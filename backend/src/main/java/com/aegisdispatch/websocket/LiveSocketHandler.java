@@ -1,0 +1,3 @@
+package com.aegisdispatch.websocket;
+import org.springframework.stereotype.Component; import org.springframework.web.socket.*; import org.springframework.web.socket.handler.TextWebSocketHandler; import java.util.concurrent.CopyOnWriteArraySet;
+@Component public class LiveSocketHandler extends TextWebSocketHandler { private final CopyOnWriteArraySet<WebSocketSession> sessions=new CopyOnWriteArraySet<>(); public void afterConnectionEstablished(WebSocketSession s){sessions.add(s);} public void afterConnectionClosed(WebSocketSession s,CloseStatus c){sessions.remove(s);} public void broadcast(String json){sessions.removeIf(s->!s.isOpen()); sessions.forEach(s->{try{s.sendMessage(new TextMessage(json));}catch(Exception ignored){}});} }

@@ -1,0 +1,17 @@
+services:
+  postgres:
+    image: postgis/postgis:16-3.4
+    container_name: aegis-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: aegis_dispatch
+      POSTGRES_USER: aegis
+      POSTGRES_PASSWORD: aegis_demo
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./backend/src/main/resources/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./backend/src/main/resources/data.sql:/docker-entrypoint-initdb.d/02-data.sql:ro
+      - aegis_pgdata:/var/lib/postgresql/data
+volumes:
+  aegis_pgdata:

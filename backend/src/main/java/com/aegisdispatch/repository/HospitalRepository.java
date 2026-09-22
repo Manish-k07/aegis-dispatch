@@ -1,0 +1,1 @@
+package com.aegisdispatch.repository; import com.aegisdispatch.model.Hospital; import org.springframework.data.jpa.repository.JpaRepository; import java.util.*; public interface HospitalRepository extends JpaRepository<Hospital,UUID>{}

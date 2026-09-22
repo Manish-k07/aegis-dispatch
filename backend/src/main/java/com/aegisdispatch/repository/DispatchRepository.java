@@ -1,0 +1,1 @@
+package com.aegisdispatch.repository; import com.aegisdispatch.model.Dispatch; import org.springframework.data.jpa.repository.JpaRepository; import java.util.*; public interface DispatchRepository extends JpaRepository<Dispatch,UUID>{ List<Dispatch> findAllByOrderByAssignedAtDesc(); Optional<Dispatch> findByEmergencyId(UUID emergencyId); }

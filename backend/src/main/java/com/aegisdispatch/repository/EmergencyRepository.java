@@ -1,0 +1,1 @@
+package com.aegisdispatch.repository; import com.aegisdispatch.model.Emergency; import org.springframework.data.jpa.repository.JpaRepository; import java.util.*; public interface EmergencyRepository extends JpaRepository<Emergency,UUID>{ List<Emergency> findAllByOrderByCreatedAtDesc(); }

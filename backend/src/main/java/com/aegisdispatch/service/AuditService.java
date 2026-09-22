@@ -1,0 +1,3 @@
+package com.aegisdispatch.service;
+import com.aegisdispatch.model.AuditLog; import com.aegisdispatch.repository.AuditLogRepository; import org.springframework.stereotype.Service; import java.time.Instant; import java.util.UUID;
+@Service public class AuditService { private final AuditLogRepository repo; public AuditService(AuditLogRepository r){repo=r;} public void log(String actor,String action,String type,UUID id,String previous,String next,String metadata){AuditLog a=new AuditLog();a.setActor(actor);a.setAction(action);a.setEntityType(type);a.setEntityId(id);a.setPreviousState(previous);a.setNewState(next);a.setMetadata(metadata);a.setCreatedAt(Instant.now());repo.save(a);} }
