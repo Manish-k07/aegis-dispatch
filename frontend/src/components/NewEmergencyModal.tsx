@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, AlertTriangle, Sparkles } from 'lucide-react';
 import { Emergency } from '../types';
+import { API_BASE } from '../config';
 
 interface NewEmergencyModalProps {
   initialCoordinates?: { lat: number; lon: number } | null;
@@ -38,7 +39,7 @@ export const NewEmergencyModal: React.FC<NewEmergencyModalProps> = ({
     if (!description.trim()) return;
     setTriageLoading(true);
     try {
-      const res = await fetch('http://localhost:8080/api/ai/triage', {
+      const res = await fetch(`${API_BASE}/ai/triage`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ description, type }),

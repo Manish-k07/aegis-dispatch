@@ -6,6 +6,7 @@ import {
   Ambulance,
   Hospital
 } from '../types';
+import { API_BASE } from '../config';
 import {
   Bot,
   Send,
@@ -74,7 +75,7 @@ export const AICopilotDrawer: React.FC<AICopilotDrawerProps> = ({
     setIsLoading(true);
 
     try {
-      const res = await fetch('http://localhost:8080/api/ai/chat', {
+      const res = await fetch(`${API_BASE}/ai/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: text }),
@@ -114,7 +115,7 @@ export const AICopilotDrawer: React.FC<AICopilotDrawerProps> = ({
     if (!triageInput.trim()) return;
     setIsTriaging(true);
     try {
-      const res = await fetch('http://localhost:8080/api/ai/triage', {
+      const res = await fetch(`${API_BASE}/ai/triage`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ description: triageInput }),

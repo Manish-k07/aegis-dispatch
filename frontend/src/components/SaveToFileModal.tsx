@@ -14,6 +14,7 @@ import {
   Database
 } from 'lucide-react';
 import { DashboardData, SavedFileInfo, SaveResult } from '../types';
+import { API_BASE } from '../config';
 
 interface SaveToFileModalProps {
   isOpen: boolean;
@@ -21,8 +22,6 @@ interface SaveToFileModalProps {
   data: DashboardData;
   onSaveSuccess?: (result: SaveResult) => void;
 }
-
-const API_BASE = 'http://localhost:8080/api';
 
 export const SaveToFileModal: React.FC<SaveToFileModalProps> = ({
   isOpen,

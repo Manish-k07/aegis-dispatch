@@ -26,9 +26,7 @@ import {
   PatientVitals
 } from './types';
 import { audioSystem } from './utils/audio';
-
-const API_BASE = 'http://localhost:8080/api';
-const WS_URL = 'ws://localhost:8080/ws/live';
+import { API_BASE, WS_URL } from './config';
 
 export const App: React.FC = () => {
   const [data, setData] = useState<DashboardData>({
