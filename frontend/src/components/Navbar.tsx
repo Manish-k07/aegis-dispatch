@@ -8,7 +8,6 @@ import {
   VolumeX,
   Search,
   Clock,
-  Cpu,
   Bot,
   Wrench,
   TrendingUp,
@@ -17,7 +16,7 @@ import {
   Zap,
   Save,
   Activity,
-  HardDrive
+  Command
 } from 'lucide-react';
 import { DashboardData, UserRole } from '../types';
 
@@ -87,100 +86,110 @@ export const Navbar: React.FC<NavbarProps> = ({
   ).length;
 
   return (
-    <header className="navbar">
-      {/* Brand & Console Role Segmented Control */}
-      <div className="navbar-brand">
-        <div className="brand-logo">
-          <Shield className="logo-icon" size={20} />
-        </div>
-        <div className="brand-text-block">
-          <div className="brand-title">
-            <span className="brand-primary">AEGIS</span>
-            <span className="brand-secondary">DISPATCH</span>
-            <span className="brand-version">PRO v2.5</span>
+    <header className="navbar-modern">
+      {/* 1. Left Section: Identity & Segmented Role Switcher */}
+      <div className="nav-left-zone">
+        <div className="brand-lockup">
+          <div className="brand-logo-soft">
+            <Shield className="logo-icon-soft" size={18} />
           </div>
-          <div className="brand-subtitle">Tier-1 Tactical Emergency Command</div>
+          <div className="brand-meta">
+            <div className="brand-heading">
+              <span className="brand-name">AEGIS</span>
+              <span className="brand-pill">CAD v2.5</span>
+            </div>
+            <span className="brand-subtext">Emergency Operations</span>
+          </div>
         </div>
 
-        {/* Polished Segmented Role Switcher */}
-        <div className="segmented-role-control" title="Switch Active Console Interface">
+        {/* Calm Segmented Role Controller */}
+        <nav className="role-switcher-bar" aria-label="Console Interface Switcher">
           <button
-            className={`segmented-role-btn ${currentRole === 'DISPATCHER' ? 'active' : ''}`}
+            className={`role-tab-btn ${currentRole === 'DISPATCHER' ? 'active-cad' : ''}`}
             onClick={() => onSelectRole('DISPATCHER')}
+            title="Central Dispatch CAD Command"
           >
-            <Radio size={12} className={currentRole === 'DISPATCHER' ? 'text-sky' : 'text-muted'} />
+            <Radio size={13} className="tab-icon" />
             <span>Central CAD</span>
           </button>
           <button
-            className={`segmented-role-btn ${currentRole === 'DRIVER' ? 'active' : ''}`}
+            className={`role-tab-btn ${currentRole === 'DRIVER' ? 'active-driver' : ''}`}
             onClick={() => onSelectRole('DRIVER')}
+            title="Mobile Data Terminal (Paramedic / Driver)"
           >
-            <User size={12} className={currentRole === 'DRIVER' ? 'text-amber' : 'text-muted'} />
+            <User size={13} className="tab-icon" />
             <span>Driver MDT</span>
           </button>
           <button
-            className={`segmented-role-btn ${currentRole === 'HOSPITAL' ? 'active' : ''}`}
+            className={`role-tab-btn ${currentRole === 'HOSPITAL' ? 'active-hosp' : ''}`}
             onClick={() => onSelectRole('HOSPITAL')}
+            title="Hospital Emergency Department Triage"
           >
-            <Activity size={12} className={currentRole === 'HOSPITAL' ? 'text-emerald' : 'text-muted'} />
+            <Activity size={13} className="tab-icon" />
             <span>Hospital ED</span>
           </button>
-        </div>
+        </nav>
       </div>
 
-      {/* Center Operational Telemetry */}
-      <div className="navbar-center-telemetry">
-        {/* Real-time 24h Military Mission Clock */}
-        <div className="ops-clock" title="Operational Mission Time (24H Local Zulu)">
-          <Clock size={12} className="text-sky" />
-          <span className="clock-label">OPS:</span>
-          <span className="clock-time">{currentTime || '00:00:00'}</span>
-        </div>
-
-        {/* Live Weather Integration Badge */}
-        <div className="weather-nav-badge" title="Bengaluru Metro Live Weather: 27°C Monsoon / Wet Roads (0.85x speed multiplier)">
-          <CloudRain size={12} className="text-sky" />
-          <span className="weather-val">27°C MONSOON · ROAD: WET</span>
-        </div>
-
-        {/* Global Tactical Search */}
+      {/* 2. Center Section: Calm Search & Status Telemetry */}
+      <div className="nav-center-zone">
         {onSearchChange && currentRole === 'DISPATCHER' && (
-          <div className="nav-search">
-            <Search size={13} className="nav-search-icon" />
+          <div className="calm-search-box">
+            <Search size={14} className="search-icon-soft" />
             <input
               type="text"
-              placeholder="Search incident, unit, road... (/)"
+              placeholder="Search incidents, units, facilities..."
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
             />
+            <span className="shortcut-hint">/</span>
           </div>
         )}
 
-        {/* Central CAD Stat Badges */}
-        {currentRole === 'DISPATCHER' && (
-          <div className="navbar-stats">
-            <div className={`stat-badge ${pendingCount > 0 ? 'alert' : ''}`}>
-              <span className="stat-label">Pending</span>
-              <span className="stat-value">{pendingCount}</span>
-            </div>
-            <div className="stat-badge">
-              <span className="stat-label">Fleet</span>
-              <span className="stat-value text-emerald">{availableAmbulances}/{data.ambulances.length}</span>
-            </div>
-            <div className="stat-badge">
-              <span className="stat-label">Missions</span>
-              <span className="stat-value text-amber">{activeDispatches}</span>
-            </div>
+        {/* Unified Calm Status Strip */}
+        <div className="calm-status-strip">
+          <div className="status-chip chip-time" title="Operational Mission Clock">
+            <Clock size={12} />
+            <span>{currentTime || '00:00:00'}</span>
           </div>
-        )}
+
+          <div className="status-chip chip-weather" title="Bengaluru Metro: 27°C Monsoon / Wet Roads">
+            <CloudRain size={12} />
+            <span>27°C Monsoon</span>
+          </div>
+
+          {currentRole === 'DISPATCHER' && (
+            <div className="cad-metrics-cluster">
+              {pendingCount > 0 ? (
+                <span className="metric-chip alert-rose" title="Pending Incidents Awaiting Unit">
+                  {pendingCount} Pending
+                </span>
+              ) : (
+                <span className="metric-chip calm-slate" title="All Incidents Assigned">
+                  0 Pending
+                </span>
+              )}
+
+              <span className="metric-chip calm-slate" title="Available Fleet">
+                {availableAmbulances}/{data.ambulances.length} Units
+              </span>
+
+              {activeDispatches > 0 && (
+                <span className="metric-chip calm-amber" title="Active Missions in Transit">
+                  {activeDispatches} Active
+                </span>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Actions Toolbar */}
-      <div className="navbar-actions">
-        {/* Quick Auto-Dispatch Next Button */}
+      {/* 3. Right Section: Action Hierarchy & Grouped Utilities */}
+      <div className="nav-right-zone">
+        {/* Contextual Auto-Dispatch Next Button */}
         {pendingCount > 0 && currentRole === 'DISPATCHER' && (
           <button
-            className="btn btn-xs btn-primary btn-quick-auto"
+            className="btn-calm-auto"
             onClick={onAutoAssignNext}
             title="Auto-dispatch nearest ambulance and hospital to highest priority incident"
           >
@@ -189,71 +198,80 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
         )}
 
-        {/* Save to File Action Button */}
-        <button
-          className="btn btn-save-nav"
-          onClick={onOpenSaveModal}
-          title="Save all CAD incidents, dispatches, fleet telemetry and audit logs to persistent disk file"
-        >
-          <Save size={14} className="text-sky" />
-          <span>Save to File</span>
-          <span className="save-indicator-dot"></span>
-        </button>
-
-        {/* AI Copilot Launcher */}
-        <button
-          className="btn btn-outline btn-copilot-nav"
-          onClick={onOpenAICopilot}
-          title="Open Aegis AI Dispatch Assistant"
-        >
-          <Bot size={14} className="text-indigo" />
-          <span>AI Copilot</span>
-        </button>
-
-        {/* Fleet Maintenance Diagnostics Trigger */}
-        <button
-          className="btn btn-outline btn-icon-only"
-          onClick={onOpenMaintenance}
-          title="Fleet Diagnostics & Vehicle Telemetry"
-        >
-          <Wrench size={14} className="text-amber" />
-        </button>
-
-        {/* Predictive Surge Allocator Trigger */}
-        <button
-          className="btn btn-outline btn-icon-only"
-          onClick={onOpenPredictive}
-          title="Predictive Demand Surge & Resource Pre-Positioning"
-        >
-          <TrendingUp size={14} className="text-sky" />
-        </button>
-
-        {/* Live Feed Status Pill */}
-        <div className={`connection-pill ${isConnected ? 'connected' : 'disconnected'}`}>
-          <Radio size={12} className={isConnected ? 'pulse-icon' : ''} />
-          <span>{isConnected ? 'LIVE' : 'OFFLINE'}</span>
-        </div>
-
-        {/* Audio Alert Tones Toggle */}
-        <button
-          className={`btn btn-outline audio-toggle-btn ${isAudioEnabled ? 'audio-on' : 'audio-off'}`}
-          onClick={onToggleAudio}
-          title={isAudioEnabled ? 'EMS Alert Tones: Active' : 'EMS Alert Tones: Muted'}
-        >
-          {isAudioEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />}
-          <span>{isAudioEnabled ? 'AUDIO' : 'MUTED'}</span>
-        </button>
-
+        {/* Primary Intake Incident Button */}
         {currentRole === 'DISPATCHER' && (
-          <button className="btn btn-primary" onClick={onOpenNewEmergency}>
+          <button
+            className="btn-calm-primary"
+            onClick={onOpenNewEmergency}
+            title="Intake New Emergency Incident"
+          >
             <PlusCircle size={14} />
-            <span>+ Incident</span>
+            <span>+ New Call</span>
           </button>
         )}
 
-        <button className="btn btn-outline" onClick={onResetData} title="Reset demo seed data & fleet ready">
-          <RotateCcw size={14} />
+        {/* File Persistence Action */}
+        <button
+          className="btn-calm-secondary"
+          onClick={onOpenSaveModal}
+          title="Save CAD database, telemetry snapshots & CSV exports to disk"
+        >
+          <Save size={13} className="text-sky" />
+          <span>Save</span>
+          <span className="calm-green-dot" />
         </button>
+
+        {/* Grouped Secondary Utilities Cluster */}
+        <div className="utility-cluster">
+          <button
+            className="util-btn"
+            onClick={onOpenAICopilot}
+            title="Aegis AI Dispatch Assistant"
+          >
+            <Bot size={15} />
+          </button>
+
+          <button
+            className="util-btn"
+            onClick={onOpenMaintenance}
+            title="Fleet Diagnostics & Telemetry"
+          >
+            <Wrench size={15} />
+          </button>
+
+          <button
+            className="util-btn"
+            onClick={onOpenPredictive}
+            title="Predictive Resource Pre-Positioning"
+          >
+            <TrendingUp size={15} />
+          </button>
+
+          <button
+            className={`util-btn ${!isAudioEnabled ? 'muted' : ''}`}
+            onClick={onToggleAudio}
+            title={isAudioEnabled ? 'Alert Chimes: Active' : 'Alert Chimes: Muted'}
+          >
+            {isAudioEnabled ? <Volume2 size={15} /> : <VolumeX size={15} />}
+          </button>
+
+          <button
+            className="util-btn"
+            onClick={onResetData}
+            title="Reset Simulation Demo Data"
+          >
+            <RotateCcw size={14} />
+          </button>
+        </div>
+
+        {/* Minimalist Live Connection Pill */}
+        <div
+          className={`calm-connection-badge ${isConnected ? 'online' : 'offline'}`}
+          title={isConnected ? 'Connected to Live WebSocket Gateway' : 'Reconnecting to Gateway...'}
+        >
+          <span className="connection-beacon" />
+          <span className="connection-label">{isConnected ? 'LIVE' : 'OFFLINE'}</span>
+        </div>
       </div>
     </header>
   );
