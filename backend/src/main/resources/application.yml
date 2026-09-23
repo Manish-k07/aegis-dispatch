@@ -19,16 +19,28 @@ spring:
       mode: always
       schema-locations: classpath:schema.sql
       data-locations: classpath:data.sql
-      continue-on-error: true
+      continue-on-error: false
+
 server:
   port: ${PORT:8080}
+  forward-headers-strategy: framework
   error:
-    include-message: always
+    include-message: never
+    include-binding-errors: never
+    include-stacktrace: never
+    include-exception: false
+
 management:
   endpoints:
     web:
       exposure:
         include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: never
+
 app:
   cors-origin: ${CORS_ORIGIN:http://localhost:5173}
   stale-seconds: ${STALE_SECONDS:60}
@@ -38,6 +50,7 @@ app:
     availability-weight: ${AVAILABILITY_WEIGHT:0.15}
     distance-weight: ${DISTANCE_WEIGHT:0.15}
     traffic-weight: ${TRAFFIC_WEIGHT:0.10}
+
 ---
 spring:
   config:
@@ -47,5 +60,4 @@ spring:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/aegis_dispatch}
     driver-class-name: org.postgresql.Driver
     username: ${DB_USER:aegis}
-    password: ${DB_PASSWORD:aegis_demo}
-
+    password: ${DB_PASSWORD:}
