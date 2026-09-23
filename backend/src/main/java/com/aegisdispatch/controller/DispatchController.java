@@ -17,7 +17,7 @@ import java.util.*;
 
 @RestController
 @RequestMapping("/api")
-@CrossOrigin(origins = "*")
+
 public class DispatchController {
 
     private final EmergencyRepository emergencies;
