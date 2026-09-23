@@ -34,7 +34,7 @@ Aegis Dispatch Pro incorporates defense-in-depth architectural safeguards:
 
 ---
 
-## 🐳 Deploy-Ready Quickstart (Docker)
+## 🐳 Deploy-Ready Quickstart (Docker Compose)
 
 Deploy the entire production stack (PostGIS Database, Spring Boot Backend, and Nginx + React Frontend) with a single command:
 
@@ -55,6 +55,36 @@ docker compose up -d --build
 - **Backend API Gateway:** [http://localhost:8080/api/dashboard](http://localhost:8080/api/dashboard)
 - **Actuator Health Monitor:** [http://localhost:8080/actuator/health](http://localhost:8080/actuator/health)
 - **PostGIS Database:** `localhost:5432` (database: `aegis_dispatch`, user: `aegis`)
+
+---
+
+## ☁️ Google Cloud Run Deployment
+
+The repository includes a production container build in `Dockerfile`, a hardened runtime configuration, and `cloudbuild.yaml`.
+
+### Local production container
+
+```bash
+docker build -t aegis-dispatch .
+docker run --rm -p 8080:8080 \
+  -e CORS_ORIGIN=http://localhost:8080 \
+  aegis-dispatch
+```
+
+The container serves the React UI and Spring Boot API from the same origin.
+
+### Cloud Run Setup
+
+For a managed cloud deployment, provision a PostgreSQL database (Cloud SQL for PostgreSQL), create an Artifact Registry repository, and create a Secret Manager secret named `aegis-db-password`.
+
+Then configure the substitutions in `cloudbuild.yaml` for your Google Cloud project, Cloud Run region, Cloud SQL instance, database URL, and public Cloud Run origin before running Cloud Build.
+
+Required Google Cloud services:
+- Cloud Run
+- Artifact Registry
+- Cloud Build
+- Secret Manager
+- Cloud SQL for PostgreSQL
 
 ---
 

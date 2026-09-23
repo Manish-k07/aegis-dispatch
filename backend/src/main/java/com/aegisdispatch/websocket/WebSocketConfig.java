@@ -14,21 +14,24 @@ public class WebSocketConfig implements WebSocketConfigurer {
 
     private final LiveSocketHandler handler;
 
-    @Value("${app.cors-allowed-origins:http://localhost:5173,http://localhost:8080,http://127.0.0.1:5173,http://127.0.0.1:8080,http://172.20.10.2:5173,http://172.20.10.2:8080}")
+    @Value("${app.cors-allowed-origins:${app.cors-origin:http://localhost:5173,http://localhost:8080,http://127.0.0.1:5173,http://127.0.0.1:8080,http://172.20.10.2:5173,http://172.20.10.2:8080}}")
     private String allowedOrigins;
 
-    public WebSocketConfig(LiveSocketHandler h) {
-        this.handler = h;
+    public WebSocketConfig(LiveSocketHandler handler) {
+        this.handler = handler;
     }
 
     @Override
-    public void registerWebSocketHandlers(WebSocketHandlerRegistry r) {
+    public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         String[] origins = Arrays.stream(allowedOrigins.split(","))
                 .map(String::trim)
                 .filter(s -> !s.isEmpty())
                 .toArray(String[]::new);
 
-        r.addHandler(handler, "/ws/live")
-         .setAllowedOrigins(origins.length > 0 ? origins : new String[]{"*"});
+        if (origins.length > 0) {
+            registry.addHandler(handler, "/ws/live").setAllowedOrigins(origins);
+        } else {
+            registry.addHandler(handler, "/ws/live");
+        }
     }
 }
