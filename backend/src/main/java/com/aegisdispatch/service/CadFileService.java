@@ -131,8 +131,9 @@ public class CadFileService {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("status", "SUCCESS");
         result.put("message", "All emergency incidents, dispatches, fleet telemetry, hospital capacities, and audit logs successfully saved to file.");
-        result.put("snapshotFile", latestFile.getCanonicalPath());
-        result.put("backupFile", backupFile.getCanonicalPath());
+        result.put("snapshotFile", latestFile.getName());
+        result.put("backupFile", backupFile.getName());
+        result.put("storagePath", "./data/" + latestFile.getName());
         result.put("fileSizeBytes", latestFile.length());
         result.put("fileSizeFormatted", String.format("%.2f KB", latestFile.length() / 1024.0));
         result.put("timestamp", Instant.now().toString());
@@ -215,7 +216,7 @@ public class CadFileService {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("fileName", f.getName());
         m.put("category", category);
-        m.put("path", f.getPath());
+        m.put("path", "LATEST_SNAPSHOT".equals(category) ? "./data/" + f.getName() : "./data/backups/" + f.getName());
         m.put("sizeBytes", f.length());
         m.put("sizeFormatted", String.format("%.2f KB", f.length() / 1024.0));
         m.put("lastModified", Instant.ofEpochMilli(f.lastModified()).toString());

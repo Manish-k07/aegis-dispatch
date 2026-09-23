@@ -16,7 +16,8 @@ import {
   Zap,
   Save,
   Activity,
-  Command
+  Command,
+  Scale
 } from 'lucide-react';
 import { DashboardData, UserRole } from '../types';
 
@@ -36,6 +37,7 @@ interface NavbarProps {
   onOpenPredictive: () => void;
   onOpenSaveModal: () => void;
   onAutoAssignNext: () => void;
+  onOpenLegal?: (tab?: 'privacy' | 'terms' | 'security') => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -54,6 +56,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenPredictive,
   onOpenSaveModal,
   onAutoAssignNext,
+  onOpenLegal,
 }) => {
   const [currentTime, setCurrentTime] = useState<string>('');
 
@@ -262,6 +265,16 @@ export const Navbar: React.FC<NavbarProps> = ({
           >
             <RotateCcw size={14} />
           </button>
+
+          {onOpenLegal && (
+            <button
+              className="util-btn"
+              onClick={() => onOpenLegal('privacy')}
+              title="Privacy Policy, Terms of Service & Compliance"
+            >
+              <Scale size={15} />
+            </button>
+          )}
         </div>
 
         {/* Minimalist Live Connection Pill */}

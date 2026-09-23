@@ -17,7 +17,6 @@ import java.util.*;
 
 @RestController
 @RequestMapping("/api")
-@CrossOrigin(origins = "*")
 public class DispatchController {
 
     private final EmergencyRepository emergencies;
@@ -93,7 +92,28 @@ public class DispatchController {
         if (e.getId() == null) e.setId(UUID.randomUUID());
         if (e.getStatus() == null || e.getStatus().isBlank()) e.setStatus("PENDING_DISPATCH");
         if (e.getPatientCount() <= 0) e.setPatientCount(1);
+        if (e.getPatientCount() > 100) e.setPatientCount(100);
         if (e.getPriority() == null) e.setPriority("HIGH");
+
+        // Validate coordinate boundaries
+        if (e.getLatitude() < -90.0 || e.getLatitude() > 90.0) {
+            throw new IllegalArgumentException("Invalid incident latitude: must be between -90 and 90");
+        }
+        if (e.getLongitude() < -180.0 || e.getLongitude() > 180.0) {
+            throw new IllegalArgumentException("Invalid incident longitude: must be between -180 and 180");
+        }
+
+        // Bound string fields to prevent memory abuse
+        if (e.getCallerName() != null && e.getCallerName().length() > 255) {
+            e.setCallerName(e.getCallerName().substring(0, 255));
+        }
+        if (e.getDescription() != null && e.getDescription().length() > 2000) {
+            e.setDescription(e.getDescription().substring(0, 2000));
+        }
+        if (e.getAddress() != null && e.getAddress().length() > 500) {
+            e.setAddress(e.getAddress().substring(0, 500));
+        }
+
         e.setCreatedAt(Instant.now());
         e.setUpdatedAt(Instant.now());
         Emergency saved = emergencies.save(e);

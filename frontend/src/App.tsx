@@ -14,6 +14,8 @@ import { AICopilotDrawer } from './components/AICopilotDrawer';
 import { FleetMaintenanceModal } from './components/FleetMaintenanceModal';
 import { PredictiveSurgeModal } from './components/PredictiveSurgeModal';
 import { SaveToFileModal } from './components/SaveToFileModal';
+import { LegalModal } from './components/LegalModal';
+import { Footer } from './components/Footer';
 import {
   DashboardData,
   Emergency,
@@ -47,7 +49,14 @@ export const App: React.FC = () => {
   const [isMaintenanceOpen, setIsMaintenanceOpen] = useState(false);
   const [isPredictiveOpen, setIsPredictiveOpen] = useState(false);
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
+  const [isLegalModalOpen, setIsLegalModalOpen] = useState(false);
+  const [legalModalTab, setLegalModalTab] = useState<'privacy' | 'terms' | 'security'>('privacy');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const handleOpenLegal = (tab: 'privacy' | 'terms' | 'security' = 'privacy') => {
+    setLegalModalTab(tab);
+    setIsLegalModalOpen(true);
+  };
 
   // Live Streamed Patient Vitals by dispatch ID
   const [liveVitalsByDispatch, setLiveVitalsByDispatch] = useState<{ [dispatchId: string]: PatientVitals }>({});
@@ -519,6 +528,7 @@ export const App: React.FC = () => {
         onOpenPredictive={() => setIsPredictiveOpen(true)}
         onOpenSaveModal={() => setIsSaveModalOpen(true)}
         onAutoAssignNext={handleAutoAssignNext}
+        onOpenLegal={handleOpenLegal}
       />
 
       {/* Role-Based Primary Interface */}
@@ -729,6 +739,24 @@ export const App: React.FC = () => {
           <button className="toast-close-btn" onClick={() => setToastMessage(null)}>×</button>
         </div>
       )}
+
+      {/* Universal Compliance & System Footer */}
+      <Footer
+        isConnected={isConnected}
+        onOpenLegal={handleOpenLegal}
+        onOpenSaveModal={() => setIsSaveModalOpen(true)}
+        onOpenAuditLogs={() => {
+          const drawer = document.querySelector('.audit-drawer-root');
+          if (drawer) drawer.scrollIntoView({ behavior: 'smooth' });
+        }}
+      />
+
+      {/* Legal & Regulatory Compliance Modal */}
+      <LegalModal
+        isOpen={isLegalModalOpen}
+        onClose={() => setIsLegalModalOpen(false)}
+        defaultTab={legalModalTab}
+      />
 
       {/* System Audit Drawer */}
       <AuditLogDrawer logs={auditLogs} liveEvents={liveEvents} />

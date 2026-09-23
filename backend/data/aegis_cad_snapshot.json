@@ -2,15 +2,15 @@
   "metadata" : {
     "systemName" : "AEGIS DISPATCH CAD",
     "version" : "v2.5 PRO",
-    "snapshotReason" : "AUTO_ASSIGN",
-    "exportedAt" : "2026-09-22T20:32:07.861272700Z",
+    "snapshotReason" : "SYSTEM_STARTUP",
+    "exportedAt" : "2026-09-23T05:01:56.987798Z",
     "systemStatus" : "OPERATIONAL",
-    "archiveSignature" : "e8812505-ab39-4517-a72d-885c7eddf6fa",
+    "archiveSignature" : "df479c8c-2d07-4771-9a02-79ce6f6c3596",
     "totalEmergencies" : 3,
     "totalDispatches" : 3,
     "totalAmbulances" : 4,
     "totalHospitals" : 3,
-    "totalAuditLogs" : 17
+    "totalAuditLogs" : 27
   },
   "emergencies" : [ {
     "id" : "30000000-0000-0000-0000-000000000001",
@@ -33,13 +33,13 @@
     "type" : "BREATHING",
     "description" : "Simulation respiratory emergency with severe distress",
     "address" : "Demo Market Road, Bengaluru",
-    "status" : "EN_ROUTE_TO_SCENE",
+    "status" : "COMPLETED",
     "patientCount" : 1,
     "priority" : "HIGH",
     "latitude" : 12.9655,
     "longitude" : 77.6015,
     "createdAt" : "2026-09-22T20:22:07.584382Z",
-    "updatedAt" : "2026-09-22T20:31:43.526498Z"
+    "updatedAt" : "2026-09-22T20:32:40.843179Z"
   }, {
     "id" : "30000000-0000-0000-0000-000000000003",
     "callerName" : "Priya Sharma",
@@ -47,40 +47,40 @@
     "type" : "CARDIAC",
     "description" : "Suspected acute coronary syndrome with crushing chest pain",
     "address" : "Cunningham Road, Bengaluru",
-    "status" : "DISPATCHED",
+    "status" : "COMPLETED",
     "patientCount" : 1,
     "priority" : "CRITICAL",
     "latitude" : 12.9812,
     "longitude" : 77.5877,
     "createdAt" : "2026-09-22T20:22:07.584382Z",
-    "updatedAt" : "2026-09-22T20:32:07.845347400Z"
+    "updatedAt" : "2026-09-22T20:33:14.883094Z"
   } ],
   "dispatches" : [ {
     "id" : "c031e763-8029-42f4-9835-ccc62c4d09c3",
     "emergencyId" : "30000000-0000-0000-0000-000000000003",
     "ambulanceId" : "20000000-0000-0000-0000-000000000003",
     "dispatcherName" : "AI Auto-Dispatcher",
-    "status" : "DISPATCHED",
+    "status" : "COMPLETED",
     "distanceKm" : 1.58,
     "etaMinutes" : 3.6,
     "score" : 0.9,
     "hospitalId" : "10000000-0000-0000-0000-000000000001",
-    "assignedAt" : "2026-09-22T20:32:07.845347400Z",
+    "assignedAt" : "2026-09-22T20:32:07.845347Z",
     "acceptedAt" : null,
-    "completedAt" : null
+    "completedAt" : "2026-09-22T20:33:14.883094Z"
   }, {
     "id" : "536a4f91-9969-426f-aa7d-72ab55c852fc",
     "emergencyId" : "30000000-0000-0000-0000-000000000002",
     "ambulanceId" : "20000000-0000-0000-0000-000000000001",
     "dispatcherName" : "AI Auto-Dispatcher",
-    "status" : "EN_ROUTE_TO_SCENE",
+    "status" : "COMPLETED",
     "distanceKm" : 1.91,
     "etaMinutes" : 4.5,
     "score" : 0.88,
     "hospitalId" : "10000000-0000-0000-0000-000000000002",
     "assignedAt" : "2026-09-22T20:31:43.491303Z",
     "acceptedAt" : null,
-    "completedAt" : null
+    "completedAt" : "2026-09-22T20:32:40.844185Z"
   }, {
     "id" : "c644f427-f12a-467e-8be2-373ff02e0596",
     "emergencyId" : "30000000-0000-0000-0000-000000000001",
@@ -99,14 +99,14 @@
     "id" : "20000000-0000-0000-0000-000000000001",
     "registrationNumber" : "KA-01-AE-1001",
     "type" : "ALS",
-    "status" : "EN_ROUTE_TO_PATIENT",
+    "status" : "AVAILABLE",
     "driverName" : "Arun Kumar",
     "emtName" : "Meena R",
-    "latitude" : 12.96555,
-    "longitude" : 77.60217,
-    "speed" : 42.6,
-    "heading" : 265.9,
-    "lastLocationAt" : "2026-09-22T20:32:07.144548Z"
+    "latitude" : 12.96201,
+    "longitude" : 77.6082,
+    "speed" : 0.0,
+    "heading" : 90.0,
+    "lastLocationAt" : "2026-09-22T20:32:37.833115Z"
   }, {
     "id" : "20000000-0000-0000-0000-000000000002",
     "registrationNumber" : "KA-01-AE-1002",
@@ -123,14 +123,14 @@
     "id" : "20000000-0000-0000-0000-000000000003",
     "registrationNumber" : "KA-01-AE-1003",
     "type" : "ALS",
-    "status" : "DISPATCHED",
+    "status" : "AVAILABLE",
     "driverName" : "Vijay P",
     "emtName" : "Anitha S",
-    "latitude" : 12.985,
-    "longitude" : 77.58,
+    "latitude" : 12.97183,
+    "longitude" : 77.59487,
     "speed" : 0.0,
     "heading" : 120.0,
-    "lastLocationAt" : "2026-09-22T19:42:28.155248Z"
+    "lastLocationAt" : "2026-09-22T20:33:02.523178Z"
   }, {
     "id" : "20000000-0000-0000-0000-000000000004",
     "registrationNumber" : "KA-01-AE-1004",
@@ -158,7 +158,7 @@
     "pediatricServices" : true,
     "maternityServices" : true,
     "totalBeds" : 160,
-    "availableBeds" : 66,
+    "availableBeds" : 65,
     "icuBedsTotal" : 28,
     "icuBedsAvailable" : 5,
     "traumaBaysTotal" : 10,
@@ -179,7 +179,7 @@
     "pediatricServices" : false,
     "maternityServices" : false,
     "totalBeds" : 120,
-    "availableBeds" : 24,
+    "availableBeds" : 23,
     "icuBedsTotal" : 24,
     "icuBedsAvailable" : 2,
     "traumaBaysTotal" : 12,
@@ -377,6 +377,106 @@
     "previousState" : "PENDING_DISPATCH",
     "newState" : "DISPATCHED",
     "metadata" : "ambulance=20000000-0000-0000-0000-000000000003;hospital=Aegis City General",
-    "createdAt" : "2026-09-22T20:32:07.845347400Z"
+    "createdAt" : "2026-09-22T20:32:07.845347Z"
+  }, {
+    "id" : 65,
+    "actor" : "Simulation Engine",
+    "action" : "SIMULATION_STARTED",
+    "entityType" : "DISPATCH",
+    "entityId" : "c031e763-8029-42f4-9835-ccc62c4d09c3",
+    "previousState" : null,
+    "newState" : "SIMULATING_SCENE",
+    "metadata" : "roadDistanceKm=1.58;etaMin=3.6",
+    "createdAt" : "2026-09-22T20:32:07.876894Z"
+  }, {
+    "id" : 66,
+    "actor" : "Simulation Engine",
+    "action" : "SIMULATION_COMPLETED",
+    "entityType" : "DISPATCH",
+    "entityId" : "536a4f91-9969-426f-aa7d-72ab55c852fc",
+    "previousState" : "SIMULATING_SCENE",
+    "newState" : "ARRIVED_AT_SCENE",
+    "metadata" : "Vehicle arrived via road routing",
+    "createdAt" : "2026-09-22T20:32:08.360227Z"
+  }, {
+    "id" : 67,
+    "actor" : "Simulation Engine",
+    "action" : "SIMULATION_STARTED",
+    "entityType" : "DISPATCH",
+    "entityId" : "536a4f91-9969-426f-aa7d-72ab55c852fc",
+    "previousState" : null,
+    "newState" : "SIMULATING_HOSPITAL",
+    "metadata" : "roadDistanceKm=2.76;etaMin=7.5",
+    "createdAt" : "2026-09-22T20:32:13.026111Z"
+  }, {
+    "id" : 68,
+    "actor" : "Simulation Engine",
+    "action" : "SIMULATION_COMPLETED",
+    "entityType" : "DISPATCH",
+    "entityId" : "c031e763-8029-42f4-9835-ccc62c4d09c3",
+    "previousState" : "SIMULATING_SCENE",
+    "newState" : "ARRIVED_AT_SCENE",
+    "metadata" : "Vehicle arrived via road routing",
+    "createdAt" : "2026-09-22T20:32:32.693069Z"
+  }, {
+    "id" : 69,
+    "actor" : "Simulation Engine",
+    "action" : "SIMULATION_STARTED",
+    "entityType" : "DISPATCH",
+    "entityId" : "c031e763-8029-42f4-9835-ccc62c4d09c3",
+    "previousState" : null,
+    "newState" : "SIMULATING_HOSPITAL",
+    "metadata" : "roadDistanceKm=1.91;etaMin=4.5",
+    "createdAt" : "2026-09-22T20:32:37.707955Z"
+  }, {
+    "id" : 70,
+    "actor" : "Simulation Engine",
+    "action" : "SIMULATION_COMPLETED",
+    "entityType" : "DISPATCH",
+    "entityId" : "536a4f91-9969-426f-aa7d-72ab55c852fc",
+    "previousState" : "SIMULATING_HOSPITAL",
+    "newState" : "ARRIVED_AT_HOSPITAL",
+    "metadata" : "Vehicle arrived via road routing",
+    "createdAt" : "2026-09-22T20:32:37.840127Z"
+  }, {
+    "id" : 71,
+    "actor" : "Autonomous CAD System",
+    "action" : "MISSION_COMPLETED",
+    "entityType" : "DISPATCH",
+    "entityId" : "536a4f91-9969-426f-aa7d-72ab55c852fc",
+    "previousState" : "ARRIVED_AT_HOSPITAL",
+    "newState" : "COMPLETED",
+    "metadata" : "Patient successfully admitted to hospital facility; vehicle returned to AVAILABLE",
+    "createdAt" : "2026-09-22T20:32:40.845187Z"
+  }, {
+    "id" : 72,
+    "actor" : "Simulation Engine",
+    "action" : "SIMULATION_COMPLETED",
+    "entityType" : "DISPATCH",
+    "entityId" : "c031e763-8029-42f4-9835-ccc62c4d09c3",
+    "previousState" : "SIMULATING_HOSPITAL",
+    "newState" : "ARRIVED_AT_HOSPITAL",
+    "metadata" : "Vehicle arrived via road routing",
+    "createdAt" : "2026-09-22T20:33:02.532990Z"
+  }, {
+    "id" : 73,
+    "actor" : "Autonomous CAD System",
+    "action" : "MISSION_COMPLETED",
+    "entityType" : "DISPATCH",
+    "entityId" : "c031e763-8029-42f4-9835-ccc62c4d09c3",
+    "previousState" : "ARRIVED_AT_HOSPITAL",
+    "newState" : "COMPLETED",
+    "metadata" : "Patient successfully admitted to hospital facility; vehicle returned to AVAILABLE",
+    "createdAt" : "2026-09-22T20:33:05.538470Z"
+  }, {
+    "id" : 74,
+    "actor" : "EMS Dispatcher",
+    "action" : "STATUS_CHANGED",
+    "entityType" : "DISPATCH",
+    "entityId" : "c031e763-8029-42f4-9835-ccc62c4d09c3",
+    "previousState" : "COMPLETED",
+    "newState" : "COMPLETED",
+    "metadata" : "emergency=30000000-0000-0000-0000-000000000003;ambulance=20000000-0000-0000-0000-000000000003",
+    "createdAt" : "2026-09-22T20:33:14.883094Z"
   } ]
 }
