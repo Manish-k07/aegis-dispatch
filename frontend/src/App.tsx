@@ -29,15 +29,10 @@ import {
 } from './types';
 import { audioSystem } from './utils/audio';
 import { API_BASE, WS_URL } from './config';
+import { INITIAL_DEMO_DATA, INITIAL_DEMO_AUDIT_LOGS } from './utils/demoData';
 
 export const App: React.FC = () => {
-  const [data, setData] = useState<DashboardData>({
-    emergencies: [],
-    ambulances: [],
-    hospitals: [],
-    dispatches: [],
-    activeSimulations: [],
-  });
+  const [data, setData] = useState<DashboardData>(INITIAL_DEMO_DATA);
 
   // Role Management
   const [role, setRole] = useState<UserRole>('DISPATCHER');
@@ -80,7 +75,7 @@ export const App: React.FC = () => {
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
 
   const [liveEvents, setLiveEvents] = useState<string[]>([]);
-  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>(INITIAL_DEMO_AUDIT_LOGS);
   const [isConnected, setIsConnected] = useState(false);
   const [activeTab, setActiveTab] = useState<'QUEUE' | 'MISSIONS' | 'FLEET'>('QUEUE');
 

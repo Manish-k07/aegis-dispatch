@@ -58,6 +58,26 @@ docker compose up -d --build
 
 ---
 
+## ⚡ Direct Netlify Deployment
+
+Aegis Dispatch Pro includes native [`netlify.toml`](netlify.toml) with SPA redirect handling, security headers, and instant offline/demo fallback mode.
+
+### Option 1: One-Click Git Deploy (Recommended)
+1. Go to [app.netlify.com](https://app.netlify.com) and click **"Add new site" > "Import an existing project"**.
+2. Select **GitHub** and choose your repository: **`Manish-k07/aegis-dispatch`**.
+3. Netlify automatically detects `netlify.toml` (`base: frontend`, `publish: dist`, `command: npm run build`).
+4. Click **Deploy aegis-dispatch** — your site is instantly live at `https://<your-site>.netlify.app`!
+
+### Option 2: Command-Line Deploy
+Double-click `deploy-netlify.bat` or run:
+```bash
+cd frontend
+npm run build
+npx netlify-cli deploy --prod --dir=dist
+```
+
+---
+
 ## ☁️ Google Cloud Run Deployment
 
 The repository includes a production container build in `Dockerfile`, a hardened runtime configuration, and `cloudbuild.yaml`.
