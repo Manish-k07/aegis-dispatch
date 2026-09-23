@@ -16,7 +16,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/system")
-@CrossOrigin(origins = "*")
+
 public class SystemController {
 
     private final CadFileService fileService;
