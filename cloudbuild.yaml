@@ -22,7 +22,8 @@ steps:
       - --platform=managed
       - --port=8080
       - --allow-unauthenticated
-      - --set-env-vars=CORS_ORIGIN=${_CORS_ORIGIN},DB_URL=${_DB_URL},DB_USER=${_DB_USER}
+      - --add-cloudsql-instances=${_CLOUD_SQL_INSTANCE}
+      - --set-env-vars=DB_URL=${_DB_URL},DB_USER=${_DB_USER}
       - --set-secrets=DB_PASSWORD=${_DB_PASSWORD_SECRET}:latest
       - --min-instances=0
       - --max-instances=3
