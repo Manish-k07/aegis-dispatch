@@ -100,3 +100,50 @@ Open **`http://localhost:5173`** in your browser.
 - `GET /api/audit` - Inspect permanent system audit logs.
 - `GET /actuator/health` - Service health monitor.
 - `WebSocket: ws://localhost:8080/ws/live` - Real-time event and location broadcast feed.
+
+
+---
+
+## Production / Google Cloud Run
+
+The repository now includes a production container build in `Dockerfile`, a hardened runtime configuration, and `cloudbuild.yaml`.
+
+### Local production container
+
+```bash
+docker build -t aegis-dispatch .
+docker run --rm -p 8080:8080 \
+  -e CORS_ORIGIN=http://localhost:8080 \
+  aegis-dispatch
+```
+
+The container serves the React UI and Spring Boot API from the same origin.
+
+### Google Cloud Run
+
+For a real deployment, provision a PostgreSQL database (Cloud SQL for PostgreSQL is recommended), create an Artifact Registry repository, and create a Secret Manager secret named `aegis-db-password`. Do not commit production credentials.
+
+Then configure the substitutions in `cloudbuild.yaml` for your Google Cloud project, Cloud Run region, Cloud SQL instance, database URL, and public Cloud Run origin before running Cloud Build.
+
+Required Google Cloud services:
+- Cloud Run
+- Artifact Registry
+- Cloud Build
+- Secret Manager
+- Cloud SQL for PostgreSQL
+
+The Cloud Run service should use a dedicated service account with only the permissions it needs. PostgreSQL should not be exposed directly to the public internet.
+
+### Production environment
+
+At minimum configure:
+- `DB_URL`
+- `DB_USER`
+- `DB_PASSWORD` through Secret Manager
+- `CORS_ORIGIN`
+
+The production API no longer returns raw exception messages and database initialization now fails loudly instead of silently continuing after SQL errors.
+
+### Important
+
+This application is an evaluator/demo dispatch console, not a certified emergency-services platform. A real operational deployment requires identity/access management, audited operator authentication, formal clinical/EMS workflows, HA database design, backups, monitoring/alerting, disaster recovery, security testing, and compliance review before use with real patients or emergency operations.

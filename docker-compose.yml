@@ -4,11 +4,13 @@ services:
     container_name: aegis-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: aegis_dispatch
-      POSTGRES_USER: aegis
-      POSTGRES_PASSWORD: aegis_demo
+      POSTGRES_DB: ${POSTGRES_DB:-aegis_dispatch}
+      POSTGRES_USER: ${POSTGRES_USER:-aegis}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD before starting PostgreSQL}
+    # Keep PostgreSQL private to the Docker network by default.
+    # For local host access, explicitly enable DB_EXPOSE_PORT=5432.
     ports:
-      - "5432:5432"
+      - "${DB_EXPOSE_PORT:-127.0.0.1:5432}:5432"
     volumes:
       - ./backend/src/main/resources/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
       - ./backend/src/main/resources/data.sql:/docker-entrypoint-initdb.d/02-data.sql:ro
