@@ -13,6 +13,7 @@ import {
 
 interface FooterProps {
   isConnected: boolean;
+  isVirtualMode?: boolean;
   onOpenLegal: (tab: 'privacy' | 'terms' | 'security') => void;
   onOpenSaveModal: () => void;
   onOpenAuditLogs: () => void;
@@ -20,6 +21,7 @@ interface FooterProps {
 
 export const Footer: React.FC<FooterProps> = ({
   isConnected,
+  isVirtualMode = false,
   onOpenLegal,
   onOpenSaveModal,
   onOpenAuditLogs,
@@ -54,7 +56,7 @@ export const Footer: React.FC<FooterProps> = ({
             }}
           />
           <span style={{ fontWeight: 500, color: 'var(--text-main)' }}>
-            Aegis CAD Engine: {isConnected ? 'NOMINAL' : 'RECONNECTING'}
+            Aegis CAD Engine: {isConnected ? (isVirtualMode ? 'ACTIVE (Virtual Cloud Gateway)' : 'NOMINAL') : 'RECONNECTING'}
           </span>
         </div>
 

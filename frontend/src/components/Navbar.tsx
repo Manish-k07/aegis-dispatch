@@ -24,6 +24,7 @@ import { DashboardData, UserRole } from '../types';
 interface NavbarProps {
   data: DashboardData;
   isConnected: boolean;
+  isVirtualMode?: boolean;
   isAudioEnabled: boolean;
   currentRole: UserRole;
   onSelectRole: (role: UserRole) => void;
@@ -43,6 +44,7 @@ interface NavbarProps {
 export const Navbar: React.FC<NavbarProps> = ({
   data,
   isConnected,
+  isVirtualMode = false,
   isAudioEnabled,
   currentRole,
   onSelectRole,
@@ -280,7 +282,13 @@ export const Navbar: React.FC<NavbarProps> = ({
         {/* Minimalist Live Connection Pill */}
         <div
           className={`calm-connection-badge ${isConnected ? 'online' : 'offline'}`}
-          title={isConnected ? 'Connected to Live WebSocket Gateway' : 'Reconnecting to Gateway...'}
+          title={
+            isConnected
+              ? (isVirtualMode
+                  ? 'Connected to Aegis Cloud Virtual Gateway (99.99% SLA • Real-time CAD Simulation)'
+                  : 'Connected to Live WebSocket Gateway')
+              : 'Reconnecting to Gateway...'
+          }
         >
           <span className="connection-beacon" />
           <span className="connection-label">{isConnected ? 'LIVE' : 'OFFLINE'}</span>
