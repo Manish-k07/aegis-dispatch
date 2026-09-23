@@ -1,0 +1,44 @@
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -t
+      - ${_IMAGE}
+      - .
+
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - ${_IMAGE}
+
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - ${_SERVICE}
+      - --image=${_IMAGE}
+      - --region=${_REGION}
+      - --platform=managed
+      - --port=8080
+      - --allow-unauthenticated
+      - --set-env-vars=CORS_ORIGIN=${_CORS_ORIGIN},DB_URL=${_DB_URL},DB_USER=${_DB_USER}
+      - --set-secrets=DB_PASSWORD=${_DB_PASSWORD_SECRET}:latest
+      - --min-instances=0
+      - --max-instances=3
+      - --cpu=1
+      - --memory=1Gi
+      - --timeout=300
+      - --concurrency=80
+
+substitutions:
+  _SERVICE: aegis-dispatch
+  _REGION: asia-south1
+  _IMAGE: asia-south1-docker.pkg.dev/$PROJECT_ID/aegis/aegis-dispatch:$COMMIT_SHA
+  _CORS_ORIGIN: https://REPLACE_WITH_CLOUD_RUN_URL
+  _DB_URL: jdbc:postgresql:///aegis_dispatch?host=/cloudsql/REPLACE_WITH_PROJECT:REPLACE_WITH_REGION:REPLACE_WITH_INSTANCE
+  _DB_USER: aegis
+  _DB_PASSWORD_SECRET: aegis-db-password
+
+images:
+  - ${_IMAGE}
