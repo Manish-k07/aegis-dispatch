@@ -18,6 +18,11 @@ import { LegalModal } from './components/LegalModal';
 import { HospitalCapacityHUD } from './components/HospitalCapacityHUD';
 import { HospitalList } from './components/HospitalList';
 import { Footer } from './components/Footer';
+import { NG911CallerVideoModal } from './components/NG911CallerVideoModal';
+import { V2XPreemptionHUD } from './components/V2XPreemptionHUD';
+import { MciTriageModal } from './components/MciTriageModal';
+import { ClinicalQaModal } from './components/ClinicalQaModal';
+import { DroneDispatchModal } from './components/DroneDispatchModal';
 import {
   DashboardData,
   Emergency,
@@ -87,6 +92,13 @@ export const App: React.FC = () => {
   const [isCapacityHudOpen, setIsCapacityHudOpen] = useState(false);
   const [isMciActive, setIsMciActive] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Advanced Master Plan Modals State
+  const [isNG911Open, setIsNG911Open] = useState(false);
+  const [isV2XOpen, setIsV2XOpen] = useState(false);
+  const [isMciTriageOpen, setIsMciTriageOpen] = useState(false);
+  const [isClinicalQaOpen, setIsClinicalQaOpen] = useState(false);
+  const [isDroneDispatchOpen, setIsDroneDispatchOpen] = useState(false);
 
   const handleOpenLegal = (tab: 'privacy' | 'terms' | 'security' = 'privacy') => {
     setLegalModalTab(tab);
@@ -1223,6 +1235,11 @@ export const App: React.FC = () => {
         isMciActive={isMciActive}
         onToggleMci={() => setIsMciActive(!isMciActive)}
         onOpenCapacityHud={() => setIsCapacityHudOpen(true)}
+        onOpenNG911Video={() => setIsNG911Open(true)}
+        onOpenV2X={() => setIsV2XOpen(true)}
+        onOpenMciTriage={() => setIsMciTriageOpen(true)}
+        onOpenClinicalQa={() => setIsClinicalQaOpen(true)}
+        onOpenDroneDispatch={() => setIsDroneDispatchOpen(true)}
       />
 
       {isMciActive && (
@@ -1507,6 +1524,48 @@ export const App: React.FC = () => {
         hospitals={data.hospitals}
         apiBase={API_BASE}
         onRefreshHospitals={fetchDashboard}
+      />
+
+      {/* Next-Gen 911 (NG911) Live Caller Video & Indoor Elevation Modal */}
+      <NG911CallerVideoModal
+        isOpen={isNG911Open}
+        onClose={() => setIsNG911Open(false)}
+        emergency={selectedEmergency || data.emergencies[0]}
+      />
+
+      {/* V2X Emergency Vehicle Preemption (EVP) Green Wave HUD */}
+      <V2XPreemptionHUD
+        isOpen={isV2XOpen}
+        onClose={() => setIsV2XOpen(false)}
+        ambulanceRegistration={data.ambulances.find(a => a.status === 'DISPATCHED')?.registrationNumber || 'KA-01-AE-1001'}
+      />
+
+      {/* Digital MCI START/SALT Triage Matrix & Regional Load-Balancer */}
+      <MciTriageModal
+        isOpen={isMciTriageOpen}
+        onClose={() => setIsMciTriageOpen(false)}
+        hospitals={data.hospitals}
+      />
+
+      {/* Autonomous Drone First Responder (DFR) UAV Launch Modal */}
+      <DroneDispatchModal
+        isOpen={isDroneDispatchOpen}
+        onClose={() => setIsDroneDispatchOpen(false)}
+        emergency={selectedEmergency || data.emergencies[0]}
+        onLaunchSuccess={(droneId, payload) => {
+          setToastMessage(`✓ UAV ${droneId} airborne with ${payload} payload · Estimated delivery: 2.8m`);
+          setTimeout(() => setToastMessage(null), 6000);
+          setLiveEvents(prev => [
+            `${new Date().toLocaleTimeString()} · AUTONOMOUS DRONE LAUNCH: ${droneId} dispatched (${payload})`,
+            ...prev.slice(0, 19)
+          ]);
+        }}
+      />
+
+      {/* Automated Clinical QA/QI & Protocol Governance Scorecard Modal */}
+      <ClinicalQaModal
+        isOpen={isClinicalQaOpen}
+        onClose={() => setIsClinicalQaOpen(false)}
       />
 
       {/* System Audit Drawer */}

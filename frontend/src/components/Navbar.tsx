@@ -20,7 +20,12 @@ import {
   Scale,
   Building2,
   Truck,
-  AlertTriangle
+  AlertTriangle,
+  Video,
+  Plane,
+  Award,
+  ShieldAlert,
+  Navigation
 } from 'lucide-react';
 import { DashboardData, UserRole } from '../types';
 
@@ -45,6 +50,11 @@ interface NavbarProps {
   isMciActive?: boolean;
   onToggleMci?: () => void;
   onOpenCapacityHud?: () => void;
+  onOpenNG911Video?: () => void;
+  onOpenV2X?: () => void;
+  onOpenMciTriage?: () => void;
+  onOpenClinicalQa?: () => void;
+  onOpenDroneDispatch?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -68,6 +78,11 @@ export const Navbar: React.FC<NavbarProps> = ({
   isMciActive = false,
   onToggleMci,
   onOpenCapacityHud,
+  onOpenNG911Video,
+  onOpenV2X,
+  onOpenMciTriage,
+  onOpenClinicalQa,
+  onOpenDroneDispatch,
 }) => {
   const [currentTime, setCurrentTime] = useState<string>('');
 
@@ -257,6 +272,66 @@ export const Navbar: React.FC<NavbarProps> = ({
           >
             <AlertTriangle size={13} className={isMciActive ? 'text-red animate-pulse' : 'text-amber'} />
             <span>{isMciActive ? 'MCI ACTIVE' : 'MCI Mode'}</span>
+          </button>
+        )}
+
+        {/* NG911 Live Video Stream */}
+        {onOpenNG911Video && (
+          <button
+            className="btn-calm-secondary"
+            onClick={onOpenNG911Video}
+            title="NG911 Live Caller WebRTC Video Stream & Z-Axis Altimetry"
+          >
+            <Video size={13} className="text-sky" />
+            <span>NG911 Video</span>
+          </button>
+        )}
+
+        {/* V2X Traffic Signal Preemption HUD */}
+        {onOpenV2X && (
+          <button
+            className="btn-calm-secondary"
+            onClick={onOpenV2X}
+            title="V2X Emergency Vehicle Traffic Signal Preemption (EVP)"
+          >
+            <Navigation size={13} className="text-emerald" />
+            <span>V2X EVP</span>
+          </button>
+        )}
+
+        {/* MCI Triage Matrix */}
+        {onOpenMciTriage && (
+          <button
+            className="btn-calm-secondary"
+            onClick={onOpenMciTriage}
+            title="Mass Casualty Incident (MCI) & START/SALT Triage Matrix"
+          >
+            <ShieldAlert size={13} className="text-red" />
+            <span>MCI Triage</span>
+          </button>
+        )}
+
+        {/* Drone First Responder (DFR) */}
+        {onOpenDroneDispatch && (
+          <button
+            className="btn-calm-secondary"
+            onClick={onOpenDroneDispatch}
+            title="Autonomous Drone First Responder (AED / Narcan UAV Launch)"
+          >
+            <Plane size={13} className="text-sky" />
+            <span>Drone DFR</span>
+          </button>
+        )}
+
+        {/* Clinical QA Scorecard */}
+        {onOpenClinicalQa && (
+          <button
+            className="btn-calm-secondary"
+            onClick={onOpenClinicalQa}
+            title="Automated Clinical QA/QI Protocol Governance Scorecard"
+          >
+            <Award size={13} className="text-emerald" />
+            <span>QA Scorecard</span>
           </button>
         )}
 

@@ -25,6 +25,7 @@ import {
   Minus,
   Save
 } from 'lucide-react';
+import { MedicalMonitorWidget } from './MedicalMonitorWidget';
 
 interface HospitalDashboardProps {
   hospital: Hospital;
@@ -342,17 +343,9 @@ export const HospitalDashboard: React.FC<HospitalDashboardProps> = ({
                           <span className="font-mono text-xs text-emerald">UPDATED SECONDS AGO</span>
                         </div>
 
-                        {/* Animated ECG Rhythm Strip */}
-                        <div className="ecg-monitor-container mb-2">
-                          <div className="ecg-grid-overlay"></div>
-                          <div className="ecg-wave-line"></div>
-                          <div className="ecg-hud-readout">
-                            <div className="flex items-center gap-1 text-emerald">
-                              <Heart size={14} className="pulse-icon text-red" />
-                              <span className="font-mono text-sm font-bold">{vitals.heartRate} BPM</span>
-                            </div>
-                            <span className="font-mono text-xs text-sky">LEAD II · SINUS TACHYCARDIA</span>
-                          </div>
+                        {/* Animated Real-Time 12-Lead ECG Sweep & Telemetry */}
+                        <div className="mb-3">
+                          <MedicalMonitorWidget vitals={vitals} compact={true} />
                         </div>
 
                         <div className="vitals-readout-grid">

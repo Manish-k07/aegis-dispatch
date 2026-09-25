@@ -2,30 +2,30 @@
   "metadata" : {
     "systemName" : "AEGIS DISPATCH CAD",
     "version" : "v2.5 PRO",
-    "snapshotReason" : "AMBULANCE_ASSIGNED",
-    "exportedAt" : "2026-09-25T13:08:03.784629Z",
+    "snapshotReason" : "SYSTEM_STARTUP",
+    "exportedAt" : "2026-09-25T13:41:44.862732300Z",
     "systemStatus" : "OPERATIONAL",
-    "archiveSignature" : "e5d218df-5d06-4ecc-a8fd-e9af4a143b11",
+    "archiveSignature" : "a812c6e4-3d3b-44d9-92da-583d63769257",
     "totalEmergencies" : 4,
     "totalDispatches" : 4,
     "totalAmbulances" : 4,
     "totalHospitals" : 3,
-    "totalAuditLogs" : 30
+    "totalAuditLogs" : 28
   },
   "emergencies" : [ {
-    "id" : "f7101da8-8613-4a12-a1a1-78982e876819",
+    "id" : "016ec001-2ff9-42fa-b96b-1b7cda54eb10",
     "callerName" : "John Doe",
     "phone" : "9876543210",
     "type" : "ACCIDENT",
-    "description" : "Emergency incident reported via interactive map coordinate selection",
-    "address" : "Incident at Lat 12.5684, Lon 77.0526 (Bengaluru)",
-    "status" : "DISPATCHED",
+    "description" : "Multi-vehicle collision with severe trauma reported\n[AI Protocol Checklist: Direct pressure hemorrhage control / Tourniquet application; C-Spine stabilization and pelvic binder if indicated; High-flow 100% O2 via non-rebreather mask; Notify Trauma Team: Prepare Trauma Bay 1 & massive transfusion]",
+    "address" : "Brigade Road Junction, Bengaluru",
+    "status" : "COMPLETED",
     "patientCount" : 1,
     "priority" : "CRITICAL",
-    "latitude" : 12.568368589303175,
-    "longitude" : 77.05261230468751,
-    "createdAt" : "2026-09-25T13:07:51.435053Z",
-    "updatedAt" : "2026-09-25T13:08:03.748693Z"
+    "latitude" : 12.9738,
+    "longitude" : 77.6074,
+    "createdAt" : "2026-09-25T13:34:42.742643Z",
+    "updatedAt" : "2026-09-25T13:35:55.434731Z"
   }, {
     "id" : "30000000-0000-0000-0000-000000000001",
     "callerName" : "Demo Caller 1",
@@ -38,8 +38,8 @@
     "priority" : "CRITICAL",
     "latitude" : 12.9735,
     "longitude" : 77.5968,
-    "createdAt" : "2026-09-25T12:49:41.547930Z",
-    "updatedAt" : "2026-09-25T12:50:41.072452Z"
+    "createdAt" : "2026-09-25T13:29:32.851299Z",
+    "updatedAt" : "2026-09-25T13:30:33.737863Z"
   }, {
     "id" : "30000000-0000-0000-0000-000000000002",
     "callerName" : "Demo Caller 2",
@@ -52,8 +52,8 @@
     "priority" : "HIGH",
     "latitude" : 12.9655,
     "longitude" : 77.6015,
-    "createdAt" : "2026-09-25T12:49:41.547930Z",
-    "updatedAt" : "2026-09-25T13:03:46.453650Z"
+    "createdAt" : "2026-09-25T13:29:32.851299Z",
+    "updatedAt" : "2026-09-25T13:32:42.412463Z"
   }, {
     "id" : "30000000-0000-0000-0000-000000000003",
     "callerName" : "Priya Sharma",
@@ -66,24 +66,37 @@
     "priority" : "CRITICAL",
     "latitude" : 12.9812,
     "longitude" : 77.5877,
-    "createdAt" : "2026-09-25T12:49:41.547930Z",
-    "updatedAt" : "2026-09-25T13:07:27.602310Z"
+    "createdAt" : "2026-09-25T13:29:32.851299Z",
+    "updatedAt" : "2026-09-25T13:30:55.687396Z"
   } ],
   "dispatches" : [ {
-    "id" : "73d602c2-0c45-407b-9318-832649c27703",
-    "emergencyId" : "f7101da8-8613-4a12-a1a1-78982e876819",
+    "id" : "7b48cf59-7184-4f7d-a65c-b6d40c810ab9",
+    "emergencyId" : "016ec001-2ff9-42fa-b96b-1b7cda54eb10",
     "ambulanceId" : "20000000-0000-0000-0000-000000000001",
-    "dispatcherName" : "EMS Commander",
-    "status" : "DISPATCHED",
-    "distanceKm" : 85.8,
-    "etaMinutes" : 82.9,
-    "score" : 0.6,
-    "hospitalId" : null,
-    "assignedAt" : "2026-09-25T13:08:03.745226700Z",
+    "dispatcherName" : "AI Auto-Dispatcher",
+    "status" : "COMPLETED",
+    "distanceKm" : 2.05,
+    "etaMinutes" : 5.5,
+    "score" : 0.87,
+    "hospitalId" : "10000000-0000-0000-0000-000000000002",
+    "assignedAt" : "2026-09-25T13:34:53.259506Z",
     "acceptedAt" : null,
-    "completedAt" : null
+    "completedAt" : "2026-09-25T13:35:55.434731Z"
   }, {
-    "id" : "c4222088-3895-495c-b463-535170ea19e6",
+    "id" : "e209926c-998d-40e6-853a-d7604e492ee3",
+    "emergencyId" : "30000000-0000-0000-0000-000000000002",
+    "ambulanceId" : "20000000-0000-0000-0000-000000000002",
+    "dispatcherName" : "AI Dispatch Assistant",
+    "status" : "COMPLETED",
+    "distanceKm" : 1.28,
+    "etaMinutes" : 3.1,
+    "score" : 0.81,
+    "hospitalId" : "10000000-0000-0000-0000-000000000002",
+    "assignedAt" : "2026-09-25T13:30:04.348380Z",
+    "acceptedAt" : null,
+    "completedAt" : "2026-09-25T13:32:42.412463Z"
+  }, {
+    "id" : "d782f208-411c-49fc-a986-700f75744793",
     "emergencyId" : "30000000-0000-0000-0000-000000000003",
     "ambulanceId" : "20000000-0000-0000-0000-000000000003",
     "dispatcherName" : "AI Auto-Dispatcher",
@@ -92,24 +105,11 @@
     "etaMinutes" : 3.6,
     "score" : 0.9,
     "hospitalId" : "10000000-0000-0000-0000-000000000001",
-    "assignedAt" : "2026-09-25T13:05:38.529770Z",
+    "assignedAt" : "2026-09-25T13:29:58.732093Z",
     "acceptedAt" : null,
-    "completedAt" : "2026-09-25T13:07:27.602824Z"
+    "completedAt" : "2026-09-25T13:30:55.687396Z"
   }, {
-    "id" : "6512a098-7a07-4ff5-9352-9fb72328cfc1",
-    "emergencyId" : "30000000-0000-0000-0000-000000000002",
-    "ambulanceId" : "20000000-0000-0000-0000-000000000001",
-    "dispatcherName" : "AI Auto-Dispatcher",
-    "status" : "COMPLETED",
-    "distanceKm" : 1.91,
-    "etaMinutes" : 4.5,
-    "score" : 0.88,
-    "hospitalId" : "10000000-0000-0000-0000-000000000002",
-    "assignedAt" : "2026-09-25T13:02:48.903095Z",
-    "acceptedAt" : null,
-    "completedAt" : "2026-09-25T13:03:46.453650Z"
-  }, {
-    "id" : "e712c743-c56f-4697-b9e6-221281d87c96",
+    "id" : "1c1f18a5-176f-4446-a224-edbb00c5ade7",
     "emergencyId" : "30000000-0000-0000-0000-000000000001",
     "ambulanceId" : "20000000-0000-0000-0000-000000000001",
     "dispatcherName" : "AI Auto-Dispatcher",
@@ -118,22 +118,22 @@
     "etaMinutes" : 4.9,
     "score" : 0.87,
     "hospitalId" : "10000000-0000-0000-0000-000000000001",
-    "assignedAt" : "2026-09-25T12:49:43.487820Z",
+    "assignedAt" : "2026-09-25T13:29:36.760879Z",
     "acceptedAt" : null,
-    "completedAt" : "2026-09-25T12:50:41.074451Z"
+    "completedAt" : "2026-09-25T13:30:33.737863Z"
   } ],
   "ambulances" : [ {
     "id" : "20000000-0000-0000-0000-000000000001",
     "registrationNumber" : "KA-01-AE-1001",
     "type" : "ALS",
-    "status" : "DISPATCHED",
+    "status" : "AVAILABLE",
     "driverName" : "Arun Kumar",
     "emtName" : "Meena R",
     "latitude" : 12.96201,
     "longitude" : 77.6082,
     "speed" : 0.0,
     "heading" : 90.0,
-    "lastLocationAt" : "2026-09-25T13:03:43.432074Z"
+    "lastLocationAt" : "2026-09-25T13:35:47.423736Z"
   }, {
     "id" : "20000000-0000-0000-0000-000000000002",
     "registrationNumber" : "KA-01-AE-1002",
@@ -141,11 +141,11 @@
     "status" : "AVAILABLE",
     "driverName" : "Ravi S",
     "emtName" : "Naveen K",
-    "latitude" : 12.966,
-    "longitude" : 77.6,
+    "latitude" : 12.96201,
+    "longitude" : 77.6082,
     "speed" : 0.0,
     "heading" : 180.0,
-    "lastLocationAt" : "2026-09-25T12:09:06.780119Z"
+    "lastLocationAt" : "2026-09-25T13:30:58.341194Z"
   }, {
     "id" : "20000000-0000-0000-0000-000000000003",
     "registrationNumber" : "KA-01-AE-1003",
@@ -157,7 +157,7 @@
     "longitude" : 77.59487,
     "speed" : 0.0,
     "heading" : 120.0,
-    "lastLocationAt" : "2026-09-25T13:06:33.058512Z"
+    "lastLocationAt" : "2026-09-25T13:30:52.682305Z"
   }, {
     "id" : "20000000-0000-0000-0000-000000000004",
     "registrationNumber" : "KA-01-AE-1004",
@@ -208,7 +208,7 @@
     "pediatricServices" : false,
     "maternityServices" : false,
     "totalBeds" : 120,
-    "availableBeds" : 21,
+    "availableBeds" : 20,
     "icuBedsTotal" : 24,
     "icuBedsAvailable" : 4,
     "traumaBaysTotal" : 12,
@@ -221,7 +221,7 @@
     "phone" : "080-40001003",
     "designatedEdPhone" : "+918022220003",
     "address" : "Demo South Avenue, Bengaluru",
-    "status" : "AVAILABLE",
+    "status" : "LIMITED_CAPACITY",
     "latitude" : 12.9447,
     "longitude" : 77.5711,
     "emergencyDepartment" : true,
@@ -239,7 +239,7 @@
     "demoData" : true
   } ],
   "auditLogs" : [ {
-    "id" : 33,
+    "id" : 127,
     "actor" : "EMS Dispatcher",
     "action" : "DATABASE_RESET",
     "entityType" : "SYSTEM",
@@ -247,296 +247,276 @@
     "previousState" : null,
     "newState" : "RESET",
     "metadata" : "Restored demo seed data, ready fleet status, and hospital capacities",
-    "createdAt" : "2026-09-25T12:49:41.622944Z"
+    "createdAt" : "2026-09-25T13:29:32.852884Z"
   }, {
-    "id" : 34,
+    "id" : 128,
     "actor" : "AI Auto-Dispatcher",
     "action" : "AMBULANCE_AUTO_ASSIGNED",
     "entityType" : "DISPATCH",
-    "entityId" : "e712c743-c56f-4697-b9e6-221281d87c96",
+    "entityId" : "1c1f18a5-176f-4446-a224-edbb00c5ade7",
     "previousState" : "PENDING_DISPATCH",
     "newState" : "DISPATCHED",
     "metadata" : "ambulance=20000000-0000-0000-0000-000000000001;hospital=Aegis City General",
-    "createdAt" : "2026-09-25T12:49:43.494636Z"
+    "createdAt" : "2026-09-25T13:29:36.760879Z"
   }, {
-    "id" : 35,
+    "id" : 129,
     "actor" : "Simulation Engine",
     "action" : "SIMULATION_STARTED",
     "entityType" : "DISPATCH",
-    "entityId" : "e712c743-c56f-4697-b9e6-221281d87c96",
+    "entityId" : "1c1f18a5-176f-4446-a224-edbb00c5ade7",
     "previousState" : null,
     "newState" : "SIMULATING_SCENE",
     "metadata" : "roadDistanceKm=2.39;etaMin=4.9",
-    "createdAt" : "2026-09-25T12:49:43.536642Z"
+    "createdAt" : "2026-09-25T13:29:36.778079Z"
   }, {
-    "id" : 36,
-    "actor" : "Driver MDT (KA-01-AE-1001)",
-    "action" : "SMS_NOTIFIED_ED",
-    "entityType" : "DISPATCH",
-    "entityId" : "e712c743-c56f-4697-b9e6-221281d87c96",
-    "previousState" : "EN_ROUTE_TO_HOSPITAL",
-    "newState" : "ED_PRE_ALERTED",
-    "metadata" : "hospital=Aegis City General;phone=+918022220001;msgId=AEGIS-SMS-A94E4A76",
-    "createdAt" : "2026-09-25T12:50:05.184851Z"
-  }, {
-    "id" : 37,
-    "actor" : "Simulation Engine",
-    "action" : "SIMULATION_COMPLETED",
-    "entityType" : "DISPATCH",
-    "entityId" : "e712c743-c56f-4697-b9e6-221281d87c96",
-    "previousState" : "SIMULATING_SCENE",
-    "newState" : "ARRIVED_AT_SCENE",
-    "metadata" : "Vehicle arrived via road routing",
-    "createdAt" : "2026-09-25T12:50:08.353400Z"
-  }, {
-    "id" : 38,
-    "actor" : "Simulation Engine",
-    "action" : "SIMULATION_STARTED",
-    "entityType" : "DISPATCH",
-    "entityId" : "e712c743-c56f-4697-b9e6-221281d87c96",
-    "previousState" : null,
-    "newState" : "SIMULATING_HOSPITAL",
-    "metadata" : "roadDistanceKm=0.57;etaMin=2.0",
-    "createdAt" : "2026-09-25T12:50:13.246429Z"
-  }, {
-    "id" : 39,
-    "actor" : "Simulation Engine",
-    "action" : "SIMULATION_COMPLETED",
-    "entityType" : "DISPATCH",
-    "entityId" : "e712c743-c56f-4697-b9e6-221281d87c96",
-    "previousState" : "SIMULATING_HOSPITAL",
-    "newState" : "ARRIVED_AT_HOSPITAL",
-    "metadata" : "Vehicle arrived via road routing",
-    "createdAt" : "2026-09-25T12:50:38.067792Z"
-  }, {
-    "id" : 40,
-    "actor" : "Autonomous CAD System",
-    "action" : "MISSION_COMPLETED",
-    "entityType" : "DISPATCH",
-    "entityId" : "e712c743-c56f-4697-b9e6-221281d87c96",
-    "previousState" : "ARRIVED_AT_HOSPITAL",
-    "newState" : "COMPLETED",
-    "metadata" : "Patient successfully admitted to hospital facility; vehicle returned to AVAILABLE",
-    "createdAt" : "2026-09-25T12:50:41.080447Z"
-  }, {
-    "id" : 41,
-    "actor" : "Driver MDT (KA-01-AE-1001)",
-    "action" : "SMS_NOTIFIED_ED",
-    "entityType" : "DISPATCH",
-    "entityId" : "e712c743-c56f-4697-b9e6-221281d87c96",
-    "previousState" : "EN_ROUTE_TO_HOSPITAL",
-    "newState" : "ED_PRE_ALERTED",
-    "metadata" : "hospital=Aegis City General;phone=+918022220001;msgId=AEGIS-SMS-DDAEF26F",
-    "createdAt" : "2026-09-25T12:51:56.624703Z"
-  }, {
-    "id" : 42,
-    "actor" : "Hospital ED Webhook",
-    "action" : "SMS_INBOUND_REPLY",
-    "entityType" : "SMS_GATEWAY",
-    "entityId" : null,
-    "previousState" : null,
-    "newState" : "1",
-    "metadata" : "from=+918022220001",
-    "createdAt" : "2026-09-25T12:52:12.939421Z"
-  }, {
-    "id" : 43,
-    "actor" : "Regional Triage Officer",
-    "action" : "HOSPITAL_DECLARED_DIVERSION",
-    "entityType" : "HOSPITAL",
-    "entityId" : "10000000-0000-0000-0000-000000000003",
-    "previousState" : "LIMITED_CAPACITY",
-    "newState" : "DIVERSION",
-    "metadata" : "reason=ED Saturation Protocol",
-    "createdAt" : "2026-09-25T12:56:51.270098Z"
-  }, {
-    "id" : 44,
-    "actor" : "Regional Triage Officer",
-    "action" : "HOSPITAL_RESUMED_NORMAL",
-    "entityType" : "HOSPITAL",
-    "entityId" : "10000000-0000-0000-0000-000000000003",
-    "previousState" : "DIVERSION",
-    "newState" : "AVAILABLE",
-    "metadata" : "reason=ED Saturation Protocol",
-    "createdAt" : "2026-09-25T12:57:41.223895Z"
-  }, {
-    "id" : 45,
+    "id" : 130,
     "actor" : "AI Auto-Dispatcher",
     "action" : "AMBULANCE_AUTO_ASSIGNED",
     "entityType" : "DISPATCH",
-    "entityId" : "6512a098-7a07-4ff5-9352-9fb72328cfc1",
-    "previousState" : "PENDING_DISPATCH",
-    "newState" : "DISPATCHED",
-    "metadata" : "ambulance=20000000-0000-0000-0000-000000000001;hospital=Metro Trauma Centre",
-    "createdAt" : "2026-09-25T13:02:48.903095Z"
-  }, {
-    "id" : 46,
-    "actor" : "Simulation Engine",
-    "action" : "SIMULATION_STARTED",
-    "entityType" : "DISPATCH",
-    "entityId" : "6512a098-7a07-4ff5-9352-9fb72328cfc1",
-    "previousState" : null,
-    "newState" : "SIMULATING_SCENE",
-    "metadata" : "roadDistanceKm=1.91;etaMin=4.5",
-    "createdAt" : "2026-09-25T13:02:48.926003Z"
-  }, {
-    "id" : 47,
-    "actor" : "Simulation Engine",
-    "action" : "SIMULATION_COMPLETED",
-    "entityType" : "DISPATCH",
-    "entityId" : "6512a098-7a07-4ff5-9352-9fb72328cfc1",
-    "previousState" : "SIMULATING_SCENE",
-    "newState" : "ARRIVED_AT_SCENE",
-    "metadata" : "Vehicle arrived via road routing",
-    "createdAt" : "2026-09-25T13:03:13.749377Z"
-  }, {
-    "id" : 48,
-    "actor" : "Simulation Engine",
-    "action" : "SIMULATION_STARTED",
-    "entityType" : "DISPATCH",
-    "entityId" : "6512a098-7a07-4ff5-9352-9fb72328cfc1",
-    "previousState" : null,
-    "newState" : "SIMULATING_HOSPITAL",
-    "metadata" : "roadDistanceKm=2.76;etaMin=7.5",
-    "createdAt" : "2026-09-25T13:03:18.619333Z"
-  }, {
-    "id" : 49,
-    "actor" : "Driver MDT (KA-01-AE-1001)",
-    "action" : "SMS_NOTIFIED_ED",
-    "entityType" : "DISPATCH",
-    "entityId" : "6512a098-7a07-4ff5-9352-9fb72328cfc1",
-    "previousState" : "EN_ROUTE_TO_HOSPITAL",
-    "newState" : "ED_PRE_ALERTED",
-    "metadata" : "hospital=Metro Trauma Centre;phone=+918022220002;msgId=AEGIS-SMS-F93A22F3",
-    "createdAt" : "2026-09-25T13:03:32.282911Z"
-  }, {
-    "id" : 50,
-    "actor" : "Simulation Engine",
-    "action" : "SIMULATION_COMPLETED",
-    "entityType" : "DISPATCH",
-    "entityId" : "6512a098-7a07-4ff5-9352-9fb72328cfc1",
-    "previousState" : "SIMULATING_HOSPITAL",
-    "newState" : "ARRIVED_AT_HOSPITAL",
-    "metadata" : "Vehicle arrived via road routing",
-    "createdAt" : "2026-09-25T13:03:43.448029Z"
-  }, {
-    "id" : 51,
-    "actor" : "Autonomous CAD System",
-    "action" : "MISSION_COMPLETED",
-    "entityType" : "DISPATCH",
-    "entityId" : "6512a098-7a07-4ff5-9352-9fb72328cfc1",
-    "previousState" : "ARRIVED_AT_HOSPITAL",
-    "newState" : "COMPLETED",
-    "metadata" : "Patient successfully admitted to hospital facility; vehicle returned to AVAILABLE",
-    "createdAt" : "2026-09-25T13:03:46.456619Z"
-  }, {
-    "id" : 52,
-    "actor" : "Driver MDT (KA-01-AE-1001)",
-    "action" : "SMS_NOTIFIED_ED",
-    "entityType" : "DISPATCH",
-    "entityId" : "6512a098-7a07-4ff5-9352-9fb72328cfc1",
-    "previousState" : "EN_ROUTE_TO_HOSPITAL",
-    "newState" : "ED_PRE_ALERTED",
-    "metadata" : "hospital=Metro Trauma Centre;phone=+918022220002;msgId=AEGIS-SMS-4FFAE336",
-    "createdAt" : "2026-09-25T13:04:17.797487Z"
-  }, {
-    "id" : 53,
-    "actor" : "ED Personnel",
-    "action" : "HOSPITAL_CAPACITY_UPDATED",
-    "entityType" : "HOSPITAL",
-    "entityId" : "10000000-0000-0000-0000-000000000002",
-    "previousState" : null,
-    "newState" : "AVAILABLE",
-    "metadata" : "Available Beds: 21, ICU: 4",
-    "createdAt" : "2026-09-25T13:04:33.786484Z"
-  }, {
-    "id" : 54,
-    "actor" : "AI Auto-Dispatcher",
-    "action" : "AMBULANCE_AUTO_ASSIGNED",
-    "entityType" : "DISPATCH",
-    "entityId" : "c4222088-3895-495c-b463-535170ea19e6",
+    "entityId" : "d782f208-411c-49fc-a986-700f75744793",
     "previousState" : "PENDING_DISPATCH",
     "newState" : "DISPATCHED",
     "metadata" : "ambulance=20000000-0000-0000-0000-000000000003;hospital=Aegis City General",
-    "createdAt" : "2026-09-25T13:05:38.530770Z"
+    "createdAt" : "2026-09-25T13:29:58.732093Z"
   }, {
-    "id" : 55,
+    "id" : 131,
     "actor" : "Simulation Engine",
     "action" : "SIMULATION_STARTED",
     "entityType" : "DISPATCH",
-    "entityId" : "c4222088-3895-495c-b463-535170ea19e6",
+    "entityId" : "d782f208-411c-49fc-a986-700f75744793",
     "previousState" : null,
     "newState" : "SIMULATING_SCENE",
     "metadata" : "roadDistanceKm=1.58;etaMin=3.6",
-    "createdAt" : "2026-09-25T13:05:38.571221Z"
+    "createdAt" : "2026-09-25T13:29:58.761309Z"
   }, {
-    "id" : 56,
+    "id" : 132,
     "actor" : "Simulation Engine",
     "action" : "SIMULATION_COMPLETED",
     "entityType" : "DISPATCH",
-    "entityId" : "c4222088-3895-495c-b463-535170ea19e6",
+    "entityId" : "1c1f18a5-176f-4446-a224-edbb00c5ade7",
     "previousState" : "SIMULATING_SCENE",
     "newState" : "ARRIVED_AT_SCENE",
     "metadata" : "Vehicle arrived via road routing",
-    "createdAt" : "2026-09-25T13:06:03.391584Z"
+    "createdAt" : "2026-09-25T13:30:01.594525Z"
   }, {
-    "id" : 57,
+    "id" : 133,
+    "actor" : "AI Dispatch Assistant",
+    "action" : "AMBULANCE_AUTO_ASSIGNED",
+    "entityType" : "DISPATCH",
+    "entityId" : "e209926c-998d-40e6-853a-d7604e492ee3",
+    "previousState" : "PENDING_DISPATCH",
+    "newState" : "DISPATCHED",
+    "metadata" : "ambulance=20000000-0000-0000-0000-000000000002;hospital=Metro Trauma Centre",
+    "createdAt" : "2026-09-25T13:30:04.351949Z"
+  }, {
+    "id" : 134,
     "actor" : "Simulation Engine",
     "action" : "SIMULATION_STARTED",
     "entityType" : "DISPATCH",
-    "entityId" : "c4222088-3895-495c-b463-535170ea19e6",
+    "entityId" : "e209926c-998d-40e6-853a-d7604e492ee3",
+    "previousState" : null,
+    "newState" : "SIMULATING_SCENE",
+    "metadata" : "roadDistanceKm=1.28;etaMin=3.1",
+    "createdAt" : "2026-09-25T13:30:04.386974Z"
+  }, {
+    "id" : 135,
+    "actor" : "Simulation Engine",
+    "action" : "SIMULATION_STARTED",
+    "entityType" : "DISPATCH",
+    "entityId" : "1c1f18a5-176f-4446-a224-edbb00c5ade7",
     "previousState" : null,
     "newState" : "SIMULATING_HOSPITAL",
-    "metadata" : "roadDistanceKm=1.91;etaMin=4.5",
-    "createdAt" : "2026-09-25T13:06:08.251915Z"
+    "metadata" : "roadDistanceKm=0.57;etaMin=2.0",
+    "createdAt" : "2026-09-25T13:30:05.925467Z"
   }, {
-    "id" : 58,
+    "id" : 136,
     "actor" : "Simulation Engine",
     "action" : "SIMULATION_COMPLETED",
     "entityType" : "DISPATCH",
-    "entityId" : "c4222088-3895-495c-b463-535170ea19e6",
+    "entityId" : "d782f208-411c-49fc-a986-700f75744793",
+    "previousState" : "SIMULATING_SCENE",
+    "newState" : "ARRIVED_AT_SCENE",
+    "metadata" : "Vehicle arrived via road routing",
+    "createdAt" : "2026-09-25T13:30:23.566119Z"
+  }, {
+    "id" : 137,
+    "actor" : "Simulation Engine",
+    "action" : "SIMULATION_STARTED",
+    "entityType" : "DISPATCH",
+    "entityId" : "d782f208-411c-49fc-a986-700f75744793",
+    "previousState" : null,
+    "newState" : "SIMULATING_HOSPITAL",
+    "metadata" : "roadDistanceKm=1.91;etaMin=4.5",
+    "createdAt" : "2026-09-25T13:30:27.876271Z"
+  }, {
+    "id" : 138,
+    "actor" : "Simulation Engine",
+    "action" : "SIMULATION_COMPLETED",
+    "entityType" : "DISPATCH",
+    "entityId" : "e209926c-998d-40e6-853a-d7604e492ee3",
+    "previousState" : "SIMULATING_SCENE",
+    "newState" : "ARRIVED_AT_SCENE",
+    "metadata" : "Vehicle arrived via road routing",
+    "createdAt" : "2026-09-25T13:30:29.195080Z"
+  }, {
+    "id" : 139,
+    "actor" : "Simulation Engine",
+    "action" : "SIMULATION_COMPLETED",
+    "entityType" : "DISPATCH",
+    "entityId" : "1c1f18a5-176f-4446-a224-edbb00c5ade7",
     "previousState" : "SIMULATING_HOSPITAL",
     "newState" : "ARRIVED_AT_HOSPITAL",
     "metadata" : "Vehicle arrived via road routing",
-    "createdAt" : "2026-09-25T13:06:33.065532Z"
+    "createdAt" : "2026-09-25T13:30:30.734004Z"
   }, {
-    "id" : 59,
+    "id" : 140,
+    "actor" : "Simulation Engine",
+    "action" : "SIMULATION_STARTED",
+    "entityType" : "DISPATCH",
+    "entityId" : "e209926c-998d-40e6-853a-d7604e492ee3",
+    "previousState" : null,
+    "newState" : "SIMULATING_HOSPITAL",
+    "metadata" : "roadDistanceKm=2.76;etaMin=7.5",
+    "createdAt" : "2026-09-25T13:30:33.534017Z"
+  }, {
+    "id" : 141,
     "actor" : "Autonomous CAD System",
     "action" : "MISSION_COMPLETED",
     "entityType" : "DISPATCH",
-    "entityId" : "c4222088-3895-495c-b463-535170ea19e6",
+    "entityId" : "1c1f18a5-176f-4446-a224-edbb00c5ade7",
     "previousState" : "ARRIVED_AT_HOSPITAL",
     "newState" : "COMPLETED",
     "metadata" : "Patient successfully admitted to hospital facility; vehicle returned to AVAILABLE",
-    "createdAt" : "2026-09-25T13:06:36.083910Z"
+    "createdAt" : "2026-09-25T13:30:33.744093Z"
   }, {
-    "id" : 60,
+    "id" : 142,
+    "actor" : "Simulation Engine",
+    "action" : "SIMULATION_COMPLETED",
+    "entityType" : "DISPATCH",
+    "entityId" : "d782f208-411c-49fc-a986-700f75744793",
+    "previousState" : "SIMULATING_HOSPITAL",
+    "newState" : "ARRIVED_AT_HOSPITAL",
+    "metadata" : "Vehicle arrived via road routing",
+    "createdAt" : "2026-09-25T13:30:52.684333Z"
+  }, {
+    "id" : 143,
+    "actor" : "Autonomous CAD System",
+    "action" : "MISSION_COMPLETED",
+    "entityType" : "DISPATCH",
+    "entityId" : "d782f208-411c-49fc-a986-700f75744793",
+    "previousState" : "ARRIVED_AT_HOSPITAL",
+    "newState" : "COMPLETED",
+    "metadata" : "Patient successfully admitted to hospital facility; vehicle returned to AVAILABLE",
+    "createdAt" : "2026-09-25T13:30:55.692070Z"
+  }, {
+    "id" : 144,
+    "actor" : "Simulation Engine",
+    "action" : "SIMULATION_COMPLETED",
+    "entityType" : "DISPATCH",
+    "entityId" : "e209926c-998d-40e6-853a-d7604e492ee3",
+    "previousState" : "SIMULATING_HOSPITAL",
+    "newState" : "ARRIVED_AT_HOSPITAL",
+    "metadata" : "Vehicle arrived via road routing",
+    "createdAt" : "2026-09-25T13:30:58.351201Z"
+  }, {
+    "id" : 145,
+    "actor" : "Autonomous CAD System",
+    "action" : "MISSION_COMPLETED",
+    "entityType" : "DISPATCH",
+    "entityId" : "e209926c-998d-40e6-853a-d7604e492ee3",
+    "previousState" : "ARRIVED_AT_HOSPITAL",
+    "newState" : "COMPLETED",
+    "metadata" : "Patient successfully admitted to hospital facility; vehicle returned to AVAILABLE",
+    "createdAt" : "2026-09-25T13:31:01.356981Z"
+  }, {
+    "id" : 146,
     "actor" : "EMS Dispatcher",
     "action" : "STATUS_CHANGED",
     "entityType" : "DISPATCH",
-    "entityId" : "c4222088-3895-495c-b463-535170ea19e6",
+    "entityId" : "e209926c-998d-40e6-853a-d7604e492ee3",
     "previousState" : "COMPLETED",
     "newState" : "COMPLETED",
-    "metadata" : "emergency=30000000-0000-0000-0000-000000000003;ambulance=20000000-0000-0000-0000-000000000003",
-    "createdAt" : "2026-09-25T13:07:27.603359Z"
+    "metadata" : "emergency=30000000-0000-0000-0000-000000000002;ambulance=20000000-0000-0000-0000-000000000002",
+    "createdAt" : "2026-09-25T13:32:42.412463Z"
   }, {
-    "id" : 61,
+    "id" : 147,
     "actor" : "John Doe",
     "action" : "EMERGENCY_CREATED",
     "entityType" : "EMERGENCY",
-    "entityId" : "f7101da8-8613-4a12-a1a1-78982e876819",
+    "entityId" : "016ec001-2ff9-42fa-b96b-1b7cda54eb10",
     "previousState" : null,
     "newState" : "PENDING_DISPATCH",
     "metadata" : "priority=CRITICAL;type=ACCIDENT",
-    "createdAt" : "2026-09-25T13:07:51.436288Z"
+    "createdAt" : "2026-09-25T13:34:42.743643Z"
   }, {
-    "id" : 62,
-    "actor" : "EMS Commander",
-    "action" : "AMBULANCE_ASSIGNED",
+    "id" : 148,
+    "actor" : "AI Auto-Dispatcher",
+    "action" : "AMBULANCE_AUTO_ASSIGNED",
     "entityType" : "DISPATCH",
-    "entityId" : "73d602c2-0c45-407b-9318-832649c27703",
+    "entityId" : "7b48cf59-7184-4f7d-a65c-b6d40c810ab9",
     "previousState" : "PENDING_DISPATCH",
     "newState" : "DISPATCHED",
-    "metadata" : "ambulance=20000000-0000-0000-0000-000000000001;emergency=f7101da8-8613-4a12-a1a1-78982e876819",
-    "createdAt" : "2026-09-25T13:08:03.748693Z"
+    "metadata" : "ambulance=20000000-0000-0000-0000-000000000001;hospital=Metro Trauma Centre",
+    "createdAt" : "2026-09-25T13:34:53.259506Z"
+  }, {
+    "id" : 149,
+    "actor" : "Simulation Engine",
+    "action" : "SIMULATION_STARTED",
+    "entityType" : "DISPATCH",
+    "entityId" : "7b48cf59-7184-4f7d-a65c-b6d40c810ab9",
+    "previousState" : null,
+    "newState" : "SIMULATING_SCENE",
+    "metadata" : "roadDistanceKm=2.05;etaMin=5.5",
+    "createdAt" : "2026-09-25T13:34:53.282831Z"
+  }, {
+    "id" : 150,
+    "actor" : "Simulation Engine",
+    "action" : "SIMULATION_COMPLETED",
+    "entityType" : "DISPATCH",
+    "entityId" : "7b48cf59-7184-4f7d-a65c-b6d40c810ab9",
+    "previousState" : "SIMULATING_SCENE",
+    "newState" : "ARRIVED_AT_SCENE",
+    "metadata" : "Vehicle arrived via road routing",
+    "createdAt" : "2026-09-25T13:35:18.102943Z"
+  }, {
+    "id" : 151,
+    "actor" : "Simulation Engine",
+    "action" : "SIMULATION_STARTED",
+    "entityType" : "DISPATCH",
+    "entityId" : "7b48cf59-7184-4f7d-a65c-b6d40c810ab9",
+    "previousState" : null,
+    "newState" : "SIMULATING_HOSPITAL",
+    "metadata" : "roadDistanceKm=1.88;etaMin=5.1",
+    "createdAt" : "2026-09-25T13:35:22.604257Z"
+  }, {
+    "id" : 152,
+    "actor" : "Simulation Engine",
+    "action" : "SIMULATION_COMPLETED",
+    "entityType" : "DISPATCH",
+    "entityId" : "7b48cf59-7184-4f7d-a65c-b6d40c810ab9",
+    "previousState" : "SIMULATING_HOSPITAL",
+    "newState" : "ARRIVED_AT_HOSPITAL",
+    "metadata" : "Vehicle arrived via road routing",
+    "createdAt" : "2026-09-25T13:35:47.431384Z"
+  }, {
+    "id" : 153,
+    "actor" : "Autonomous CAD System",
+    "action" : "MISSION_COMPLETED",
+    "entityType" : "DISPATCH",
+    "entityId" : "7b48cf59-7184-4f7d-a65c-b6d40c810ab9",
+    "previousState" : "ARRIVED_AT_HOSPITAL",
+    "newState" : "COMPLETED",
+    "metadata" : "Patient successfully admitted to hospital facility; vehicle returned to AVAILABLE",
+    "createdAt" : "2026-09-25T13:35:50.441300Z"
+  }, {
+    "id" : 154,
+    "actor" : "EMS Dispatcher",
+    "action" : "STATUS_CHANGED",
+    "entityType" : "DISPATCH",
+    "entityId" : "7b48cf59-7184-4f7d-a65c-b6d40c810ab9",
+    "previousState" : "COMPLETED",
+    "newState" : "COMPLETED",
+    "metadata" : "emergency=016ec001-2ff9-42fa-b96b-1b7cda54eb10;ambulance=20000000-0000-0000-0000-000000000001",
+    "createdAt" : "2026-09-25T13:35:55.434731Z"
   } ]
 }

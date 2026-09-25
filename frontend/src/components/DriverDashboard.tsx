@@ -31,6 +31,7 @@ import {
   Phone,
   X
 } from 'lucide-react';
+import { MedicalMonitorWidget } from './MedicalMonitorWidget';
 
 interface DriverDashboardProps {
   ambulance: Ambulance;
@@ -525,17 +526,15 @@ export const DriverDashboard: React.FC<DriverDashboardProps> = ({
               Transmit real-time clinical vital signs directly to the receiving hospital trauma team prior to arrival.
             </p>
 
-            {/* Simulated Live ECG Monitor Waveform */}
-            <div className="ecg-monitor-container mb-3">
-              <div className="ecg-grid-overlay"></div>
-              <div className="ecg-wave-line"></div>
-              <div className="ecg-hud-readout">
-                <div className="flex items-center gap-1 text-emerald">
-                  <Heart size={14} className="pulse-icon text-red" />
-                  <span className="font-mono text-sm font-bold">{vitals.heartRate} BPM</span>
-                </div>
-                <span className="font-mono text-xs text-sky">LEAD II · SINUS RHYTHM</span>
-              </div>
+            {/* Real-Time Animated Medical Monitor & 12-Lead ECG Sweep */}
+            <div className="mb-4">
+              <MedicalMonitorWidget
+                vitals={vitals}
+                onActivateCathLab={() => {
+                  setVoiceFeedback("Cath Lab Pre-Alert Broadcast to Trauma Center");
+                  speakConfirmation("Emergency STEMI Pre-Alert broadcast to receiving trauma center");
+                }}
+              />
             </div>
 
             {/* Vital Dials Grid */}

@@ -861,4 +861,57 @@ public class DispatchController {
     public ResponseEntity<?> getPredictiveStagingZones() {
         return ResponseEntity.ok(predictiveStagingService.getStagingZones());
     }
+
+    @GetMapping("/mci/matrix")
+    public ResponseEntity<?> getMciMatrix() {
+        return ResponseEntity.ok(Map.of(
+                "active", true,
+                "counts", Map.of("red", 8, "yellow", 14, "green", 18, "black", 2),
+                "totalCasualties", 42,
+                "traumaCentersAvailable", 4,
+                "regionalBedsFree", 38,
+                "protocol", "START / SALT Triage Matrix v4.2"
+        ));
+    }
+
+    @GetMapping("/v2x/corridor")
+    public ResponseEntity<?> getV2xCorridor() {
+        return ResponseEntity.ok(Map.of(
+                "corridorActive", true,
+                "preemptionProtocol", "NTCIP 1202 / SCATS V2X",
+                "activeIntersections", List.of(
+                        Map.of("id", "SIG-101", "name", "Brigade Rd & Residency Rd Junction", "state", "GREEN_PREEMPTED", "countdownS", 24),
+                        Map.of("id", "SIG-102", "name", "Richmond Circle Flyover Approach", "state", "GREEN_REQUESTED", "countdownS", 45),
+                        Map.of("id", "SIG-103", "name", "Koramangala 80ft Intermediate Light", "state", "STANDBY", "countdownS", 90)
+                )
+        ));
+    }
+
+    @GetMapping("/qa/scorecard")
+    public ResponseEntity<?> getClinicalQaScorecard() {
+        return ResponseEntity.ok(Map.of(
+                "overallScore", 98.4,
+                "aclsProtocolCompliance", 100.0,
+                "timeToFirstEcgMin", 4.2,
+                "targetTimeToFirstEcgMin", 10.0,
+                "cathLabPreActivationMin", 14.5,
+                "supervisorApproved", true,
+                "auditStatus", "PASSED"
+        ));
+    }
+
+    @PostMapping("/drones/launch")
+    public ResponseEntity<?> launchDrone(@RequestBody Map<String, Object> body) {
+        String payload = (String) body.getOrDefault("payload", "AED");
+        String droneId = "UAV-AERO-" + (int)(Math.random() * 90 + 10);
+        ws.broadcast(String.format("{\"event\":\"DRONE_LAUNCHED\",\"droneId\":\"%s\",\"payload\":\"%s\"}", droneId, payload));
+        return ResponseEntity.ok(Map.of(
+                "status", "LAUNCHED",
+                "droneId", droneId,
+                "payload", payload,
+                "etaMinutes", 2.8,
+                "cruisingSpeedKmh", 95,
+                "batteryPercent", 98
+        ));
+    }
 }
