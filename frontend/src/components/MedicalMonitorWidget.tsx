@@ -25,22 +25,36 @@ export const MedicalMonitorWidget: React.FC<MedicalMonitorWidgetProps> = ({
   const resp = 20;
   const etco2 = 38;
 
-  // Real-time animated 12-lead ECG sweep canvas
+  // Real-time animated 12-lead ECG sweep canvas with Hi-DPI scaling & dynamic BPM
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+    const parent = canvas.parentElement;
+    const clientWidth = parent?.clientWidth || 640;
+    const clientHeight = compact ? 80 : 110;
+    const dpr = window.devicePixelRatio || 1;
+
+    canvas.width = clientWidth * dpr;
+    canvas.height = clientHeight * dpr;
+    canvas.style.width = '100%';
+    canvas.style.height = `${clientHeight}px`;
+
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
+    ctx.scale(dpr, dpr);
 
     let animationId: number;
     let x = 0;
-    const height = canvas.height;
-    const width = canvas.width;
+    const height = clientHeight;
+    const width = clientWidth;
     const baseline = height / 2;
 
     // Simulated P-QRS-T complex buffer
     const points: number[] = [];
     const stepSize = 2;
+
+    // Dynamically calculate cycle length based on HR (60s / HR * speed)
+    const cycleLengthPx = Math.max(50, Math.min(240, Math.round((60 / Math.max(40, hr)) * 140)));
 
     const render = () => {
       // Clear a small leading eraser bar for medical monitor sweep effect
@@ -52,12 +66,12 @@ export const MedicalMonitorWidget: React.FC<MedicalMonitorWidgetProps> = ({
       ctx.lineWidth = 0.5;
 
       // Generate ECG Y coordinate based on phase of heartbeat
-      const cyclePos = (x % 140) / 140;
+      const cyclePos = (x % cycleLengthPx) / cycleLengthPx;
       let y = baseline;
 
       if (cyclePos > 0.15 && cyclePos < 0.22) {
         // P wave
-        y = baseline - Math.sin((cyclePos - 0.15) / 0.07 * Math.PI) * 7;
+        y = baseline - Math.sin(((cyclePos - 0.15) / 0.07) * Math.PI) * 7;
       } else if (cyclePos >= 0.26 && cyclePos < 0.28) {
         // Q dip
         y = baseline + 6;
@@ -71,7 +85,7 @@ export const MedicalMonitorWidget: React.FC<MedicalMonitorWidgetProps> = ({
       } else if (cyclePos > 0.45 && cyclePos < 0.62) {
         // T wave (with slight elevation for critical patients)
         const stElevation = isStemiAlertActive ? 12 : 0;
-        y = baseline - Math.sin((cyclePos - 0.45) / 0.17 * Math.PI) * (10 + stElevation);
+        y = baseline - Math.sin(((cyclePos - 0.45) / 0.17) * Math.PI) * (10 + stElevation);
       }
 
       // Draw glowing ECG sweep trace
@@ -99,7 +113,7 @@ export const MedicalMonitorWidget: React.FC<MedicalMonitorWidgetProps> = ({
     return () => {
       cancelAnimationFrame(animationId);
     };
-  }, [isStemiAlertActive]);
+  }, [isStemiAlertActive, hr, compact]);
 
   const handleTriggerCathLab = () => {
     setCathLabActivated(true);

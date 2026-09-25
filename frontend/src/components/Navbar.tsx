@@ -25,7 +25,8 @@ import {
   Plane,
   Award,
   ShieldAlert,
-  Navigation
+  Navigation,
+  ChevronDown
 } from 'lucide-react';
 import { DashboardData, UserRole } from '../types';
 
@@ -85,6 +86,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenDroneDispatch,
 }) => {
   const [currentTime, setCurrentTime] = useState<string>('');
+  const [isTacticalOpsOpen, setIsTacticalOpsOpen] = useState(false);
 
   useEffect(() => {
     const updateClock = () => {
@@ -215,124 +217,154 @@ export const Navbar: React.FC<NavbarProps> = ({
 
       {/* 3. Right Section: Action Hierarchy & Grouped Utilities */}
       <div className="nav-right-zone">
-        {/* Contextual Auto-Dispatch Next Button */}
-        {pendingCount > 0 && currentRole === 'DISPATCHER' && (
-          <button
-            className="btn-calm-auto"
-            onClick={onAutoAssignNext}
-            title="Auto-dispatch nearest ambulance and hospital to highest priority incident"
-          >
-            <Zap size={13} />
-            <span>⚡ Auto-Dispatch</span>
-          </button>
-        )}
-
-        {/* Primary Intake Incident Button */}
         {currentRole === 'DISPATCHER' && (
-          <button
-            className="btn-calm-primary"
-            onClick={onOpenNewEmergency}
-            title="Intake New Emergency Incident"
-          >
-            <PlusCircle size={14} />
-            <span>+ New Call</span>
-          </button>
+          <>
+            {/* Contextual Auto-Dispatch Next Button */}
+            {pendingCount > 0 && (
+              <button
+                className="btn-calm-auto"
+                onClick={onAutoAssignNext}
+                title="Auto-dispatch nearest ambulance and hospital to highest priority incident"
+              >
+                <Zap size={13} />
+                <span>⚡ Auto-Dispatch</span>
+              </button>
+            )}
+
+            {/* Primary Intake Incident Button */}
+            <button
+              className="btn-calm-primary"
+              onClick={onOpenNewEmergency}
+              title="Intake New Emergency Incident"
+            >
+              <PlusCircle size={14} />
+              <span>+ New Call</span>
+            </button>
+
+            {/* Consolidated Tactical Operations Suite Dropdown */}
+            <div className="tactical-ops-wrapper" style={{ position: 'relative' }}>
+              <button
+                className={`btn-calm-secondary tactical-ops-trigger ${isTacticalOpsOpen ? 'active' : ''} ${isMciActive ? 'mci-alert' : ''}`}
+                onClick={() => setIsTacticalOpsOpen(!isTacticalOpsOpen)}
+                title="Open Advanced Tactical Operations Suite (NG911, V2X, MCI, Drone DFR, QA, ED Capacity)"
+              >
+                <Activity size={13} className={isMciActive ? 'text-red animate-pulse' : 'text-sky'} />
+                <span>⚡ Tactical Ops</span>
+                <ChevronDown size={12} className={`transition-transform ${isTacticalOpsOpen ? 'rotate-180' : ''}`} />
+                {isMciActive && <span className="mci-dot-badge" />}
+              </button>
+
+              {isTacticalOpsOpen && (
+                <div className="tactical-ops-menu" onClick={() => setIsTacticalOpsOpen(false)}>
+                  <div className="tactical-menu-header">
+                    <span>ADVANCED CAD SUBSYSTEMS</span>
+                  </div>
+
+                  {onOpenNG911Video && (
+                    <button className="tactical-menu-item" onClick={onOpenNG911Video}>
+                      <Video size={14} className="text-sky" />
+                      <div className="menu-text">
+                        <strong>NG911 Live Video</strong>
+                        <small>Caller WebRTC feed & indoor altimetry</small>
+                      </div>
+                    </button>
+                  )}
+
+                  {onOpenV2X && (
+                    <button className="tactical-menu-item" onClick={onOpenV2X}>
+                      <Navigation size={14} className="text-emerald" />
+                      <div className="menu-text">
+                        <strong>V2X Green Wave Preemption</strong>
+                        <small>Traffic signal priority corridor HUD</small>
+                      </div>
+                    </button>
+                  )}
+
+                  {onOpenMciTriage && (
+                    <button className="tactical-menu-item" onClick={onOpenMciTriage}>
+                      <ShieldAlert size={14} className="text-red" />
+                      <div className="menu-text">
+                        <strong>MCI START/SALT Triage</strong>
+                        <small>Mass casualty matrix & load balancer</small>
+                      </div>
+                    </button>
+                  )}
+
+                  {onOpenDroneDispatch && (
+                    <button className="tactical-menu-item" onClick={onOpenDroneDispatch}>
+                      <Plane size={14} className="text-sky" />
+                      <div className="menu-text">
+                        <strong>Drone First Responder (DFR)</strong>
+                        <small>Autonomous UAV AED/Narcan dispatch</small>
+                      </div>
+                    </button>
+                  )}
+
+                  {onOpenClinicalQa && (
+                    <button className="tactical-menu-item" onClick={onOpenClinicalQa}>
+                      <Award size={14} className="text-emerald" />
+                      <div className="menu-text">
+                        <strong>Clinical QA/QI Scorecard</strong>
+                        <small>AHA / ACLS protocol compliance</small>
+                      </div>
+                    </button>
+                  )}
+
+                  <div className="tactical-menu-divider" />
+
+                  {onOpenCapacityHud && (
+                    <button className="tactical-menu-item" onClick={onOpenCapacityHud}>
+                      <Building2 size={14} className="text-sky" />
+                      <div className="menu-text">
+                        <strong>Regional ED Capacity HUD</strong>
+                        <small>Live trauma bay & diversion network</small>
+                      </div>
+                    </button>
+                  )}
+
+                  {onToggleMci && (
+                    <button
+                      className={`tactical-menu-item ${isMciActive ? 'mci-item-active' : ''}`}
+                      onClick={onToggleMci}
+                    >
+                      <AlertTriangle size={14} className={isMciActive ? 'text-red animate-pulse' : 'text-amber'} />
+                      <div className="menu-text">
+                        <strong style={{ color: isMciActive ? '#fca5a5' : undefined }}>
+                          {isMciActive ? 'Deactivate MCI Mode' : 'Declare Mass Casualty (MCI)'}
+                        </strong>
+                        <small>{isMciActive ? 'Stand down regional emergency protocol' : 'Engage mutual aid & diversion override'}</small>
+                      </div>
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* File Persistence Action */}
+            <button
+              className="btn-calm-secondary"
+              onClick={onOpenSaveModal}
+              title="Save CAD database, telemetry snapshots & CSV exports to disk"
+            >
+              <Save size={13} className="text-sky" />
+              <span>Save</span>
+              <span className="calm-green-dot" />
+            </button>
+          </>
         )}
 
-        {/* File Persistence Action */}
-        <button
-          className="btn-calm-secondary"
-          onClick={onOpenSaveModal}
-          title="Save CAD database, telemetry snapshots & CSV exports to disk"
-        >
-          <Save size={13} className="text-sky" />
-          <span>Save</span>
-          <span className="calm-green-dot" />
-        </button>
-
-        {/* Hospital Capacity HUD Trigger */}
-        {onOpenCapacityHud && (
-          <button
-            className="btn-calm-secondary"
-            onClick={onOpenCapacityHud}
-            title="Open Regional Hospital ED & Trauma Capacity Network HUD"
-          >
-            <Building2 size={13} className="text-sky" />
-            <span>ED Capacity</span>
-          </button>
+        {currentRole === 'DRIVER' && (
+          <div className="role-context-badge driver">
+            <Truck size={14} className="text-amber" />
+            <span>Paramedic MDT Navigation Terminal</span>
+          </div>
         )}
 
-        {/* Mass Casualty Incident (MCI) Mode Toggle */}
-        {onToggleMci && (
-          <button
-            className={`btn-calm-secondary ${isMciActive ? 'mci-active-btn' : ''}`}
-            onClick={onToggleMci}
-            title="Toggle Mass Casualty Incident (MCI) Operations Mode"
-            style={isMciActive ? { borderColor: '#ef4444', color: '#f87171', background: 'rgba(239, 68, 68, 0.15)' } : undefined}
-          >
-            <AlertTriangle size={13} className={isMciActive ? 'text-red animate-pulse' : 'text-amber'} />
-            <span>{isMciActive ? 'MCI ACTIVE' : 'MCI Mode'}</span>
-          </button>
-        )}
-
-        {/* NG911 Live Video Stream */}
-        {onOpenNG911Video && (
-          <button
-            className="btn-calm-secondary"
-            onClick={onOpenNG911Video}
-            title="NG911 Live Caller WebRTC Video Stream & Z-Axis Altimetry"
-          >
-            <Video size={13} className="text-sky" />
-            <span>NG911 Video</span>
-          </button>
-        )}
-
-        {/* V2X Traffic Signal Preemption HUD */}
-        {onOpenV2X && (
-          <button
-            className="btn-calm-secondary"
-            onClick={onOpenV2X}
-            title="V2X Emergency Vehicle Traffic Signal Preemption (EVP)"
-          >
-            <Navigation size={13} className="text-emerald" />
-            <span>V2X EVP</span>
-          </button>
-        )}
-
-        {/* MCI Triage Matrix */}
-        {onOpenMciTriage && (
-          <button
-            className="btn-calm-secondary"
-            onClick={onOpenMciTriage}
-            title="Mass Casualty Incident (MCI) & START/SALT Triage Matrix"
-          >
-            <ShieldAlert size={13} className="text-red" />
-            <span>MCI Triage</span>
-          </button>
-        )}
-
-        {/* Drone First Responder (DFR) */}
-        {onOpenDroneDispatch && (
-          <button
-            className="btn-calm-secondary"
-            onClick={onOpenDroneDispatch}
-            title="Autonomous Drone First Responder (AED / Narcan UAV Launch)"
-          >
-            <Plane size={13} className="text-sky" />
-            <span>Drone DFR</span>
-          </button>
-        )}
-
-        {/* Clinical QA Scorecard */}
-        {onOpenClinicalQa && (
-          <button
-            className="btn-calm-secondary"
-            onClick={onOpenClinicalQa}
-            title="Automated Clinical QA/QI Protocol Governance Scorecard"
-          >
-            <Award size={13} className="text-emerald" />
-            <span>QA Scorecard</span>
-          </button>
+        {currentRole === 'HOSPITAL' && (
+          <div className="role-context-badge hospital">
+            <Building2 size={14} className="text-emerald" />
+            <span>Emergency Dept & Trauma Triage</span>
+          </div>
         )}
 
         {/* Grouped Secondary Utilities Cluster */}

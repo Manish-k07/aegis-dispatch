@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AlertCircle, Clock, MapPin, Users, Send, Phone, AlertTriangle, Zap, CheckCircle2, History } from 'lucide-react';
 import { Emergency } from '../types';
 
@@ -22,6 +22,13 @@ export const EmergencyQueue: React.FC<EmergencyQueueProps> = ({
   onResetData,
 }) => {
   const [filter, setFilter] = useState<'ACTIVE' | 'CRITICAL' | 'HIGH' | 'PENDING' | 'SHIFT_LOG'>('ACTIVE');
+
+  // Auto-tick every 15s so relative elapsed time badges refresh continuously without page reloads
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const timer = setInterval(() => setTick((t) => t + 1), 15000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Filter out completed & cancelled from primary active queues to prevent cognitive overload & SLA confusion
   const filtered = emergencies.filter((e) => {
@@ -50,9 +57,12 @@ export const EmergencyQueue: React.FC<EmergencyQueueProps> = ({
   const activeEmergencies = emergencies.filter((e) => !['COMPLETED', 'CANCELLED'].includes(e.status));
   const closedCount = emergencies.filter((e) => ['COMPLETED', 'CANCELLED'].includes(e.status)).length;
 
-  const formatElapsed = (dateStr: string) => {
+  const formatElapsed = (dateStr?: string) => {
+    if (!dateStr) return '';
     try {
-      const ms = Date.now() - new Date(dateStr).getTime();
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return '';
+      const ms = Date.now() - d.getTime();
       const mins = Math.floor(ms / 60000);
       if (mins < 1) return '< 1m ago';
       if (mins < 60) return `${mins}m ago`;
@@ -63,10 +73,12 @@ export const EmergencyQueue: React.FC<EmergencyQueueProps> = ({
     }
   };
 
-  const isOverdue = (dateStr: string, status: string) => {
-    if (['COMPLETED', 'CANCELLED'].includes(status)) return false;
+  const isOverdue = (dateStr?: string, status?: string) => {
+    if (!dateStr || !status || ['COMPLETED', 'CANCELLED'].includes(status)) return false;
     try {
-      const ms = Date.now() - new Date(dateStr).getTime();
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return false;
+      const ms = Date.now() - d.getTime();
       return ms > 15 * 60 * 1000; // 15 mins SLA threshold
     } catch {
       return false;

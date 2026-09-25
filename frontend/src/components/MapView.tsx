@@ -98,6 +98,13 @@ const cctvIcon = L.divIcon({
   iconAnchor: [13, 13],
 });
 
+const droneIcon = L.divIcon({
+  className: 'uav-drone-marker',
+  html: `<div class="drone-pulse-circle"></div><div class="uav-drone-pin"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.5"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/></svg></div>`,
+  iconSize: [36, 36],
+  iconAnchor: [18, 18],
+});
+
 interface MapViewProps {
   ambulances: Ambulance[];
   emergencies: Emergency[];
@@ -114,6 +121,14 @@ interface MapViewProps {
   onSelectEmergency: (e: Emergency) => void;
   onMapClick?: (lat: number, lon: number) => void;
   onStopSimulation?: (dispatchId: string) => void;
+  activeDroneMission?: {
+    id: string;
+    payload: string;
+    startCoords: [number, number];
+    targetCoords: [number, number];
+    etaMinutes: number;
+    altitudeMeters: number;
+  } | null;
 }
 
 function MapClickHandler({ onMapClick }: { onMapClick?: (lat: number, lon: number) => void }) {
@@ -162,12 +177,12 @@ function MapResizeWatcher() {
       map.invalidateSize();
     };
     window.addEventListener('resize', handleResize);
-    const timer = setTimeout(() => {
-      map.invalidateSize();
-    }, 250);
+    const timer1 = setTimeout(() => map.invalidateSize(), 100);
+    const timer2 = setTimeout(() => map.invalidateSize(), 350);
     return () => {
       window.removeEventListener('resize', handleResize);
-      clearTimeout(timer);
+      clearTimeout(timer1);
+      clearTimeout(timer2);
     };
   }, [map]);
   return null;
@@ -185,6 +200,7 @@ export const MapView: React.FC<MapViewProps> = ({
   onSelectEmergency,
   onMapClick,
   onStopSimulation,
+  activeDroneMission,
 }) => {
   const [mapLayer, setMapLayer] = useState<MapTileLayer>('OSM_CLEAN');
   const [showLayerMenu, setShowLayerMenu] = useState(false);
@@ -559,6 +575,59 @@ export const MapView: React.FC<MapViewProps> = ({
               </React.Fragment>
             );
           })}
+
+        {/* Autonomous Drone First Responder (UAV) Aerial Mission */}
+        {activeDroneMission && (
+          <React.Fragment key={`uav-flight-${activeDroneMission.id}`}>
+            {/* Aerial Flight Corridor */}
+            <Polyline
+              positions={[activeDroneMission.startCoords, activeDroneMission.targetCoords]}
+              pathOptions={{
+                color: '#38bdf8',
+                weight: 4,
+                opacity: 0.85,
+                dashArray: '8, 10',
+                lineCap: 'round',
+              }}
+            >
+              <Tooltip permanent={false} direction="top">
+                <span>🚁 Aerial Drone Corridor: {activeDroneMission.id} · Payload: {activeDroneMission.payload}</span>
+              </Tooltip>
+            </Polyline>
+
+            {/* Target Area Delivery Radius Circle */}
+            <Circle
+              center={activeDroneMission.targetCoords}
+              radius={100}
+              pathOptions={{
+                color: '#0284c7',
+                fillColor: '#38bdf8',
+                fillOpacity: 0.18,
+                weight: 2,
+                dashArray: '4, 6',
+              }}
+            />
+
+            {/* UAV Drone Current Position Marker (approaching target) */}
+            <Marker
+              position={[
+                activeDroneMission.startCoords[0] + (activeDroneMission.targetCoords[0] - activeDroneMission.startCoords[0]) * 0.65,
+                activeDroneMission.startCoords[1] + (activeDroneMission.targetCoords[1] - activeDroneMission.startCoords[1]) * 0.65,
+              ]}
+              icon={droneIcon}
+            >
+              <Tooltip permanent direction="top" className="drone-tooltip">
+                <div style={{ textAlign: 'center', fontWeight: 'bold' }}>
+                  <span style={{ color: '#38bdf8' }}>🚁 {activeDroneMission.id} (UAV)</span>
+                  <br />
+                  <span style={{ fontSize: '11px', color: '#f8fafc' }}>PAYLOAD: {activeDroneMission.payload}</span>
+                  <br />
+                  <small style={{ color: '#34d399' }}>ALT: {activeDroneMission.altitudeMeters}m · ETA {activeDroneMission.etaMinutes}m</small>
+                </div>
+              </Tooltip>
+            </Marker>
+          </React.Fragment>
+        )}
 
         {/* Hospitals */}
         {showHospitals &&

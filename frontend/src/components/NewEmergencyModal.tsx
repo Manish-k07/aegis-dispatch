@@ -14,22 +14,22 @@ export const NewEmergencyModal: React.FC<NewEmergencyModalProps> = ({
   onClose,
   onSubmit,
 }) => {
-  const [callerName, setCallerName] = useState('John Doe');
-  const [phone, setPhone] = useState('9876543210');
+  const [callerName, setCallerName] = useState('');
+  const [phone, setPhone] = useState('');
   const [type, setType] = useState('ACCIDENT');
   const [priority, setPriority] = useState<'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'>('CRITICAL');
   const [patientCount, setPatientCount] = useState(1);
   const [address, setAddress] = useState(
     initialCoordinates
       ? `Incident at Lat ${initialCoordinates.lat.toFixed(4)}, Lon ${initialCoordinates.lon.toFixed(4)} (Bengaluru)`
-      : 'Brigade Road Junction, Bengaluru'
+      : ''
   );
   const [latitude, setLatitude] = useState(initialCoordinates?.lat ?? 12.9738);
   const [longitude, setLongitude] = useState(initialCoordinates?.lon ?? 77.6074);
   const [description, setDescription] = useState(
     initialCoordinates
       ? 'Emergency incident reported via interactive map coordinate selection'
-      : 'Multi-vehicle collision with severe trauma reported'
+      : ''
   );
 
   const [triageLoading, setTriageLoading] = useState(false);
@@ -205,15 +205,15 @@ export const NewEmergencyModal: React.FC<NewEmergencyModalProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit({
-      callerName,
-      phone,
+      callerName: callerName.trim() || 'Emergency Caller',
+      phone: phone.trim() || 'N/A',
       type,
       priority,
       patientCount,
-      address,
+      address: address.trim() || (initialCoordinates ? `Lat ${latitude.toFixed(4)}, Lon ${longitude.toFixed(4)}` : 'Bengaluru Metropolitan Area'),
       latitude,
       longitude,
-      description,
+      description: description.trim() || 'Emergency medical assistance requested',
     });
   };
 
@@ -289,6 +289,7 @@ export const NewEmergencyModal: React.FC<NewEmergencyModalProps> = ({
                 type="text"
                 value={callerName}
                 onChange={(e) => setCallerName(e.target.value)}
+                placeholder="e.g. Rahul Sharma"
                 required
               />
             </div>
@@ -299,6 +300,7 @@ export const NewEmergencyModal: React.FC<NewEmergencyModalProps> = ({
                 type="text"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
+                placeholder="e.g. +91 98765 43210"
                 required
               />
             </div>
@@ -345,6 +347,7 @@ export const NewEmergencyModal: React.FC<NewEmergencyModalProps> = ({
                 type="text"
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
+                placeholder="e.g. Brigade Road Junction, Bengaluru"
                 required
               />
             </div>

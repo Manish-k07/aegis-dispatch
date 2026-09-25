@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Hospital,
   Dispatch,
@@ -58,6 +58,14 @@ export const HospitalDashboard: React.FC<HospitalDashboardProps> = ({
   const [traumaBaysAvailable, setTraumaBaysAvailable] = useState(hospital.traumaBaysAvailable ?? 4);
   const [status, setStatus] = useState(hospital.status);
   const [savedBanner, setSavedBanner] = useState(false);
+
+  // Sync state whenever hospital prop changes
+  useEffect(() => {
+    setAvailableBeds(hospital.availableBeds ?? 48);
+    setIcuBedsAvailable(hospital.icuBedsAvailable ?? 7);
+    setTraumaBaysAvailable(hospital.traumaBaysAvailable ?? 4);
+    setStatus(hospital.status);
+  }, [hospital.id, hospital.availableBeds, hospital.icuBedsAvailable, hospital.traumaBaysAvailable, hospital.status]);
 
   // Inbound dispatches destined for this hospital
   const inboundDispatches = dispatches.filter(

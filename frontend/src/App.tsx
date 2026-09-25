@@ -99,6 +99,14 @@ export const App: React.FC = () => {
   const [isMciTriageOpen, setIsMciTriageOpen] = useState(false);
   const [isClinicalQaOpen, setIsClinicalQaOpen] = useState(false);
   const [isDroneDispatchOpen, setIsDroneDispatchOpen] = useState(false);
+  const [activeDroneMission, setActiveDroneMission] = useState<{
+    id: string;
+    payload: string;
+    startCoords: [number, number];
+    targetCoords: [number, number];
+    etaMinutes: number;
+    altitudeMeters: number;
+  } | null>(null);
 
   const handleOpenLegal = (tab: 'privacy' | 'terms' | 'security' = 'privacy') => {
     setLegalModalTab(tab);
@@ -1279,6 +1287,7 @@ export const App: React.FC = () => {
               onSelectEmergency={handleSelectEmergency}
               onMapClick={handleMapClick}
               onStopSimulation={handleToggleSimulation}
+              activeDroneMission={activeDroneMission}
             />
           </section>
 
@@ -1553,6 +1562,16 @@ export const App: React.FC = () => {
         onClose={() => setIsDroneDispatchOpen(false)}
         emergency={selectedEmergency || data.emergencies[0]}
         onLaunchSuccess={(droneId, payload) => {
+          const em = selectedEmergency || data.emergencies[0];
+          const targetCoords: [number, number] = em ? [em.latitude, em.longitude] : [12.9738, 77.6074];
+          setActiveDroneMission({
+            id: droneId,
+            payload,
+            startCoords: [12.9784, 77.6408], // Aerial Launch Hub (HAL/Indiranagar)
+            targetCoords,
+            etaMinutes: 2.8,
+            altitudeMeters: 65,
+          });
           setToastMessage(`✓ UAV ${droneId} airborne with ${payload} payload · Estimated delivery: 2.8m`);
           setTimeout(() => setToastMessage(null), 6000);
           setLiveEvents(prev => [

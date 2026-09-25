@@ -425,7 +425,7 @@ export const DriverDashboard: React.FC<DriverDashboardProps> = ({
             ) : (
               <div className="empty-state">
                 <CheckCircle2 size={32} className="text-emerald mb-2" />
-                <strong>Unit KA-01-AE-1001 is Available & Ready in Sector</strong>
+                <strong>Unit {ambulance.registrationNumber} ({ambulance.type}) is Available & Ready in Sector</strong>
                 <p className="text-secondary text-xs mt-1">Awaiting CAD emergency dispatch assignment from command center.</p>
               </div>
             )}
