@@ -59,7 +59,7 @@ export const CandidateModal: React.FC<CandidateModalProps> = ({
 
               {candidates.map((cand, index) => {
                 const isBest = index === 0;
-                const matchPct = Math.round(cand.score * 100);
+                const matchPct = cand.score <= 1.0 ? Math.round(cand.score * 100) : Math.min(100, Math.round(cand.score));
 
                 return (
                   <div key={cand.ambulance.id} className={`candidate-card ${isBest ? 'best-match' : ''}`}>

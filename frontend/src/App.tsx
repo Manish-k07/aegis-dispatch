@@ -4,6 +4,7 @@ import { MapView } from './components/MapView';
 import { EmergencyQueue } from './components/EmergencyQueue';
 import { ActiveDispatches } from './components/ActiveDispatches';
 import { FleetList } from './components/FleetList';
+import { HospitalList } from './components/HospitalList';
 import { CandidateModal } from './components/CandidateModal';
 import { HospitalModal } from './components/HospitalModal';
 import { NewEmergencyModal } from './components/NewEmergencyModal';
@@ -135,7 +136,7 @@ export const App: React.FC = () => {
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>(INITIAL_DEMO_AUDIT_LOGS);
   const [isConnected, setIsConnected] = useState(true); // Default to true on initial render
   const [isVirtualMode, setIsVirtualMode] = useState(false);
-  const [activeTab, setActiveTab] = useState<'QUEUE' | 'MISSIONS' | 'FLEET'>('QUEUE');
+  const [activeTab, setActiveTab] = useState<'QUEUE' | 'MISSIONS' | 'FLEET' | 'HOSPITALS'>('QUEUE');
 
   const fetchDashboard = useCallback(async () => {
     try {
@@ -1298,6 +1299,12 @@ export const App: React.FC = () => {
               >
                 Fleet ({data.ambulances.length})
               </button>
+              <button
+                className={`nav-tab ${activeTab === 'HOSPITALS' ? 'active' : ''}`}
+                onClick={() => setActiveTab('HOSPITALS')}
+              >
+                Hospitals ({data.hospitals.length})
+              </button>
             </div>
 
             <div className="sidebar-body">
@@ -1309,6 +1316,7 @@ export const App: React.FC = () => {
                   onSelectEmergency={handleSelectEmergency}
                   onAutoAssign={handleAutoAssign}
                   onAutoAssignNext={handleAutoAssignNext}
+                  onResetData={handleResetData}
                 />
               )}
 
@@ -1332,7 +1340,26 @@ export const App: React.FC = () => {
               )}
 
               {activeTab === 'FLEET' && (
-                <FleetList ambulances={data.ambulances} searchQuery={searchQuery} />
+                <FleetList
+                  ambulances={data.ambulances}
+                  searchQuery={searchQuery}
+                  onOpenDriverDashboard={(amb) => {
+                    setSelectedDriverAmbulanceId(amb.id);
+                    setRole('DRIVER');
+                  }}
+                />
+              )}
+
+              {activeTab === 'HOSPITALS' && (
+                <HospitalList
+                  hospitals={data.hospitals}
+                  searchQuery={searchQuery}
+                  onSelectHospital={(h) => setSelectedHospitalId(h.id)}
+                  onOpenHospitalDashboard={(h) => {
+                    setSelectedHospitalId(h.id);
+                    setRole('HOSPITAL');
+                  }}
+                />
               )}
             </div>
           </aside>

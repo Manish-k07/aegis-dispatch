@@ -20,7 +20,8 @@ import {
   Scale,
   GraduationCap,
   AlertTriangle,
-  Building2
+  Building2,
+  Truck
 } from 'lucide-react';
 import { DashboardData, UserRole } from '../types';
 
@@ -116,31 +117,31 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
         </div>
 
-        {/* Calm Segmented Role Controller */}
+        {/* Prominent Primary Dashboard Console Switcher */}
         <nav className="role-switcher-bar" aria-label="Console Interface Switcher">
           <button
             className={`role-tab-btn ${currentRole === 'DISPATCHER' ? 'active-cad' : ''}`}
             onClick={() => onSelectRole('DISPATCHER')}
-            title="Central Dispatch CAD Command"
+            title="Central Dispatch CAD Command Interface"
           >
-            <Radio size={13} className="tab-icon" />
-            <span>Central CAD</span>
+            <Radio size={14} className="tab-icon" />
+            <span>🚨 Central CAD</span>
           </button>
           <button
             className={`role-tab-btn ${currentRole === 'DRIVER' ? 'active-driver' : ''}`}
             onClick={() => onSelectRole('DRIVER')}
-            title="Mobile Data Terminal (Paramedic / Driver)"
+            title="Ambulance Driver Mobile Data Terminal (MDT) Dashboard"
           >
-            <User size={13} className="tab-icon" />
-            <span>Driver MDT</span>
+            <Truck size={14} className="tab-icon" />
+            <span>🚑 Ambulance Dashboard</span>
           </button>
           <button
             className={`role-tab-btn ${currentRole === 'HOSPITAL' ? 'active-hosp' : ''}`}
             onClick={() => onSelectRole('HOSPITAL')}
-            title="Hospital Emergency Department Triage"
+            title="Hospital Emergency Department & Trauma Reception Dashboard"
           >
-            <Activity size={13} className="tab-icon" />
-            <span>Hospital ED</span>
+            <Building2 size={14} className="tab-icon" />
+            <span>🏥 Hospital Dashboard</span>
           </button>
         </nav>
       </div>

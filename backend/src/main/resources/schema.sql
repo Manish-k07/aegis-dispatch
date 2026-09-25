@@ -12,6 +12,8 @@ CREATE TABLE IF NOT EXISTS hospitals (
  demo_data BOOLEAN NOT NULL DEFAULT TRUE, created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
 
+ALTER TABLE hospitals ADD COLUMN IF NOT EXISTS designated_ed_phone VARCHAR(40);
+
 CREATE TABLE IF NOT EXISTS hospital_capabilities (
  hospital_id UUID NOT NULL REFERENCES hospitals(id) ON DELETE CASCADE,
  capability VARCHAR(60) NOT NULL,

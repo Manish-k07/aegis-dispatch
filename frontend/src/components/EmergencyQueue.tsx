@@ -9,6 +9,7 @@ interface EmergencyQueueProps {
   onSelectEmergency: (e: Emergency) => void;
   onAutoAssign?: (emergencyId: string) => void;
   onAutoAssignNext?: () => void;
+  onResetData?: () => void;
 }
 
 export const EmergencyQueue: React.FC<EmergencyQueueProps> = ({
@@ -18,6 +19,7 @@ export const EmergencyQueue: React.FC<EmergencyQueueProps> = ({
   onSelectEmergency,
   onAutoAssign,
   onAutoAssignNext,
+  onResetData,
 }) => {
   const [filter, setFilter] = useState<'ACTIVE' | 'CRITICAL' | 'HIGH' | 'PENDING' | 'SHIFT_LOG'>('ACTIVE');
 
@@ -134,10 +136,23 @@ export const EmergencyQueue: React.FC<EmergencyQueueProps> = ({
 
       <div className="queue-list">
         {filtered.length === 0 ? (
-          <div className="empty-state">
-            {filter === 'SHIFT_LOG'
-              ? 'No closed incidents in current shift log.'
-              : 'Zero active incidents matching current filters.'}
+          <div className="empty-state" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', padding: '24px 12px' }}>
+            <p style={{ margin: 0, color: '#94a3b8' }}>
+              {filter === 'SHIFT_LOG'
+                ? 'No closed incidents in current shift log.'
+                : 'Zero active incidents matching current filters.'}
+            </p>
+            {filter !== 'SHIFT_LOG' && onResetData && (
+              <button
+                className="btn btn-sm btn-primary"
+                onClick={onResetData}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '6px' }}
+                title="Seed 3 active high-acuity emergency calls into the dispatch queue"
+              >
+                <Zap size={13} />
+                <span>🚨 Seed Live Emergency Calls</span>
+              </button>
+            )}
           </div>
         ) : (
           filtered.map((em) => {

@@ -205,6 +205,13 @@ public class DispatchController {
                 d.getId(), eid, aid));
 
         triggerAutoSave("AMBULANCE_ASSIGNED");
+
+        // Immediately start full autonomous road simulation
+        try {
+            simulationService.startSimulation(d.getId());
+        } catch (Exception ignored) {
+        }
+
         return ResponseEntity.ok(d);
     }
 
@@ -363,6 +370,16 @@ public class DispatchController {
     @GetMapping("/hospitals")
     public Object allHospitals() {
         return hospitals.findAll();
+    }
+
+    @PostMapping("/dispatches/auto")
+    @Transactional
+    public ResponseEntity<?> autoAssignByBody(@RequestBody Map<String, String> body) {
+        String eid = body.get("emergencyId");
+        if (eid == null || eid.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "emergencyId is required"));
+        }
+        return autoAssign(UUID.fromString(eid), body);
     }
 
     @PostMapping("/emergencies/{id}/auto-assign")

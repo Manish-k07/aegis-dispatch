@@ -1,13 +1,18 @@
 import React, { useState } from 'react';
-import { Truck, Navigation, Gauge, BatteryCharging, Shield, Activity } from 'lucide-react';
+import { Truck, Navigation, Gauge, BatteryCharging, Shield, Activity, ExternalLink } from 'lucide-react';
 import { Ambulance } from '../types';
 
 interface FleetListProps {
   ambulances: Ambulance[];
   searchQuery?: string;
+  onOpenDriverDashboard?: (ambulance: Ambulance) => void;
 }
 
-export const FleetList: React.FC<FleetListProps> = ({ ambulances, searchQuery = '' }) => {
+export const FleetList: React.FC<FleetListProps> = ({
+  ambulances,
+  searchQuery = '',
+  onOpenDriverDashboard,
+}) => {
   const [filter, setFilter] = useState<'ALL' | 'AVAILABLE' | 'MISSION' | 'ALS' | 'BLS'>('ALL');
 
   const filtered = ambulances.filter((amb) => {
@@ -118,6 +123,27 @@ export const FleetList: React.FC<FleetListProps> = ({ ambulances, searchQuery = 
                     <span>98% Ready</span>
                   </div>
                 </div>
+
+                {onOpenDriverDashboard && (
+                  <div className="flex items-center justify-end mt-2 pt-2 border-t border-border-light">
+                    <button
+                      className="btn btn-xs btn-outline"
+                      onClick={() => onOpenDriverDashboard(amb)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '5px',
+                        color: '#fbbf24',
+                        borderColor: 'rgba(251, 191, 36, 0.4)',
+                        background: 'rgba(251, 191, 36, 0.08)',
+                      }}
+                      title="Launch full Ambulance Driver MDT Dashboard"
+                    >
+                      <span>Open Ambulance Dashboard</span>
+                      <ExternalLink size={11} />
+                    </button>
+                  </div>
+                )}
               </div>
             );
           })
