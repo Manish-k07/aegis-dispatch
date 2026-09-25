@@ -143,6 +143,35 @@ export const Footer: React.FC<FooterProps> = ({
 
         <span style={{ color: 'var(--border-soft)' }}>•</span>
 
+        <a
+          href="/research_proposal.html"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            background: 'rgba(56, 189, 248, 0.1)',
+            border: '1px solid rgba(56, 189, 248, 0.25)',
+            borderRadius: '4px',
+            padding: '2px 7px',
+            cursor: 'pointer',
+            color: '#38bdf8',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+            textDecoration: 'none',
+            fontWeight: 600,
+            fontSize: '0.72rem',
+            transition: 'all 0.15s ease'
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(56, 189, 248, 0.2)')}
+          onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(56, 189, 248, 0.1)')}
+          title="Open Final Year Research Paper Dossier in new tab"
+        >
+          <ExternalLink size={11} />
+          <span>IEEE Research Dossier ↗</span>
+        </a>
+
+        <span style={{ color: 'var(--border-soft)' }}>•</span>
+
         <button
           onClick={onOpenAuditLogs}
           style={{

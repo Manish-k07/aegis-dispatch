@@ -17,7 +17,8 @@ import {
   Save,
   Activity,
   Command,
-  Scale
+  Scale,
+  GraduationCap
 } from 'lucide-react';
 import { DashboardData, UserRole } from '../types';
 
@@ -225,6 +226,27 @@ export const Navbar: React.FC<NavbarProps> = ({
           <span>Save</span>
           <span className="calm-green-dot" />
         </button>
+
+        {/* IEEE Final Year Research Paper Proposal */}
+        <a
+          href="/research_proposal.html"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="btn-calm-secondary"
+          style={{
+            textDecoration: 'none',
+            color: '#38bdf8',
+            borderColor: 'rgba(56, 189, 248, 0.35)',
+            background: 'rgba(56, 189, 248, 0.08)',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px'
+          }}
+          title="IEEE Final Year Research Paper Proposal & Architecture (Opens in new tab)"
+        >
+          <GraduationCap size={14} className="text-sky" />
+          <span>Research Paper ↗</span>
+        </a>
 
         {/* Grouped Secondary Utilities Cluster */}
         <div className="utility-cluster">
