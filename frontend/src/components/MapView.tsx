@@ -1,13 +1,29 @@
 import React, { useState, useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Polyline, Tooltip, useMapEvents, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Polyline, Tooltip, Circle, useMapEvents, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
-import { Layers, Maximize2, Shield, Eye, MapPin, Building2, Navigation, Crosshair, Activity, Zap } from 'lucide-react';
+import {
+  Layers,
+  Maximize2,
+  Shield,
+  Eye,
+  MapPin,
+  Building2,
+  Navigation,
+  Crosshair,
+  Activity,
+  Zap,
+  Video,
+  Flame,
+  AlertTriangle,
+  X,
+  Check
+} from 'lucide-react';
 import { Ambulance, Emergency, Hospital, Dispatch } from '../types';
 import { getAmbulanceIcon, getEmergencyIcon, getHospitalIcon } from '../utils/mapIcons';
 import { MissionHUD } from './MissionHUD';
 
-export type MapTileLayer = 'DARK' | 'STREETS' | 'SATELLITE';
+export type MapTileLayer = 'DARK' | 'OSM' | 'STREETS' | 'SATELLITE';
 
 const trafficCorridors: { name: string; level: 'HEAVY' | 'MODERATE' | 'CLEAR'; color: string; coords: [number, number][] }[] = [
   {
@@ -64,6 +80,28 @@ const trafficSignalIcon = L.divIcon({
   iconSize: [20, 20],
   iconAnchor: [10, 10],
 });
+
+// Architecture Stubs: Live CCTV Intersection Cameras
+const cctvCameras = [
+  { id: 'CAM-01', name: 'Brigade Road / MG Road Junction', coords: [12.9738, 77.6074] as [number, number], fps: 30, trafficStatus: 'CONGESTED', incidentNearby: true },
+  { id: 'CAM-02', name: 'Richmond Circle Interchange', coords: [12.9655, 77.6015] as [number, number], fps: 30, trafficStatus: 'MODERATE', incidentNearby: false },
+  { id: 'CAM-03', name: 'Koramangala 80ft Road Flyover', coords: [12.9380, 77.6220] as [number, number], fps: 28, trafficStatus: 'CLEAR', incidentNearby: false },
+  { id: 'CAM-04', name: 'Cubbon Park North Gate', coords: [12.9800, 77.5880] as [number, number], fps: 30, trafficStatus: 'CLEAR', incidentNearby: false },
+];
+
+const cctvCameraIcon = L.divIcon({
+  className: 'cctv-camera-marker',
+  html: `<div style="background:#0f172a;border:2px solid #a855f7;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;box-shadow:0 0 10px rgba(168,85,247,0.7);cursor:pointer;"><span style="color:#c084fc;font-size:12px;">📹</span></div>`,
+  iconSize: [26, 26],
+  iconAnchor: [13, 13],
+});
+
+// Architecture Stubs: Predictive Fleet Staging Risk Hotspots
+const predictiveRiskHotspots = [
+  { id: 'PRED-01', name: 'Commercial Surge Zone', coords: [12.9735, 77.5968] as [number, number], radius: 600, riskScore: 0.94, suggestedStaging: 'Unit KA-01-AE-1001' },
+  { id: 'PRED-02', name: 'Evening Arterial Trauma Cluster', coords: [12.9655, 77.6015] as [number, number], radius: 480, riskScore: 0.78, suggestedStaging: 'Unit KA-01-AE-1002' },
+  { id: 'PRED-03', name: 'Central Sector High-Acuity Hub', coords: [12.9812, 77.5877] as [number, number], radius: 520, riskScore: 0.85, suggestedStaging: 'Unit KA-01-AE-1003' },
+];
 
 interface MapViewProps {
   ambulances: Ambulance[];
@@ -163,6 +201,10 @@ export const MapView: React.FC<MapViewProps> = ({
   const [showHospitals, setShowHospitals] = useState(true);
   const [showRoutes, setShowRoutes] = useState(true);
   const [showTraffic, setShowTraffic] = useState(true);
+  const [showHeatmap, setShowHeatmap] = useState(false);
+  const [showCctv, setShowCctv] = useState(false);
+  const [trafficSeverity, setTrafficSeverity] = useState<'CRITICAL' | 'MODERATE' | 'CLEAR'>('CRITICAL');
+  const [selectedCctvCamera, setSelectedCctvCamera] = useState<any>(null);
 
   const defaultCenter: [number, number] = [12.9716, 77.5946];
 
@@ -174,13 +216,26 @@ export const MapView: React.FC<MapViewProps> = ({
     (d) => !['COMPLETED', 'CANCELLED'].includes(d.status)
   );
 
-  // Map layer URLs
-  let tileUrl = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
-  let attribution = '&copy; CARTO &copy; OpenStreetMap';
+  // Authenticated or Watermark-Free Map Layer Resolution
+  const mapApiKey = ((import.meta as any).env?.VITE_MAP_API_KEY as string) || '';
+  let tileUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+  let attribution = '&copy; OpenStreetMap contributors (Watermark-Free)';
 
-  if (mapLayer === 'STREETS') {
-    tileUrl = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
-    attribution = '&copy; CARTO &copy; OpenStreetMap';
+  if (mapLayer === 'DARK') {
+    if (mapApiKey) {
+      tileUrl = `https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?api_key=${mapApiKey}`;
+      attribution = '&copy; CARTO &copy; OpenStreetMap (Authenticated)';
+    } else {
+      // Safe, zero-watermark dark tiles via Carto rastertiles or OpenStreetMap inverted
+      tileUrl = 'https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}.png';
+      attribution = '&copy; CARTO &copy; OpenStreetMap';
+    }
+  } else if (mapLayer === 'OSM') {
+    tileUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+    attribution = '&copy; OpenStreetMap contributors (100% Free • No API Key Required)';
+  } else if (mapLayer === 'STREETS') {
+    tileUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+    attribution = '&copy; OpenStreetMap contributors';
   } else if (mapLayer === 'SATELLITE') {
     tileUrl = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
     attribution = '&copy; Esri World Imagery';
@@ -211,7 +266,7 @@ export const MapView: React.FC<MapViewProps> = ({
           <span>Fit Extents</span>
         </button>
 
-        {/* Entity Filters */}
+        {/* Entity Filters with Enhanced Touch Target Padding */}
         <div className="entity-filters">
           <button
             className={`filter-pill ${showIncidents ? 'active-red' : ''}`}
@@ -246,7 +301,25 @@ export const MapView: React.FC<MapViewProps> = ({
             title="Toggle Real-Time Traffic Arterial Overlays"
           >
             <Activity size={12} />
-            <span>Traffic Flow</span>
+            <span>Traffic</span>
+          </button>
+
+          <button
+            className={`filter-pill ${showHeatmap ? 'active-rose' : ''}`}
+            onClick={() => setShowHeatmap(!showHeatmap)}
+            title="Toggle AI Predictive Fleet Staging Risk Clusters"
+          >
+            <Flame size={12} />
+            <span>Heatmap ({predictiveRiskHotspots.length})</span>
+          </button>
+
+          <button
+            className={`filter-pill ${showCctv ? 'active-purple' : ''}`}
+            onClick={() => setShowCctv(!showCctv)}
+            title="Toggle Live City CCTV Junction Camera Markers"
+          >
+            <Video size={12} />
+            <span>CCTV ({cctvCameras.length})</span>
           </button>
         </div>
 
@@ -267,8 +340,15 @@ export const MapView: React.FC<MapViewProps> = ({
                 className={`layer-option ${mapLayer === 'DARK' ? 'active' : ''}`}
                 onClick={() => { setMapLayer('DARK'); setShowLayerMenu(false); }}
               >
-                <strong>Dark CAD Ops</strong>
+                <strong>Dark CAD Ops {mapApiKey ? '✓ Auth' : ''}</strong>
                 <small>High contrast emergency operations</small>
+              </button>
+              <button
+                className={`layer-option ${mapLayer === 'OSM' ? 'active' : ''}`}
+                onClick={() => { setMapLayer('OSM'); setShowLayerMenu(false); }}
+              >
+                <strong>OpenStreetMap Clean</strong>
+                <small>100% Free · No API Key Required</small>
               </button>
               <button
                 className={`layer-option ${mapLayer === 'STREETS' ? 'active' : ''}`}
@@ -300,16 +380,44 @@ export const MapView: React.FC<MapViewProps> = ({
         <span>Click anywhere on map to intake incident at coordinates</span>
       </div>
 
-      {/* Real-Time Traffic & Weather HUD Banner */}
+      {/* Real-Time Dynamic Traffic Alert HUD Banner */}
       {showTraffic && (
-        <div className="traffic-reroute-banner">
+        <div className={`traffic-reroute-banner ${trafficSeverity === 'CRITICAL' ? 'severe' : trafficSeverity === 'MODERATE' ? 'moderate' : 'clear'}`}>
           <div className="flex items-center gap-2">
-            <span className="live-dot-green"></span>
-            <strong>DYNAMIC ARTERIAL REROUTING:</strong>
-            <span>Heavy traffic on MG Road Corridor (+2.4m). OSRM Green Wave Corridor engaged.</span>
+            {trafficSeverity === 'CRITICAL' && <span className="live-dot-red-pulse"></span>}
+            {trafficSeverity === 'MODERATE' && <span className="live-dot-amber"></span>}
+            {trafficSeverity === 'CLEAR' && <span className="live-dot-green"></span>}
+
+            <strong style={{ letterSpacing: '0.03em' }}>
+              {trafficSeverity === 'CRITICAL' && 'CRITICAL ARTERIAL BLOCKAGE:'}
+              {trafficSeverity === 'MODERATE' && 'DYNAMIC ARTERIAL REROUTING:'}
+              {trafficSeverity === 'CLEAR' && 'TRAFFIC CORRIDORS NOMINAL:'}
+            </strong>
+
+            <span>
+              {trafficSeverity === 'CRITICAL' && 'Severe gridlock on MG Road Corridor (+8.5m). Automated Green-Wave Preemption Active.'}
+              {trafficSeverity === 'MODERATE' && 'Moderate congestion on Richmond Road (+2.4m). Routing via secondary arterial bypass.'}
+              {trafficSeverity === 'CLEAR' && 'Traffic flowing smoothly across all city sectors. Preemption in standby.'}
+            </span>
           </div>
-          <div className="weather-hud-pill">
-            <span>27°C MONSOON · ROAD: WET (0.85x SPEED)</span>
+
+          <div className="flex items-center gap-2">
+            <button
+              className="traffic-toggle-cycle-btn"
+              onClick={() => {
+                setTrafficSeverity((prev) =>
+                  prev === 'CRITICAL' ? 'MODERATE' : prev === 'MODERATE' ? 'CLEAR' : 'CRITICAL'
+                );
+              }}
+              title="Click to simulate and test city-wide traffic severity alerts"
+            >
+              <Activity size={10} />
+              <span>Simulate: {trafficSeverity}</span>
+            </button>
+
+            <div className="weather-hud-pill">
+              <span>27°C MONSOON · ROAD: WET (0.85x SPEED)</span>
+            </div>
           </div>
         </div>
       )}
@@ -322,7 +430,7 @@ export const MapView: React.FC<MapViewProps> = ({
         }
         zoom={13}
         scrollWheelZoom={true}
-        className="leaflet-container"
+        className={`leaflet-container ${mapLayer === 'DARK' && !mapApiKey ? 'tactical-dark-tiles' : ''}`}
       >
         <TileLayer attribution={attribution} url={tileUrl} maxZoom={19} />
 
@@ -367,7 +475,49 @@ export const MapView: React.FC<MapViewProps> = ({
           </Marker>
         ))}
 
-        {/* Real-world Road Routing Polylines */}
+        {/* Predictive Staging Hotspot Circles (Future Architecture Stub) */}
+        {showHeatmap && predictiveRiskHotspots.map((spot) => (
+          <Circle
+            key={spot.id}
+            center={spot.coords}
+            radius={spot.radius}
+            pathOptions={{
+              color: '#f43f5e',
+              fillColor: '#f43f5e',
+              fillOpacity: 0.22,
+              weight: 2,
+              dashArray: '4, 6',
+            }}
+          >
+            <Tooltip direction="top" offset={[0, -10]}>
+              <div style={{ fontSize: '11px', color: '#fff', background: '#090d16', padding: '4px 8px', borderRadius: '4px' }}>
+                <strong style={{ color: '#fb7185' }}>PREDICTIVE STAGING: {spot.name}</strong><br />
+                Risk Index: <strong>{(spot.riskScore * 100).toFixed(0)}%</strong><br />
+                Recommended Pre-Position: <strong>{spot.suggestedStaging}</strong>
+              </div>
+            </Tooltip>
+          </Circle>
+        ))}
+
+        {/* Live CCTV Junction Camera Markers (Future Architecture Stub) */}
+        {showCctv && cctvCameras.map((cam) => (
+          <Marker
+            key={cam.id}
+            position={cam.coords}
+            icon={cctvCameraIcon}
+            eventHandlers={{
+              click: () => setSelectedCctvCamera(cam),
+            }}
+          >
+            <Tooltip direction="top" offset={[0, -14]} opacity={0.95}>
+              <div style={{ fontSize: '11px', fontWeight: 'bold', color: '#c084fc' }}>
+                📹 {cam.id}: {cam.name} (Click to View Live Feed)
+              </div>
+            </Tooltip>
+          </Marker>
+        ))}
+
+        {/* High-Contrast Dual-Layer Neon Road Routing Polylines */}
         {showRoutes && activeDispatches.map((dispatch) => {
           const amb = ambulances.find((a) => a.id === dispatch.ambulanceId);
           const em = emergencies.find((e) => e.id === dispatch.emergencyId);
@@ -378,6 +528,7 @@ export const MapView: React.FC<MapViewProps> = ({
           if (!amb || !em) return null;
 
           const isSim = activeSimulations.includes(dispatch.id);
+          const isTransportingToHospital = ['EN_ROUTE_TO_HOSPITAL', 'ARRIVED_AT_HOSPITAL'].includes(dispatch.status);
 
           // Use real road geometry coordinates if telemetry has them, else direct
           let points: [number, number][] = [];
@@ -388,28 +539,44 @@ export const MapView: React.FC<MapViewProps> = ({
               [amb.latitude, amb.longitude],
               [em.latitude, em.longitude],
             ];
-            if (hosp && ['EN_ROUTE_TO_HOSPITAL', 'ARRIVED_AT_HOSPITAL'].includes(dispatch.status)) {
+            if (hosp && isTransportingToHospital) {
               points.push([hosp.latitude, hosp.longitude]);
             }
           }
 
+          const coreColor = isTransportingToHospital ? '#facc15' : isSim ? '#00f5ff' : '#38bdf8';
+          const glowColor = isTransportingToHospital ? '#f59e0b' : '#00f5ff';
+
           return (
-            <Polyline
-              key={`route-${dispatch.id}`}
-              positions={points}
-              pathOptions={{
-                color: isSim ? '#38bdf8' : '#6366f1',
-                weight: 5,
-                opacity: 0.85,
-                lineCap: 'round',
-                lineJoin: 'round',
-                dashArray: isSim ? '8, 10' : undefined,
-              }}
-            >
-              <Tooltip sticky>
-                Priority Emergency Route: {amb.registrationNumber} → {em.type} ({dispatch.status})
-              </Tooltip>
-            </Polyline>
+            <React.Fragment key={`route-group-${dispatch.id}`}>
+              {/* Outer Translucent Glowing Neon Halo */}
+              <Polyline
+                positions={points}
+                pathOptions={{
+                  color: glowColor,
+                  weight: 12,
+                  opacity: 0.30,
+                  lineCap: 'round',
+                  lineJoin: 'round',
+                }}
+              />
+              {/* Inner High-Contrast Core Neon Trajectory */}
+              <Polyline
+                positions={points}
+                pathOptions={{
+                  color: coreColor,
+                  weight: 6,
+                  opacity: 0.98,
+                  lineCap: 'round',
+                  lineJoin: 'round',
+                  dashArray: isSim ? '8, 12' : undefined,
+                }}
+              >
+                <Tooltip sticky>
+                  <strong>Priority Emergency Route</strong>: {amb.registrationNumber} → {em.type} ({dispatch.status})
+                </Tooltip>
+              </Polyline>
+            </React.Fragment>
           );
         })}
 
@@ -520,6 +687,59 @@ export const MapView: React.FC<MapViewProps> = ({
           isSimulating={activeSimulations.includes(activeMissionDispatch.id)}
           onStopSimulation={() => onStopSimulation && onStopSimulation(activeMissionDispatch.id)}
         />
+      )}
+
+      {/* Live CCTV Video Feed Modal (Architecture Stub) */}
+      {selectedCctvCamera && (
+        <div className="cctv-modal-overlay" onClick={() => setSelectedCctvCamera(null)}>
+          <div className="cctv-modal-content" onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 18px', borderBottom: '1px solid #1e293b' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Video size={16} style={{ color: '#c084fc' }} />
+                <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#ffffff' }}>
+                  TRAFFIC CCTV FEED · {selectedCctvCamera.id}
+                </span>
+                <span style={{ background: 'rgba(239,68,68,0.2)', color: '#ef4444', fontSize: '0.7rem', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>
+                  LIVE 30 FPS
+                </span>
+              </div>
+              <button
+                onClick={() => setSelectedCctvCamera(null)}
+                style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="cctv-video-sim">
+              <div className="cctv-scanline"></div>
+              {/* Simulated camera HUD overlay */}
+              <div style={{ position: 'absolute', top: 12, left: 16, color: '#38bdf8', fontFamily: 'monospace', fontSize: '11px', textShadow: '0 0 4px rgba(0,0,0,0.8)' }}>
+                CAMERA: {selectedCctvCamera.name.toUpperCase()}<br />
+                LAT/LON: {selectedCctvCamera.coords[0].toFixed(4)}°N, {selectedCctvCamera.coords[1].toFixed(4)}°E<br />
+                ENCRYPTION: AES-256 (MUNICIPAL HIGHWAY AUTHORITY)
+              </div>
+              <div style={{ position: 'absolute', bottom: 12, right: 16, color: '#34d399', fontFamily: 'monospace', fontSize: '11px', textShadow: '0 0 4px rgba(0,0,0,0.8)' }}>
+                STATUS: {selectedCctvCamera.trafficStatus} · PREEMPTION: ARMED
+              </div>
+              <div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.7)', zIndex: 2 }}>
+                <Video size={48} style={{ margin: '0 auto 12px', opacity: 0.6, color: '#c084fc' }} />
+                <p style={{ fontWeight: 600, fontSize: '0.95rem', color: '#f8fafc' }}>{selectedCctvCamera.name}</p>
+                <p style={{ fontSize: '0.78rem', color: '#94a3b8' }}>Real-time Optical Flow Telemetry Active · Scene Safety Clearance: NOMINAL</p>
+              </div>
+            </div>
+
+            <div style={{ padding: '12px 18px', background: '#0b0f19', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.8rem', color: '#94a3b8' }}>
+              <span>Optical Density: 24 vehicles/min · Preemption Green Corridor: STANDBY</span>
+              <button
+                className="traffic-toggle-cycle-btn"
+                onClick={() => setSelectedCctvCamera(null)}
+              >
+                Close Camera HUD
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

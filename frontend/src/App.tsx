@@ -15,7 +15,9 @@ import { FleetMaintenanceModal } from './components/FleetMaintenanceModal';
 import { PredictiveSurgeModal } from './components/PredictiveSurgeModal';
 import { SaveToFileModal } from './components/SaveToFileModal';
 import { LegalModal } from './components/LegalModal';
+import { HospitalCapacityHUD } from './components/HospitalCapacityHUD';
 import { Footer } from './components/Footer';
+import { AlertTriangle } from 'lucide-react';
 import {
   DashboardData,
   Emergency,
@@ -83,6 +85,25 @@ export const App: React.FC = () => {
   const [isLegalModalOpen, setIsLegalModalOpen] = useState(false);
   const [legalModalTab, setLegalModalTab] = useState<'privacy' | 'terms' | 'security'>('privacy');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [isMciMode, setIsMciMode] = useState(false);
+  const [isHospitalCapacityOpen, setIsHospitalCapacityOpen] = useState(false);
+
+  const handleToggleMciMode = () => {
+    const next = !isMciMode;
+    setIsMciMode(next);
+    if (next) {
+      audioSystem.playCriticalIncidentChime();
+      setLiveEvents((prev) => [
+        `${new Date().toLocaleTimeString()} · 🚨 MASS CASUALTY INCIDENT (MCI) DECLARED: START Triage Matrix Engaged`,
+        ...prev.slice(0, 19),
+      ]);
+    } else {
+      setLiveEvents((prev) => [
+        `${new Date().toLocaleTimeString()} · ✓ MCI Protocol Stood Down: Nominal CAD posture resumed`,
+        ...prev.slice(0, 19),
+      ]);
+    }
+  };
 
   const handleOpenLegal = (tab: 'privacy' | 'terms' | 'security' = 'privacy') => {
     setLegalModalTab(tab);
@@ -1216,7 +1237,25 @@ export const App: React.FC = () => {
         onOpenSaveModal={() => setIsSaveModalOpen(true)}
         onAutoAssignNext={handleAutoAssignNext}
         onOpenLegal={handleOpenLegal}
+        isMciMode={isMciMode}
+        onToggleMciMode={handleToggleMciMode}
+        onOpenHospitalCapacity={() => setIsHospitalCapacityOpen(true)}
       />
+
+      {/* Mass Casualty Incident (MCI) Alert Banner */}
+      {isMciMode && (
+        <div className="mci-alert-banner">
+          <div className="mci-banner-content">
+            <AlertTriangle size={18} className="mci-siren-icon" />
+            <span>
+              <strong>MASS CASUALTY INCIDENT (MCI) ACTIVE</strong> — START Triage Matrix Enforced · All Fleet Units Pre-Staged · Regional Emergency Departments Alerted
+            </span>
+          </div>
+          <button className="btn-mci-standdown" onClick={handleToggleMciMode}>
+            Stand Down MCI
+          </button>
+        </div>
+      )}
 
       {/* Role-Based Primary Interface */}
       {role === 'DISPATCHER' && (
@@ -1418,6 +1457,15 @@ export const App: React.FC = () => {
           setTimeout(() => setToastMessage(null), 5000);
         }}
       />
+
+      {/* Regional Hospital ED & Trauma Capacity Network HUD */}
+      {isHospitalCapacityOpen && (
+        <HospitalCapacityHUD
+          hospitals={data.hospitals}
+          onClose={() => setIsHospitalCapacityOpen(false)}
+          onUpdateHospitalCapacity={handleUpdateHospitalCapacity}
+        />
+      )}
 
       {/* Floating System Toast Alert */}
       {toastMessage && (

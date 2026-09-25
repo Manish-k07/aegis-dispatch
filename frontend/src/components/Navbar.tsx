@@ -18,7 +18,9 @@ import {
   Activity,
   Command,
   Scale,
-  GraduationCap
+  GraduationCap,
+  AlertTriangle,
+  Building2
 } from 'lucide-react';
 import { DashboardData, UserRole } from '../types';
 
@@ -40,6 +42,9 @@ interface NavbarProps {
   onOpenSaveModal: () => void;
   onAutoAssignNext: () => void;
   onOpenLegal?: (tab?: 'privacy' | 'terms' | 'security') => void;
+  isMciMode?: boolean;
+  onToggleMciMode?: () => void;
+  onOpenHospitalCapacity?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -60,6 +65,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenSaveModal,
   onAutoAssignNext,
   onOpenLegal,
+  isMciMode = false,
+  onToggleMciMode,
+  onOpenHospitalCapacity,
 }) => {
   const [currentTime, setCurrentTime] = useState<string>('');
 
@@ -201,6 +209,30 @@ export const Navbar: React.FC<NavbarProps> = ({
           >
             <Zap size={13} />
             <span>⚡ Auto-Dispatch</span>
+          </button>
+        )}
+
+        {/* MCI Mode Master Toggle */}
+        {currentRole === 'DISPATCHER' && onToggleMciMode && (
+          <button
+            className={`btn-mci-toggle ${isMciMode ? 'active' : 'standby'}`}
+            onClick={onToggleMciMode}
+            title={isMciMode ? 'MCI Protocol Active! Click to Stand Down' : 'Declare Mass Casualty Incident (START Triage Mode)'}
+          >
+            <AlertTriangle size={13} className={isMciMode ? 'mci-siren-icon' : ''} />
+            <span>{isMciMode ? 'MCI ACTIVE' : 'MCI Mode'}</span>
+          </button>
+        )}
+
+        {/* Hospital ED Capacity Network HUD */}
+        {onOpenHospitalCapacity && (
+          <button
+            className="btn-calm-secondary"
+            onClick={onOpenHospitalCapacity}
+            title="Open Regional Hospital ED & Trauma Capacity Network"
+          >
+            <Building2 size={13} className="text-sky" />
+            <span>ED Capacity</span>
           </button>
         )}
 

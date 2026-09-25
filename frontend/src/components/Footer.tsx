@@ -2,13 +2,12 @@ import React from 'react';
 import {
   ShieldCheck,
   Lock,
-  Radio,
   FileText,
   Server,
   HeartPulse,
   Scale,
-  Sparkles,
-  ExternalLink
+  ExternalLink,
+  ClipboardList
 } from 'lucide-react';
 
 interface FooterProps {
@@ -27,194 +26,110 @@ export const Footer: React.FC<FooterProps> = ({
   onOpenAuditLogs,
 }) => {
   return (
-    <footer
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '8px 20px',
-        background: 'rgba(12, 17, 26, 0.95)',
-        backdropFilter: 'blur(12px)',
-        borderTop: '1px solid var(--border-soft)',
-        fontSize: '0.74rem',
-        color: 'var(--text-muted)',
-        zIndex: 40,
-        position: 'relative'
-      }}
-    >
-      {/* Left: System Status & Security Badges */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+    <footer className="cad-footer-modern">
+      {/* 1. Left Zone: Live Engine Status & Security Badges */}
+      <div className="cad-footer-zone cad-footer-left">
+        <div className="footer-status-badge">
           <span
+            className="footer-status-dot"
             style={{
-              width: '7px',
-              height: '7px',
-              borderRadius: '50%',
               backgroundColor: isConnected ? '#34d399' : '#f87171',
-              boxShadow: isConnected ? '0 0 8px rgba(52, 211, 153, 0.6)' : '0 0 8px rgba(248, 113, 113, 0.6)',
-              display: 'inline-block'
+              boxShadow: isConnected
+                ? '0 0 10px rgba(52, 211, 153, 0.7)'
+                : '0 0 10px rgba(248, 113, 113, 0.7)',
             }}
           />
-          <span style={{ fontWeight: 500, color: 'var(--text-main)' }}>
-            Aegis CAD Engine: {isConnected ? (isVirtualMode ? 'ACTIVE (Virtual Cloud Gateway)' : 'NOMINAL') : 'RECONNECTING'}
+          <span className="footer-engine-title">
+            CAD Engine: <strong>{isConnected ? (isVirtualMode ? 'ACTIVE (Virtual Gateway)' : 'NOMINAL') : 'RECONNECTING'}</strong>
           </span>
         </div>
 
-        <span style={{ color: 'var(--border-soft)' }}>|</span>
+        <span className="footer-divider">|</span>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-          <Lock size={12} color="#34d399" />
-          <span>TLS 1.3 / WSS • HIPAA Encrypted</span>
+        <div className="footer-meta-pill" title="Cryptographic Transport Layer Security 1.3 Active">
+          <Lock size={12} className="text-emerald" />
+          <span>TLS 1.3 / WSS · HIPAA Compliant</span>
         </div>
 
-        <span style={{ color: 'var(--border-soft)' }}>|</span>
+        <span className="footer-divider">|</span>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-          <HeartPulse size={12} color="#38bdf8" />
-          <span>Real-time PHI Telemetry Protected</span>
+        <div className="footer-meta-pill" title="Patient Health Information Telemetry Protected">
+          <HeartPulse size={12} className="text-sky" />
+          <span>PHI Telemetry Shield Active</span>
         </div>
       </div>
 
-      {/* Center: Legal & Compliance Links */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+      {/* 2. Center Zone: Compliance, Research, & Operations Controls */}
+      <div className="cad-footer-zone cad-footer-center">
         <button
+          className="footer-action-link"
           onClick={() => onOpenLegal('privacy')}
-          style={{
-            background: 'none',
-            border: 'none',
-            padding: 0,
-            cursor: 'pointer',
-            color: 'var(--text-muted)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px',
-            transition: 'color 0.15s ease'
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.color = '#38bdf8')}
-          onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
+          title="Review HIPAA Patient Data Privacy Policy"
         >
           <FileText size={12} />
           <span>Privacy Policy</span>
         </button>
 
-        <span style={{ color: 'var(--border-soft)' }}>•</span>
+        <span className="footer-bullet">•</span>
 
         <button
+          className="footer-action-link"
           onClick={() => onOpenLegal('terms')}
-          style={{
-            background: 'none',
-            border: 'none',
-            padding: 0,
-            cursor: 'pointer',
-            color: 'var(--text-muted)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px',
-            transition: 'color 0.15s ease'
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.color = '#818cf8')}
-          onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
+          title="Emergency Dispatch Service Terms of Use"
         >
           <Scale size={12} />
-          <span>Terms & Conditions</span>
+          <span>Terms & SLAs</span>
         </button>
 
-        <span style={{ color: 'var(--border-soft)' }}>•</span>
+        <span className="footer-bullet">•</span>
 
         <button
+          className="footer-action-link"
           onClick={() => onOpenLegal('security')}
-          style={{
-            background: 'none',
-            border: 'none',
-            padding: 0,
-            cursor: 'pointer',
-            color: 'var(--text-muted)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px',
-            transition: 'color 0.15s ease'
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.color = '#34d399')}
-          onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
+          title="View Cryptographic Security & Audit Posture"
         >
           <ShieldCheck size={12} />
           <span>Security Posture</span>
         </button>
 
-        <span style={{ color: 'var(--border-soft)' }}>•</span>
+        <span className="footer-bullet">•</span>
+
+        <button
+          className="footer-action-link"
+          onClick={onOpenAuditLogs}
+          title="Review Immutable CAD Dispatch Audit Logs"
+        >
+          <ClipboardList size={12} />
+          <span>Audit Log</span>
+        </button>
+
+        <span className="footer-bullet">•</span>
 
         <a
           href="/research_proposal.html"
           target="_blank"
           rel="noopener noreferrer"
-          style={{
-            background: 'rgba(56, 189, 248, 0.1)',
-            border: '1px solid rgba(56, 189, 248, 0.25)',
-            borderRadius: '4px',
-            padding: '2px 7px',
-            cursor: 'pointer',
-            color: '#38bdf8',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px',
-            textDecoration: 'none',
-            fontWeight: 600,
-            fontSize: '0.72rem',
-            transition: 'all 0.15s ease'
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(56, 189, 248, 0.2)')}
-          onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(56, 189, 248, 0.1)')}
-          title="Open Final Year Research Paper Dossier in new tab"
+          className="footer-research-chip"
+          title="Open IEEE Final Year Research Paper Proposal in new tab"
         >
           <ExternalLink size={11} />
           <span>IEEE Research Dossier ↗</span>
         </a>
-
-        <span style={{ color: 'var(--border-soft)' }}>•</span>
-
-        <button
-          onClick={onOpenAuditLogs}
-          style={{
-            background: 'none',
-            border: 'none',
-            padding: 0,
-            cursor: 'pointer',
-            color: 'var(--text-muted)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px',
-            transition: 'color 0.15s ease'
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text-main)')}
-          onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
-        >
-          <span>Audit Log</span>
-        </button>
       </div>
 
-      {/* Right: Version & Fast Backup Trigger */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+      {/* 3. Right Zone: Backups & System Version */}
+      <div className="cad-footer-zone cad-footer-right">
         <button
+          className="footer-backup-btn"
           onClick={onOpenSaveModal}
-          style={{
-            background: 'rgba(56, 189, 248, 0.08)',
-            border: '1px solid rgba(56, 189, 248, 0.2)',
-            borderRadius: '5px',
-            padding: '2px 8px',
-            color: '#38bdf8',
-            cursor: 'pointer',
-            fontSize: '0.72rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px'
-          }}
+          title="Backup CAD database state, telemetry snapshots and mission exports"
         >
           <Server size={11} />
           <span>Server Backups</span>
         </button>
 
-        <span style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>
-          v2.5 Pro (Build 2026.09)
+        <span className="footer-version-tag">
+          v2.5 Pro · Build 2026.09
         </span>
       </div>
     </footer>

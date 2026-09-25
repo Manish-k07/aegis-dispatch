@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, AlertTriangle, Sparkles } from 'lucide-react';
+import { X, AlertTriangle, Sparkles, Mic, MicOff, Volume2 } from 'lucide-react';
 import { Emergency } from '../types';
 import { API_BASE } from '../config';
 
@@ -34,6 +34,74 @@ export const NewEmergencyModal: React.FC<NewEmergencyModalProps> = ({
 
   const [triageLoading, setTriageLoading] = useState(false);
   const [triageSuggestion, setTriageSuggestion] = useState<any>(null);
+
+  // Architecture Stub: Voice-to-Text Call Intake
+  const [isVoiceTranscribing, setIsVoiceTranscribing] = useState(false);
+  const [recognitionInstance, setRecognitionInstance] = useState<any>(null);
+  const [voiceFeedback, setVoiceFeedback] = useState<string>('');
+
+  const handleToggleVoiceIntake = () => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Voice-to-Text intake requires Google Chrome or Microsoft Edge Web Speech API.");
+      return;
+    }
+
+    if (isVoiceTranscribing) {
+      if (recognitionInstance) recognitionInstance.stop();
+      setIsVoiceTranscribing(false);
+      setVoiceFeedback('');
+      return;
+    }
+
+    try {
+      const recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
+
+      recognition.onresult = (event: any) => {
+        let fullTranscript = '';
+        for (let i = 0; i < event.results.length; i++) {
+          fullTranscript += event.results[i][0].transcript;
+        }
+
+        setDescription(fullTranscript);
+        setVoiceFeedback(`Live Audio Transcribed: "${fullTranscript}"`);
+
+        // Smart Clinical Entity Extraction
+        const lower = fullTranscript.toLowerCase();
+        if (lower.includes('cardiac') || lower.includes('chest pain') || lower.includes('heart') || lower.includes('arrest')) {
+          setType('CARDIAC');
+          setPriority('CRITICAL');
+        } else if (lower.includes('breath') || lower.includes('asthma') || lower.includes('shortness')) {
+          setType('BREATHING');
+          setPriority('HIGH');
+        } else if (lower.includes('accident') || lower.includes('crash') || lower.includes('collision') || lower.includes('bleed')) {
+          setType('ACCIDENT');
+          setPriority('CRITICAL');
+        }
+
+        if (lower.includes('at ') || lower.includes('near ') || lower.includes('road') || lower.includes('street')) {
+          const locMatch = fullTranscript.match(/(?:at|near|on)\s+([A-Za-z0-9\s,]+?)(?:\.|$|,|\s+patient)/i);
+          if (locMatch && locMatch[1]) {
+            setAddress(`${locMatch[1].trim()}, Bengaluru`);
+          }
+        }
+      };
+
+      recognition.onerror = () => setIsVoiceTranscribing(false);
+      recognition.onend = () => setIsVoiceTranscribing(false);
+
+      recognition.start();
+      setRecognitionInstance(recognition);
+      setIsVoiceTranscribing(true);
+      setVoiceFeedback("🎙️ Listening to 911 emergency intake audio... Speak now.");
+    } catch (e) {
+      console.error(e);
+      setIsVoiceTranscribing(false);
+    }
+  };
 
   const handleRunAiTriage = async () => {
     if (!description.trim()) return;
@@ -160,12 +228,30 @@ export const NewEmergencyModal: React.FC<NewEmergencyModalProps> = ({
             <AlertTriangle className="text-red" size={20} />
             <h2>Report New Emergency Incident</h2>
           </div>
-          <button className="btn-close" onClick={onClose}>
-            <X size={20} />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              className={`btn btn-xs ${isVoiceTranscribing ? 'btn-danger' : 'btn-outline-sky'} flex items-center gap-1`}
+              onClick={handleToggleVoiceIntake}
+              title="Speak into microphone to automatically populate incident details"
+            >
+              {isVoiceTranscribing ? <MicOff size={13} className="text-red" /> : <Mic size={13} className="text-sky" />}
+              <span>{isVoiceTranscribing ? 'Stop Voice Intake' : '🎙️ Voice Call Intake'}</span>
+            </button>
+            <button className="btn-close" onClick={onClose}>
+              <X size={20} />
+            </button>
+          </div>
         </div>
 
         <form onSubmit={handleSubmit} className="modal-body">
+          {voiceFeedback && (
+            <div style={{ background: 'rgba(56, 189, 248, 0.12)', border: '1px solid rgba(56, 189, 248, 0.3)', borderRadius: '6px', padding: '6px 12px', marginBottom: '12px', fontSize: '0.8rem', color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Volume2 size={14} className="text-sky" />
+              <span>{voiceFeedback}</span>
+            </div>
+          )}
+
           <div className="presets-bar">
             <span className="text-secondary text-xs flex items-center gap-1">
               <Sparkles size={12} />

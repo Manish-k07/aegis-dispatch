@@ -1941,20 +1941,21 @@ body {
   z-index: 1000;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
 }
 
 .map-tool-btn {
   display: flex;
   align-items: center;
-  gap: 6px;
-  background: rgba(13, 19, 31, 0.9);
-  backdrop-filter: blur(10px);
+  gap: 8px;
+  background: rgba(13, 19, 31, 0.92);
+  backdrop-filter: blur(12px);
   border: 1px solid var(--border-light);
   color: var(--text-primary);
-  padding: 6px 12px;
+  padding: 8px 14px;
+  min-height: 38px;
   border-radius: 8px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   cursor: pointer;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6);
@@ -1963,7 +1964,8 @@ body {
 
 .map-tool-btn:hover {
   background: #1e293b;
-  border-color: #6366f1;
+  border-color: #38bdf8;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.25);
 }
 
 .map-layer-dropdown-container {
@@ -1972,49 +1974,86 @@ body {
 
 .entity-filters {
   display: flex;
-  gap: 4px;
-  background: rgba(13, 19, 31, 0.9);
-  backdrop-filter: blur(10px);
-  padding: 3px;
-  border-radius: 8px;
+  gap: 8px;
+  background: rgba(13, 19, 31, 0.92);
+  backdrop-filter: blur(12px);
+  padding: 6px 8px;
+  border-radius: 10px;
   border: 1px solid var(--border);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
 }
 
 .filter-pill {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 7px;
   background: transparent;
   border: 1px solid transparent;
   color: var(--text-muted);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
-  padding: 4px 8px;
-  border-radius: 6px;
+  padding: 7px 12px;
+  min-height: 34px;
+  border-radius: 7px;
   cursor: pointer;
   transition: all 0.15s ease;
+  white-space: nowrap;
 }
 
 .filter-pill:hover {
   color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .filter-pill.active-red {
-  background: rgba(239, 68, 68, 0.15);
+  background: rgba(239, 68, 68, 0.18);
   color: #ef4444;
-  border-color: rgba(239, 68, 68, 0.35);
+  border-color: rgba(239, 68, 68, 0.4);
 }
 
 .filter-pill.active-emerald {
-  background: rgba(16, 185, 129, 0.15);
+  background: rgba(16, 185, 129, 0.18);
   color: #10b981;
-  border-color: rgba(16, 185, 129, 0.35);
+  border-color: rgba(16, 185, 129, 0.4);
 }
 
 .filter-pill.active-sky {
-  background: rgba(2, 132, 199, 0.15);
+  background: rgba(2, 132, 199, 0.18);
   color: #38bdf8;
-  border-color: rgba(2, 132, 199, 0.35);
+  border-color: rgba(2, 132, 199, 0.4);
+}
+
+.filter-pill.active-amber {
+  background: rgba(245, 158, 11, 0.18);
+  color: #f59e0b;
+  border-color: rgba(245, 158, 11, 0.4);
+}
+
+.filter-pill.active-purple {
+  background: rgba(168, 85, 247, 0.18);
+  color: #c084fc;
+  border-color: rgba(168, 85, 247, 0.4);
+}
+
+.filter-pill.active-rose {
+  background: rgba(244, 63, 94, 0.18);
+  color: #fb7185;
+  border-color: rgba(244, 63, 94, 0.4);
+}
+
+@keyframes pulse-siren {
+  0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 10px rgba(239, 68, 68, 0.8); }
+  50% { opacity: 0.3; transform: scale(0.85); box-shadow: 0 0 2px rgba(239, 68, 68, 0.2); }
+}
+
+.live-dot-red-pulse {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ef4444;
+  animation: pulse-siren 1s infinite;
+  display: inline-block;
+  flex-shrink: 0;
 }
 
 /* MAP WATERMARK & HINT */
@@ -2735,17 +2774,55 @@ body {
   top: 54px;
   left: 58px;
   z-index: 990;
-  background: rgba(13, 19, 31, 0.9);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(245, 158, 11, 0.4);
-  border-radius: 6px;
-  padding: 5px 12px;
+  background: rgba(13, 19, 31, 0.94);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(245, 158, 11, 0.5);
+  border-radius: 8px;
+  padding: 6px 14px;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   font-size: 11px;
   color: #f1f5f9;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.traffic-reroute-banner.severe {
+  background: rgba(35, 12, 18, 0.95);
+  border-color: rgba(239, 68, 68, 0.7);
+  box-shadow: 0 0 18px rgba(239, 68, 68, 0.35);
+}
+
+.traffic-reroute-banner.moderate {
+  background: rgba(35, 25, 10, 0.95);
+  border-color: rgba(245, 158, 11, 0.6);
+  box-shadow: 0 0 16px rgba(245, 158, 11, 0.25);
+}
+
+.traffic-reroute-banner.clear {
+  background: rgba(10, 30, 22, 0.95);
+  border-color: rgba(16, 185, 129, 0.5);
+  box-shadow: 0 0 16px rgba(16, 185, 129, 0.2);
+}
+
+.traffic-toggle-cycle-btn {
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  border-radius: 5px;
+  padding: 3px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s ease;
+}
+
+.traffic-toggle-cycle-btn:hover {
+  background: rgba(255, 255, 255, 0.22);
 }
 
 .live-dot-green {
@@ -2755,6 +2832,19 @@ body {
   background: #10b981;
   box-shadow: 0 0 8px #10b981;
   animation: pulse-dot 1.2s infinite;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.live-dot-amber {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #f59e0b;
+  box-shadow: 0 0 8px #f59e0b;
+  animation: pulse-dot 1.2s infinite;
+  display: inline-block;
+  flex-shrink: 0;
 }
 
 .weather-hud-pill {
@@ -2763,8 +2853,53 @@ body {
   font-weight: 700;
   color: #38bdf8;
   background: rgba(56, 189, 248, 0.12);
-  padding: 2px 6px;
+  padding: 3px 8px;
   border-radius: 4px;
+  white-space: nowrap;
+}
+
+.cctv-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(8px);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.cctv-modal-content {
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 620px;
+  overflow: hidden;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8);
+}
+
+.cctv-video-sim {
+  position: relative;
+  width: 100%;
+  height: 320px;
+  background: #050811;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cctv-scanline {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+  background-size: 100% 3px, 6px 100%;
+  pointer-events: none;
 }
 
 .traffic-signal-marker {
@@ -5221,6 +5356,248 @@ body {
     display: inline;
   }
 }
+
+/* ==========================================================================
+   CAD MODERN FOOTER ARCHITECTURE (UNCOMPRESSED & RESPONSIVE)
+   ========================================================================== */
+
+.cad-footer-modern {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  padding: 10px 24px;
+  background: rgba(10, 15, 26, 0.96);
+  backdrop-filter: blur(14px);
+  border-top: 1px solid var(--border-soft);
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  z-index: 40;
+  position: relative;
+  min-height: 42px;
+}
+
+.cad-footer-zone {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+}
+
+.cad-footer-left {
+  gap: 14px;
+  flex-shrink: 0;
+}
+
+.footer-status-badge {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.footer-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.footer-engine-title {
+  color: var(--text-main);
+  font-weight: 500;
+}
+
+.footer-divider {
+  color: rgba(255, 255, 255, 0.15);
+  font-size: 11px;
+}
+
+.footer-bullet {
+  color: rgba(255, 255, 255, 0.2);
+  font-size: 10px;
+}
+
+.footer-meta-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #cbd5e1;
+  font-size: 0.74rem;
+  white-space: nowrap;
+}
+
+.cad-footer-center {
+  gap: 10px;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  padding: 4px 14px;
+}
+
+.footer-action-link {
+  background: none;
+  border: none;
+  padding: 2px 4px;
+  cursor: pointer;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.74rem;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.footer-action-link:hover {
+  color: #38bdf8;
+  transform: translateY(-1px);
+}
+
+.footer-research-chip {
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  border-radius: 6px;
+  padding: 2px 8px;
+  cursor: pointer;
+  color: #38bdf8;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.72rem;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.footer-research-chip:hover {
+  background: rgba(56, 189, 248, 0.25);
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
+}
+
+.cad-footer-right {
+  gap: 14px;
+  flex-shrink: 0;
+}
+
+.footer-backup-btn {
+  background: rgba(56, 189, 248, 0.08);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  border-radius: 6px;
+  padding: 3px 10px;
+  color: #38bdf8;
+  cursor: pointer;
+  font-size: 0.73rem;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 600;
+  transition: all 0.15s ease;
+}
+
+.footer-backup-btn:hover {
+  background: rgba(56, 189, 248, 0.18);
+  border-color: #38bdf8;
+}
+
+.footer-version-tag {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-family: monospace;
+}
+
+@media (max-width: 1100px) {
+  .cad-footer-modern {
+    justify-content: center;
+    gap: 10px 18px;
+  }
+}
+
+/* ==========================================================================
+   MASS CASUALTY INCIDENT (MCI) MODE & HOSPITAL CAPACITY HUD
+   ========================================================================== */
+.mci-alert-banner {
+  background: linear-gradient(90deg, #991b1b, #b91c1c, #7f1d1d);
+  color: #fff;
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  box-shadow: 0 4px 15px rgba(220, 38, 38, 0.4);
+  animation: mciBannerGlow 2s infinite alternate;
+  z-index: 100;
+}
+
+@keyframes mciBannerGlow {
+  0% { box-shadow: 0 4px 12px rgba(220, 38, 38, 0.35); }
+  100% { box-shadow: 0 4px 22px rgba(239, 68, 68, 0.7); }
+}
+
+.mci-banner-content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mci-siren-icon {
+  animation: pulse-siren 1.2s infinite ease-in-out;
+  color: #fef08a;
+  flex-shrink: 0;
+}
+
+.btn-mci-standdown {
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #fff;
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  font-weight: 700;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.btn-mci-standdown:hover {
+  background: rgba(0, 0, 0, 0.6);
+  border-color: #fff;
+}
+
+.btn-mci-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-mci-toggle.standby {
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #f87171;
+}
+
+.btn-mci-toggle.standby:hover {
+  background: rgba(239, 68, 68, 0.18);
+  border-color: #ef4444;
+}
+
+.btn-mci-toggle.active {
+  background: #dc2626;
+  border: 1px solid #ef4444;
+  color: #fff;
+  animation: pulse-siren 1.5s infinite;
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.6);
+}
+
 
 
 

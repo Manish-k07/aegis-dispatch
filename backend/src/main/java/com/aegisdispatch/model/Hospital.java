@@ -57,6 +57,12 @@ public class Hospital {
     @Column(name = "demo_data")
     private boolean demoData;
 
+    @Column(name = "designated_ed_phone")
+    private String designatedEdPhone;
+
+    public String getDesignatedEdPhone() { return designatedEdPhone; }
+    public void setDesignatedEdPhone(String v) { designatedEdPhone = v; }
+
     public UUID getId() { return id; }
     public void setId(UUID v) { id = v; }
 
