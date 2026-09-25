@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { X, Truck, Clock, Navigation, CheckCircle2, Award } from 'lucide-react';
 import { Emergency, Candidate } from '../types';
 
@@ -17,6 +17,18 @@ export const CandidateModal: React.FC<CandidateModalProps> = ({
   onClose,
   onAssign,
 }) => {
+  // Support Escape to close and Enter to dispatch top candidate
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      } else if (e.key === 'Enter' && !isLoading && candidates.length > 0) {
+        onAssign(candidates[0]);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isLoading, candidates, onClose, onAssign]);
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-dialog candidate-dialog" onClick={(e) => e.stopPropagation()}>

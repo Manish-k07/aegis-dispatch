@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { X, Hospital as HospitalIcon, Phone, MapPin, CheckCircle } from 'lucide-react';
 import { Hospital, Dispatch } from '../types';
 
@@ -15,6 +15,13 @@ export const HospitalModal: React.FC<HospitalModalProps> = ({
   onClose,
   onSelectHospital,
 }) => {
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-dialog" onClick={(e) => e.stopPropagation()}>

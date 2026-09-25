@@ -133,7 +133,13 @@ export const DriverDashboard: React.FC<DriverDashboardProps> = ({
     { id: 'SIG-103', intersection: 'Hosur Road Metro Gate', state: 'CLEARING', distanceMeters: 980, countdownSec: 70 },
   ]);
 
-  // Speech recognition initialization
+  // Maintain current dispatch reference for voice callbacks without re-instantiating recognition
+  const dispatchRef = useRef(dispatch);
+  useEffect(() => {
+    dispatchRef.current = dispatch;
+  }, [dispatch]);
+
+  // Speech recognition initialization with proper cleanup
   useEffect(() => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (SpeechRecognition) {
@@ -157,8 +163,14 @@ export const DriverDashboard: React.FC<DriverDashboardProps> = ({
       };
 
       setRecognitionInstance(recognition);
+
+      return () => {
+        try {
+          recognition.abort();
+        } catch {}
+      };
     }
-  }, [dispatch]);
+  }, []);
 
   const speakConfirmation = (phrase: string) => {
     if ('speechSynthesis' in window) {
@@ -173,33 +185,34 @@ export const DriverDashboard: React.FC<DriverDashboardProps> = ({
   const handleVoiceCommand = (command: string) => {
     setVoiceFeedback(`Heard: "${command}"`);
 
-    if (!dispatch) {
+    const currentDispatch = dispatchRef.current;
+    if (!currentDispatch) {
       speakConfirmation("No active dispatch mission assigned to this vehicle.");
       return;
     }
 
     if (command.includes('en route') || command.includes('on the way')) {
-      onAdvanceStatus(dispatch, 'EN_ROUTE_TO_SCENE');
+      onAdvanceStatus(currentDispatch, 'EN_ROUTE_TO_SCENE');
       speakConfirmation("Status updated to En Route to Scene");
       setVoiceFeedback("Voice Command Accepted: EN ROUTE TO SCENE");
     } else if (command.includes('at scene') || command.includes('arrived at scene') || command.includes('scene')) {
-      onAdvanceStatus(dispatch, 'ARRIVED_AT_SCENE');
+      onAdvanceStatus(currentDispatch, 'ARRIVED_AT_SCENE');
       speakConfirmation("Status updated to Arrived at Emergency Scene");
       setVoiceFeedback("Voice Command Accepted: ARRIVED AT SCENE");
     } else if (command.includes('patient onboard') || command.includes('on board') || command.includes('loaded')) {
-      onAdvanceStatus(dispatch, 'PATIENT_ONBOARD');
+      onAdvanceStatus(currentDispatch, 'PATIENT_ONBOARD');
       speakConfirmation("Status updated to Patient Onboard");
       setVoiceFeedback("Voice Command Accepted: PATIENT ONBOARD");
     } else if (command.includes('hospital') || command.includes('transport') || command.includes('transporting')) {
-      onAdvanceStatus(dispatch, 'EN_ROUTE_TO_HOSPITAL');
+      onAdvanceStatus(currentDispatch, 'EN_ROUTE_TO_HOSPITAL');
       speakConfirmation("Status updated to En Route to Hospital");
       setVoiceFeedback("Voice Command Accepted: EN ROUTE TO HOSPITAL");
     } else if (command.includes('arrived at hospital') || command.includes('at hospital')) {
-      onAdvanceStatus(dispatch, 'ARRIVED_AT_HOSPITAL');
+      onAdvanceStatus(currentDispatch, 'ARRIVED_AT_HOSPITAL');
       speakConfirmation("Status updated to Arrived at Hospital Emergency Department");
       setVoiceFeedback("Voice Command Accepted: ARRIVED AT HOSPITAL");
     } else if (command.includes('complete') || command.includes('finished') || command.includes('clear')) {
-      onAdvanceStatus(dispatch, 'COMPLETED');
+      onAdvanceStatus(currentDispatch, 'COMPLETED');
       speakConfirmation("Mission complete. Vehicle back in service.");
       setVoiceFeedback("Voice Command Accepted: MISSION COMPLETED");
     } else {

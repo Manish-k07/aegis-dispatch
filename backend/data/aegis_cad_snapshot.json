@@ -2,15 +2,15 @@
   "metadata" : {
     "systemName" : "AEGIS DISPATCH CAD",
     "version" : "v2.5 PRO",
-    "snapshotReason" : "DATABASE_RESET",
-    "exportedAt" : "2026-09-25T13:59:54.098124500Z",
+    "snapshotReason" : "AUTO_ASSIGN",
+    "exportedAt" : "2026-09-25T14:20:44.082959Z",
     "systemStatus" : "OPERATIONAL",
-    "archiveSignature" : "4a61dfe9-178e-4910-a165-83d0c38e5d3c",
+    "archiveSignature" : "fc7e0330-20e0-4d5d-b40f-823461fc07c5",
     "totalEmergencies" : 3,
-    "totalDispatches" : 0,
+    "totalDispatches" : 1,
     "totalAmbulances" : 4,
     "totalHospitals" : 3,
-    "totalAuditLogs" : 1
+    "totalAuditLogs" : 2
   },
   "emergencies" : [ {
     "id" : "30000000-0000-0000-0000-000000000001",
@@ -19,13 +19,13 @@
     "type" : "ACCIDENT",
     "description" : "Simulation accident requiring rapid response",
     "address" : "Demo Junction, Bengaluru",
-    "status" : "PENDING_DISPATCH",
+    "status" : "DISPATCHED",
     "patientCount" : 1,
     "priority" : "CRITICAL",
     "latitude" : 12.9735,
     "longitude" : 77.5968,
-    "createdAt" : "2026-09-25T13:59:54.076987600Z",
-    "updatedAt" : "2026-09-25T13:59:54.076987600Z"
+    "createdAt" : "2026-09-25T13:59:54.076988Z",
+    "updatedAt" : "2026-09-25T14:20:44.070236400Z"
   }, {
     "id" : "30000000-0000-0000-0000-000000000002",
     "callerName" : "Demo Caller 2",
@@ -38,8 +38,8 @@
     "priority" : "HIGH",
     "latitude" : 12.9655,
     "longitude" : 77.6015,
-    "createdAt" : "2026-09-25T13:59:54.076987600Z",
-    "updatedAt" : "2026-09-25T13:59:54.076987600Z"
+    "createdAt" : "2026-09-25T13:59:54.076988Z",
+    "updatedAt" : "2026-09-25T13:59:54.076988Z"
   }, {
     "id" : "30000000-0000-0000-0000-000000000003",
     "callerName" : "Priya Sharma",
@@ -52,15 +52,28 @@
     "priority" : "CRITICAL",
     "latitude" : 12.9812,
     "longitude" : 77.5877,
-    "createdAt" : "2026-09-25T13:59:54.076987600Z",
-    "updatedAt" : "2026-09-25T13:59:54.076987600Z"
+    "createdAt" : "2026-09-25T13:59:54.076988Z",
+    "updatedAt" : "2026-09-25T13:59:54.076988Z"
   } ],
-  "dispatches" : [ ],
+  "dispatches" : [ {
+    "id" : "ccac5458-8228-44e7-ab2c-073c5afd0544",
+    "emergencyId" : "30000000-0000-0000-0000-000000000001",
+    "ambulanceId" : "20000000-0000-0000-0000-000000000001",
+    "dispatcherName" : "AI Auto-Dispatcher",
+    "status" : "DISPATCHED",
+    "distanceKm" : 2.39,
+    "etaMinutes" : 4.9,
+    "score" : 0.87,
+    "hospitalId" : "10000000-0000-0000-0000-000000000001",
+    "assignedAt" : "2026-09-25T14:20:44.070236400Z",
+    "acceptedAt" : null,
+    "completedAt" : null
+  } ],
   "ambulances" : [ {
     "id" : "20000000-0000-0000-0000-000000000001",
     "registrationNumber" : "KA-01-AE-1001",
     "type" : "ALS",
-    "status" : "AVAILABLE",
+    "status" : "DISPATCHED",
     "driverName" : "Arun Kumar",
     "emtName" : "Meena R",
     "latitude" : 12.971,
@@ -181,6 +194,16 @@
     "previousState" : null,
     "newState" : "RESET",
     "metadata" : "Restored demo seed data, ready fleet status, and hospital capacities",
-    "createdAt" : "2026-09-25T13:59:54.087573200Z"
+    "createdAt" : "2026-09-25T13:59:54.087573Z"
+  }, {
+    "id" : 182,
+    "actor" : "AI Auto-Dispatcher",
+    "action" : "AMBULANCE_AUTO_ASSIGNED",
+    "entityType" : "DISPATCH",
+    "entityId" : "ccac5458-8228-44e7-ab2c-073c5afd0544",
+    "previousState" : "PENDING_DISPATCH",
+    "newState" : "DISPATCHED",
+    "metadata" : "ambulance=20000000-0000-0000-0000-000000000001;hospital=Aegis City General",
+    "createdAt" : "2026-09-25T14:20:44.070236400Z"
   } ]
 }

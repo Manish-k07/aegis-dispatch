@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   ChatMessage,
   TriageAssessment,
@@ -56,6 +56,22 @@ export const AICopilotDrawer: React.FC<AICopilotDrawerProps> = ({
   const [triageInput, setTriageInput] = useState('');
   const [triageResult, setTriageResult] = useState<TriageAssessment | null>(null);
   const [isTriaging, setIsTriaging] = useState(false);
+
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll on new message or loading state
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, isLoading]);
+
+  // Support Escape key to close drawer
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
 
   if (!isOpen) return null;
 
@@ -312,6 +328,7 @@ export const AICopilotDrawer: React.FC<AICopilotDrawerProps> = ({
             </div>
           </div>
         )}
+        <div ref={messagesEndRef} />
       </div>
 
       {/* Chat Input Bar */}

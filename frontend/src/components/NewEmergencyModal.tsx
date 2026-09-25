@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { X, AlertTriangle, Sparkles, Mic, MicOff, Volume2 } from 'lucide-react';
 import { Emergency } from '../types';
 import { API_BASE } from '../config';
@@ -36,6 +36,17 @@ export const NewEmergencyModal: React.FC<NewEmergencyModalProps> = ({
   const [triageSuggestion, setTriageSuggestion] = useState<any>(null);
   const [isListening, setIsListening] = useState(false);
   const [voiceTranscript, setVoiceTranscript] = useState('');
+  const recognitionRef = useRef<any>(null);
+
+  useEffect(() => {
+    return () => {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.abort();
+        } catch {}
+      }
+    };
+  }, []);
 
   const toggleVoiceIntake = () => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -45,6 +56,11 @@ export const NewEmergencyModal: React.FC<NewEmergencyModalProps> = ({
     }
 
     if (isListening) {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.abort();
+        } catch {}
+      }
       setIsListening(false);
       return;
     }
@@ -57,6 +73,7 @@ export const NewEmergencyModal: React.FC<NewEmergencyModalProps> = ({
     recognition.onstart = () => setIsListening(true);
     recognition.onend = () => setIsListening(false);
     recognition.onerror = () => setIsListening(false);
+    recognitionRef.current = recognition;
 
     recognition.onresult = (event: any) => {
       const speech = event.results[0][0].transcript;
