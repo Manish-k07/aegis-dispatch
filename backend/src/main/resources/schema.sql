@@ -1,6 +1,6 @@
 -- AEGIS DISPATCH DDL Schema (Persistent)
 CREATE TABLE IF NOT EXISTS hospitals (
- id UUID PRIMARY KEY, name VARCHAR(160) NOT NULL, phone VARCHAR(40), address VARCHAR(300) NOT NULL,
+ id UUID PRIMARY KEY, name VARCHAR(160) NOT NULL, phone VARCHAR(40), designated_ed_phone VARCHAR(40), address VARCHAR(300) NOT NULL,
  latitude DOUBLE PRECISION NOT NULL, longitude DOUBLE PRECISION NOT NULL,
  status VARCHAR(30) NOT NULL, emergency_department BOOLEAN NOT NULL DEFAULT TRUE,
  icu_available BOOLEAN NOT NULL DEFAULT FALSE, cardiac_services BOOLEAN NOT NULL DEFAULT FALSE,
@@ -11,6 +11,11 @@ CREATE TABLE IF NOT EXISTS hospitals (
  cath_lab_operational BOOLEAN NOT NULL DEFAULT TRUE,
  demo_data BOOLEAN NOT NULL DEFAULT TRUE, created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
+
+ALTER TABLE hospitals ADD COLUMN IF NOT EXISTS designated_ed_phone VARCHAR(40);
+UPDATE hospitals SET designated_ed_phone = '+918022220001' WHERE id = '10000000-0000-0000-0000-000000000001' AND (designated_ed_phone IS NULL OR designated_ed_phone = '');
+UPDATE hospitals SET designated_ed_phone = '+918022220002' WHERE id = '10000000-0000-0000-0000-000000000002' AND (designated_ed_phone IS NULL OR designated_ed_phone = '');
+UPDATE hospitals SET designated_ed_phone = '+918022220003' WHERE id = '10000000-0000-0000-0000-000000000003' AND (designated_ed_phone IS NULL OR designated_ed_phone = '');
 
 CREATE TABLE IF NOT EXISTS hospital_capabilities (
  hospital_id UUID NOT NULL REFERENCES hospitals(id) ON DELETE CASCADE,

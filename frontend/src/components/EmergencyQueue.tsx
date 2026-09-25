@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AlertCircle, Clock, MapPin, Users, Send, Phone, AlertTriangle, Zap } from 'lucide-react';
+import { AlertCircle, Clock, MapPin, Users, Send, Phone, AlertTriangle, Zap, CheckCircle2, History } from 'lucide-react';
 import { Emergency } from '../types';
 
 interface EmergencyQueueProps {
@@ -9,6 +9,7 @@ interface EmergencyQueueProps {
   onSelectEmergency: (e: Emergency) => void;
   onAutoAssign?: (emergencyId: string) => void;
   onAutoAssignNext?: () => void;
+  onResetData?: () => void;
 }
 
 export const EmergencyQueue: React.FC<EmergencyQueueProps> = ({
@@ -18,9 +19,11 @@ export const EmergencyQueue: React.FC<EmergencyQueueProps> = ({
   onSelectEmergency,
   onAutoAssign,
   onAutoAssignNext,
+  onResetData,
 }) => {
-  const [filter, setFilter] = useState<'ALL' | 'CRITICAL' | 'HIGH' | 'PENDING' | 'RESOLVED'>('ALL');
+  const [filter, setFilter] = useState<'ACTIVE' | 'CRITICAL' | 'HIGH' | 'PENDING' | 'SHIFT_LOG'>('ACTIVE');
 
+  // Filter out completed & cancelled from primary active queues to prevent cognitive overload & SLA confusion
   const filtered = emergencies.filter((e) => {
     // Search query filter
     if (searchQuery) {
@@ -33,12 +36,19 @@ export const EmergencyQueue: React.FC<EmergencyQueueProps> = ({
       if (!match) return false;
     }
 
-    if (filter === 'CRITICAL') return e.priority === 'CRITICAL';
-    if (filter === 'HIGH') return e.priority === 'HIGH';
-    if (filter === 'PENDING') return e.status === 'PENDING_DISPATCH' || e.status === 'CREATED';
-    if (filter === 'RESOLVED') return ['COMPLETED', 'CANCELLED'].includes(e.status);
-    return true;
+    const isClosed = ['COMPLETED', 'CANCELLED'].includes(e.status);
+
+    if (filter === 'ACTIVE') return !isClosed;
+    if (filter === 'CRITICAL') return !isClosed && e.priority === 'CRITICAL';
+    if (filter === 'HIGH') return !isClosed && e.priority === 'HIGH';
+    if (filter === 'PENDING') return !isClosed && (e.status === 'PENDING_DISPATCH' || e.status === 'CREATED');
+    if (filter === 'SHIFT_LOG') return isClosed;
+
+    return !isClosed;
   });
+
+  const activeEmergencies = emergencies.filter((e) => !['COMPLETED', 'CANCELLED'].includes(e.status));
+  const closedCount = emergencies.filter((e) => ['COMPLETED', 'CANCELLED'].includes(e.status)).length;
 
   const formatElapsed = (dateStr: string) => {
     try {
@@ -53,6 +63,16 @@ export const EmergencyQueue: React.FC<EmergencyQueueProps> = ({
     }
   };
 
+  const isOverdue = (dateStr: string, status: string) => {
+    if (['COMPLETED', 'CANCELLED'].includes(status)) return false;
+    try {
+      const ms = Date.now() - new Date(dateStr).getTime();
+      return ms > 15 * 60 * 1000; // 15 mins SLA threshold
+    } catch {
+      return false;
+    }
+  };
+
   return (
     <div className="sidebar-section">
       <div className="section-header">
@@ -61,7 +81,7 @@ export const EmergencyQueue: React.FC<EmergencyQueueProps> = ({
           <h2>Emergency Incident Queue</h2>
         </div>
         <div className="flex items-center gap-2">
-          {onAutoAssignNext && (
+          {onAutoAssignNext && activeEmergencies.some((e) => e.status === 'PENDING_DISPATCH' || e.status === 'CREATED') && (
             <button
               className="btn btn-xs btn-primary btn-auto-head"
               onClick={onAutoAssignNext}
@@ -71,36 +91,80 @@ export const EmergencyQueue: React.FC<EmergencyQueueProps> = ({
               <span>⚡ Auto-Dispatch Next</span>
             </button>
           )}
-          <span className="badge-count text-red">{emergencies.length}</span>
+          <span className="badge-count text-red">{activeEmergencies.length} Active</span>
         </div>
       </div>
 
+      {/* Segmented Queue Filter Navigation */}
       <div className="filter-tabs">
-        {(['ALL', 'CRITICAL', 'HIGH', 'PENDING', 'RESOLVED'] as const).map((tab) => (
-          <button
-            key={tab}
-            className={`tab-btn ${filter === tab ? 'active' : ''}`}
-            onClick={() => setFilter(tab)}
-          >
-            {tab}
-          </button>
-        ))}
+        <button
+          className={`tab-btn ${filter === 'ACTIVE' ? 'active' : ''}`}
+          onClick={() => setFilter('ACTIVE')}
+          title="Active incoming and en-route emergency calls"
+        >
+          Active ({activeEmergencies.length})
+        </button>
+        <button
+          className={`tab-btn ${filter === 'CRITICAL' ? 'active' : ''}`}
+          onClick={() => setFilter('CRITICAL')}
+        >
+          Critical
+        </button>
+        <button
+          className={`tab-btn ${filter === 'HIGH' ? 'active' : ''}`}
+          onClick={() => setFilter('HIGH')}
+        >
+          High
+        </button>
+        <button
+          className={`tab-btn ${filter === 'PENDING' ? 'active' : ''}`}
+          onClick={() => setFilter('PENDING')}
+        >
+          Pending
+        </button>
+        <button
+          className={`tab-btn ${filter === 'SHIFT_LOG' ? 'active' : ''}`}
+          onClick={() => setFilter('SHIFT_LOG')}
+          title="Historical closed incidents in current shift"
+        >
+          Shift Log ({closedCount})
+        </button>
       </div>
 
       <div className="queue-list">
         {filtered.length === 0 ? (
-          <div className="empty-state">No incidents match the active filters.</div>
+          <div className="empty-state" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', padding: '24px 12px' }}>
+            <p style={{ margin: 0, color: '#94a3b8' }}>
+              {filter === 'SHIFT_LOG'
+                ? 'No closed incidents in current shift log.'
+                : 'Zero active incidents matching current filters.'}
+            </p>
+            {filter !== 'SHIFT_LOG' && onResetData && (
+              <button
+                className="btn btn-sm btn-primary"
+                onClick={onResetData}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '6px' }}
+                title="Seed 3 active high-acuity emergency calls into the dispatch queue"
+              >
+                <Zap size={13} />
+                <span>🚨 Seed Live Emergency Calls</span>
+              </button>
+            )}
+          </div>
         ) : (
           filtered.map((em) => {
             const isSelected = selectedEmergency?.id === em.id;
             const isPending = em.status === 'PENDING_DISPATCH' || em.status === 'CREATED';
             const isCritical = em.priority === 'CRITICAL';
+            const isClosed = ['COMPLETED', 'CANCELLED'].includes(em.status);
+            const slaBreach = isOverdue(em.createdAt, em.status);
 
             return (
               <div
                 key={em.id}
-                className={`incident-card ${em.priority.toLowerCase()} ${isSelected ? 'selected' : ''}`}
+                className={`incident-card ${em.priority.toLowerCase()} ${isSelected ? 'selected' : ''} ${isClosed ? 'opacity-70' : ''}`}
                 onClick={() => onSelectEmergency(em)}
+                style={isClosed ? { borderLeftColor: '#64748b' } : undefined}
               >
                 <div className="incident-header">
                   <div className="incident-title-row">
@@ -108,7 +172,17 @@ export const EmergencyQueue: React.FC<EmergencyQueueProps> = ({
                       {em.priority}
                     </span>
                     <strong className="incident-type">{em.type}</strong>
-                    {isCritical && <span className="incident-critical-badge">IMMEDIATE</span>}
+                    {isCritical && !isClosed && <span className="incident-critical-badge">IMMEDIATE</span>}
+                    {slaBreach && (
+                      <span className="chip" style={{ background: '#7f1d1d', color: '#fca5a5', fontSize: '9px', padding: '1px 5px' }}>
+                        SLA 15m+
+                      </span>
+                    )}
+                    {isClosed && (
+                      <span className="chip" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#34d399', fontSize: '10px' }}>
+                        ✓ CLOSED
+                      </span>
+                    )}
                   </div>
                   <span className="time-ticker text-muted text-xs">{formatElapsed(em.createdAt)}</span>
                 </div>

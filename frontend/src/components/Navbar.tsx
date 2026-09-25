@@ -17,7 +17,10 @@ import {
   Save,
   Activity,
   Command,
-  Scale
+  Scale,
+  Building2,
+  Truck,
+  AlertTriangle
 } from 'lucide-react';
 import { DashboardData, UserRole } from '../types';
 
@@ -36,9 +39,12 @@ interface NavbarProps {
   onOpenAICopilot: () => void;
   onOpenMaintenance: () => void;
   onOpenPredictive: () => void;
-  onOpenSaveModal: () => void;
+  onOpenSaveModal?: () => void;
   onAutoAssignNext: () => void;
   onOpenLegal?: (tab?: 'privacy' | 'terms' | 'security') => void;
+  isMciActive?: boolean;
+  onToggleMci?: () => void;
+  onOpenCapacityHud?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -59,6 +65,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenSaveModal,
   onAutoAssignNext,
   onOpenLegal,
+  isMciActive = false,
+  onToggleMci,
+  onOpenCapacityHud,
 }) => {
   const [currentTime, setCurrentTime] = useState<string>('');
 
@@ -107,31 +116,31 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
         </div>
 
-        {/* Calm Segmented Role Controller */}
+        {/* Prominent Primary Dashboard Console Switcher */}
         <nav className="role-switcher-bar" aria-label="Console Interface Switcher">
           <button
             className={`role-tab-btn ${currentRole === 'DISPATCHER' ? 'active-cad' : ''}`}
             onClick={() => onSelectRole('DISPATCHER')}
-            title="Central Dispatch CAD Command"
+            title="Central Dispatch CAD Command Interface"
           >
-            <Radio size={13} className="tab-icon" />
-            <span>Central CAD</span>
+            <Radio size={14} className="tab-icon" />
+            <span>🚨 Central CAD</span>
           </button>
           <button
             className={`role-tab-btn ${currentRole === 'DRIVER' ? 'active-driver' : ''}`}
             onClick={() => onSelectRole('DRIVER')}
-            title="Mobile Data Terminal (Paramedic / Driver)"
+            title="Ambulance Driver Mobile Data Terminal (MDT) Dashboard"
           >
-            <User size={13} className="tab-icon" />
-            <span>Driver MDT</span>
+            <Truck size={14} className="tab-icon" />
+            <span>🚑 Ambulance Dashboard</span>
           </button>
           <button
             className={`role-tab-btn ${currentRole === 'HOSPITAL' ? 'active-hosp' : ''}`}
             onClick={() => onSelectRole('HOSPITAL')}
-            title="Hospital Emergency Department Triage"
+            title="Hospital Emergency Department & Trauma Reception Dashboard"
           >
-            <Activity size={13} className="tab-icon" />
-            <span>Hospital ED</span>
+            <Building2 size={14} className="tab-icon" />
+            <span>🏥 Hospital Dashboard</span>
           </button>
         </nav>
       </div>
@@ -225,6 +234,31 @@ export const Navbar: React.FC<NavbarProps> = ({
           <span>Save</span>
           <span className="calm-green-dot" />
         </button>
+
+        {/* Hospital Capacity HUD Trigger */}
+        {onOpenCapacityHud && (
+          <button
+            className="btn-calm-secondary"
+            onClick={onOpenCapacityHud}
+            title="Open Regional Hospital ED & Trauma Capacity Network HUD"
+          >
+            <Building2 size={13} className="text-sky" />
+            <span>ED Capacity</span>
+          </button>
+        )}
+
+        {/* Mass Casualty Incident (MCI) Mode Toggle */}
+        {onToggleMci && (
+          <button
+            className={`btn-calm-secondary ${isMciActive ? 'mci-active-btn' : ''}`}
+            onClick={onToggleMci}
+            title="Toggle Mass Casualty Incident (MCI) Operations Mode"
+            style={isMciActive ? { borderColor: '#ef4444', color: '#f87171', background: 'rgba(239, 68, 68, 0.15)' } : undefined}
+          >
+            <AlertTriangle size={13} className={isMciActive ? 'text-red animate-pulse' : 'text-amber'} />
+            <span>{isMciActive ? 'MCI ACTIVE' : 'MCI Mode'}</span>
+          </button>
+        )}
 
         {/* Grouped Secondary Utilities Cluster */}
         <div className="utility-cluster">

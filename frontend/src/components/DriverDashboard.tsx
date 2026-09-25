@@ -26,7 +26,10 @@ import {
   Zap,
   ArrowRight,
   Save,
-  HardDrive
+  HardDrive,
+  MessageSquare,
+  Phone,
+  X
 } from 'lucide-react';
 
 interface DriverDashboardProps {
@@ -45,6 +48,7 @@ interface DriverDashboardProps {
     maneuver?: string;
     etaRemaining?: number;
   };
+  apiBase?: string;
 }
 
 export const DriverDashboard: React.FC<DriverDashboardProps> = ({
@@ -60,7 +64,13 @@ export const DriverDashboard: React.FC<DriverDashboardProps> = ({
   onStreamVitals,
   onSaveToFile,
   missionTelemetry,
+  apiBase,
 }) => {
+  // SMS Pre-Arrival Hospital Notification State
+  const [isSmsModalOpen, setIsSmsModalOpen] = useState(false);
+  const [isSendingSms, setIsSendingSms] = useState(false);
+  const [smsFeedback, setSmsFeedback] = useState<{ time: string; recipient: string } | null>(null);
+
   // Hands-free Voice recognition state
   const [isListening, setIsListening] = useState(false);
   const [voiceFeedback, setVoiceFeedback] = useState<string>('Hands-free voice recognition ready. Say "En Route", "At Scene", "Patient Onboard", "Transporting", or "Arrived"');
@@ -79,6 +89,41 @@ export const DriverDashboard: React.FC<DriverDashboardProps> = ({
   });
 
   const [vitalsStreamSuccess, setVitalsStreamSuccess] = useState(false);
+
+  const handleSendHospitalSms = async () => {
+    if (!dispatch || !hospital) return;
+    setIsSendingSms(true);
+    try {
+      const endpoint = (apiBase || 'http://localhost:8080/api') + '/missions/notify-hospital';
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          missionId: dispatch.id,
+          hospitalId: hospital.id,
+          vitals: {
+            heartRate: vitals.heartRate,
+            bloodPressureSys: vitals.bloodPressureSys,
+            bloodPressureDia: vitals.bloodPressureDia,
+            spO2: vitals.spO2,
+          },
+        }),
+      });
+
+      if (res.ok) {
+        const timeNow = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
+        setSmsFeedback({
+          time: timeNow,
+          recipient: hospital.designatedEdPhone || hospital.phone,
+        });
+        setIsSmsModalOpen(false);
+      }
+    } catch (e) {
+      console.error('Error sending SMS to ED:', e);
+    } finally {
+      setIsSendingSms(false);
+    }
+  };
 
   // Simulated traffic preemption signals
   const [preemptionSignals] = useState<TrafficPreemptionSignal[]>([
@@ -334,6 +379,47 @@ export const DriverDashboard: React.FC<DriverDashboardProps> = ({
                     </button>
                   </div>
                 )}
+
+                {/* SMS Notification to Hospital ED */}
+                {dispatch && (
+                  <div className="mt-2 flex items-center justify-between gap-2">
+                    <button
+                      className="btn btn-sm btn-outline-sky flex-1"
+                      onClick={() => setIsSmsModalOpen(true)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px',
+                        padding: '8px 12px',
+                        color: '#38bdf8',
+                        borderColor: 'rgba(56, 189, 248, 0.4)',
+                        background: 'rgba(56, 189, 248, 0.08)',
+                      }}
+                      title="Transmit HIPAA-compliant pre-arrival alert to receiving Emergency Department"
+                    >
+                      <MessageSquare size={14} />
+                      <span>📲 Notify Receiving ED (SMS)</span>
+                    </button>
+
+                    {smsFeedback && (
+                      <span
+                        className="chip"
+                        style={{
+                          background: 'rgba(16, 185, 129, 0.15)',
+                          color: '#34d399',
+                          fontSize: '11px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                        }}
+                      >
+                        <CheckCircle2 size={12} />
+                        <span>ED Alerted at {smsFeedback.time}</span>
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
             ) : (
               <div className="empty-state">
@@ -545,6 +631,97 @@ export const DriverDashboard: React.FC<DriverDashboardProps> = ({
           </div>
         </div>
       </div>
+
+      {/* SMS Pre-Arrival Confirmation Modal */}
+      {isSmsModalOpen && (
+        <div className="modal-overlay" style={{ zIndex: 1000 }}>
+          <div
+            className="modal-content"
+            style={{
+              maxWidth: '520px',
+              width: '90%',
+              background: 'rgba(15, 23, 42, 0.98)',
+              border: '1px solid rgba(56, 189, 248, 0.3)',
+              borderRadius: '12px',
+              padding: '20px',
+              boxShadow: '0 20px 40px rgba(0, 0, 0, 0.8)',
+            }}
+          >
+            <div className="flex items-center justify-between mb-3 border-b border-border-light pb-2">
+              <div className="flex items-center gap-2">
+                <MessageSquare className="text-sky" size={18} />
+                <strong style={{ fontSize: '15px', color: '#f8fafc' }}>Confirm Pre-Arrival SMS Alert</strong>
+              </div>
+              <button
+                className="btn-icon"
+                onClick={() => setIsSmsModalOpen(false)}
+                style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <p style={{ fontSize: '12px', color: '#94a3b8', margin: '0 0 12px 0' }}>
+              Confirm transmission of automated clinical pre-arrival alert to the triage desk at{' '}
+              <strong style={{ color: '#f8fafc' }}>{hospital?.name || 'Receiving Hospital'}</strong>.
+            </p>
+
+            <div
+              style={{
+                background: 'rgba(0, 0, 0, 0.35)',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                borderRadius: '8px',
+                padding: '12px',
+                fontFamily: 'monospace',
+                fontSize: '11px',
+                color: '#38bdf8',
+                lineHeight: '1.5',
+                whiteSpace: 'pre-wrap',
+                marginBottom: '16px',
+              }}
+            >
+{`[AEGIS-ALERT] INBOUND AMBULANCE: ${ambulance.registrationNumber} (${ambulance.type})
+ETA: ~${missionTelemetry?.etaRemaining ? Math.round(missionTelemetry.etaRemaining) : 8} mins
+PATIENT ID: #PT-${emergency ? emergency.id.substring(0, 4).toUpperCase() : 'DEMO'}
+ACUITY: ${emergency?.priority || 'CRITICAL'}
+CHIEF COMPLAINT: ${emergency?.type || 'MEDICAL'}
+VITALS: HR ${vitals.heartRate} | BP ${vitals.bloodPressureSys}/${vitals.bloodPressureDia} | SpO2 ${vitals.spO2}%
+REPLY:
+  1 to CONFIRM TRAUMA BAY READY
+  2 for ED DIVERSION (REROUTE)`}
+            </div>
+
+            <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '16px' }}>
+              🔒 <strong>Strict HIPAA / DPDP Compliance:</strong> Patient names, exact addresses, and direct phone numbers are never transmitted over unencrypted SMS.
+            </div>
+
+            <div className="flex items-center justify-end gap-2">
+              <button
+                className="btn btn-sm btn-outline"
+                onClick={() => setIsSmsModalOpen(false)}
+                disabled={isSendingSms}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn btn-sm btn-primary"
+                onClick={handleSendHospitalSms}
+                disabled={isSendingSms}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              >
+                {isSendingSms ? (
+                  <span>Transmitting...</span>
+                ) : (
+                  <>
+                    <MessageSquare size={13} />
+                    <span>Send Verified SMS Alert</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

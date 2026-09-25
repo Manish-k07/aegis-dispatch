@@ -5222,6 +5222,173 @@ body {
   }
 }
 
+/* Touch Target Padding & Ergonomics (Min 38px) */
+.map-tool-btn,
+.filter-pill,
+.tab-btn {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.map-tool-btn {
+  padding: 8px 14px;
+  gap: 7px;
+}
+
+.filter-pill {
+  padding: 8px 14px;
+  gap: 6px;
+}
+
+/* Uncompressed Modern Footer Architecture */
+.footer-modern-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  padding: 10px 24px;
+  background: rgba(11, 15, 25, 0.98);
+  backdrop-filter: blur(14px);
+  border-top: 1px solid var(--border-soft);
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  z-index: 40;
+  position: relative;
+}
+
+.footer-zone {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.footer-separator {
+  color: var(--border-soft);
+  user-select: none;
+}
+
+.footer-dot {
+  color: var(--border-soft);
+  user-select: none;
+}
+
+.footer-nav-link {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: color 0.15s ease;
+  font-size: 0.74rem;
+}
+
+.footer-nav-link:hover {
+  color: #38bdf8;
+}
+
+.pulse-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.telemetry-beacon-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.telemetry-security-badge,
+.telemetry-health-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.footer-version-tag {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+}
+
+/* CCTV Junction Markers & HUD */
+.cctv-camera-marker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.cctv-cam-pin {
+  background: rgba(15, 23, 42, 0.92);
+  border: 1px solid #38bdf8;
+  border-radius: 50%;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
+  transition: transform 0.2s ease;
+}
+
+.cctv-cam-pin:hover {
+  transform: scale(1.25);
+  border-color: #00f0ff;
+  box-shadow: 0 0 16px rgba(0, 240, 255, 0.8);
+}
+
+/* Dynamic Tri-Color Traffic Indicators */
+.live-dot-red {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #ef4444;
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.8);
+  display: inline-block;
+}
+
+.live-dot-amber {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #f59e0b;
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.8);
+  display: inline-block;
+}
+
+.live-dot-green {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #10b981;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.8);
+  display: inline-block;
+}
+
+/* Mass Casualty Incident (MCI) Protocol Banner */
+.mci-banner {
+  background: linear-gradient(90deg, #7f1d1d 0%, #991b1b 50%, #7f1d1d 100%);
+  border-bottom: 2px solid #ef4444;
+  color: #fef2f2;
+  padding: 8px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  z-index: 50;
+  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
+}
+
 
 
 

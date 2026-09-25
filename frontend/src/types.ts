@@ -53,6 +53,7 @@ export interface Hospital {
   id: string;
   name: string;
   phone: string;
+  designatedEdPhone?: string;
   address: string;
   latitude: number;
   longitude: number;

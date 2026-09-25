@@ -15,6 +15,8 @@ import { FleetMaintenanceModal } from './components/FleetMaintenanceModal';
 import { PredictiveSurgeModal } from './components/PredictiveSurgeModal';
 import { SaveToFileModal } from './components/SaveToFileModal';
 import { LegalModal } from './components/LegalModal';
+import { HospitalCapacityHUD } from './components/HospitalCapacityHUD';
+import { HospitalList } from './components/HospitalList';
 import { Footer } from './components/Footer';
 import {
   DashboardData,
@@ -82,6 +84,8 @@ export const App: React.FC = () => {
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
   const [isLegalModalOpen, setIsLegalModalOpen] = useState(false);
   const [legalModalTab, setLegalModalTab] = useState<'privacy' | 'terms' | 'security'>('privacy');
+  const [isCapacityHudOpen, setIsCapacityHudOpen] = useState(false);
+  const [isMciActive, setIsMciActive] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const handleOpenLegal = (tab: 'privacy' | 'terms' | 'security' = 'privacy') => {
@@ -114,7 +118,7 @@ export const App: React.FC = () => {
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>(INITIAL_DEMO_AUDIT_LOGS);
   const [isConnected, setIsConnected] = useState(true); // Default to true on initial render
   const [isVirtualMode, setIsVirtualMode] = useState(false);
-  const [activeTab, setActiveTab] = useState<'QUEUE' | 'MISSIONS' | 'FLEET'>('QUEUE');
+  const [activeTab, setActiveTab] = useState<'QUEUE' | 'MISSIONS' | 'FLEET' | 'HOSPITALS'>('QUEUE');
 
   const fetchDashboard = useCallback(async () => {
     try {
@@ -1216,7 +1220,30 @@ export const App: React.FC = () => {
         onOpenSaveModal={() => setIsSaveModalOpen(true)}
         onAutoAssignNext={handleAutoAssignNext}
         onOpenLegal={handleOpenLegal}
+        isMciActive={isMciActive}
+        onToggleMci={() => setIsMciActive(!isMciActive)}
+        onOpenCapacityHud={() => setIsCapacityHudOpen(true)}
       />
+
+      {isMciActive && (
+        <div className="mci-banner">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ background: '#dc2626', color: '#fff', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 800, letterSpacing: '1px' }}>
+              CRITICAL PROTOCOL
+            </span>
+            <span>MASS CASUALTY INCIDENT (MCI) ACTIVE · ALL AVAILABLE FLEET MOBILIZED · MUTUAL AID PROTOCOLS ENGAGED</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <span style={{ fontSize: '12px', color: '#fca5a5' }}>TRAUMA HUBS: AUTOMATIC DIVERSION OVERRIDE ACTIVE</span>
+            <button
+              onClick={() => setIsMciActive(false)}
+              style={{ background: 'rgba(0,0,0,0.4)', color: '#fff', padding: '4px 10px', borderRadius: '4px', fontSize: '11px', fontWeight: 700, border: '1px solid #f87171', cursor: 'pointer' }}
+            >
+              STAND DOWN MCI
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Role-Based Primary Interface */}
       {role === 'DISPATCHER' && (
@@ -1259,6 +1286,12 @@ export const App: React.FC = () => {
               >
                 Fleet ({data.ambulances.length})
               </button>
+              <button
+                className={`nav-tab ${activeTab === 'HOSPITALS' ? 'active' : ''}`}
+                onClick={() => setActiveTab('HOSPITALS')}
+              >
+                Hospitals ({data.hospitals.length})
+              </button>
             </div>
 
             <div className="sidebar-body">
@@ -1270,6 +1303,7 @@ export const App: React.FC = () => {
                   onSelectEmergency={handleSelectEmergency}
                   onAutoAssign={handleAutoAssign}
                   onAutoAssignNext={handleAutoAssignNext}
+                  onResetData={handleResetData}
                 />
               )}
 
@@ -1293,7 +1327,26 @@ export const App: React.FC = () => {
               )}
 
               {activeTab === 'FLEET' && (
-                <FleetList ambulances={data.ambulances} searchQuery={searchQuery} />
+                <FleetList
+                  ambulances={data.ambulances}
+                  searchQuery={searchQuery}
+                  onOpenDriverDashboard={(amb) => {
+                    setSelectedDriverAmbulanceId(amb.id);
+                    setRole('DRIVER');
+                  }}
+                />
+              )}
+
+              {activeTab === 'HOSPITALS' && (
+                <HospitalList
+                  hospitals={data.hospitals}
+                  searchQuery={searchQuery}
+                  onSelectHospital={(h) => setSelectedHospitalId(h.id)}
+                  onOpenHospitalDashboard={(h) => {
+                    setSelectedHospitalId(h.id);
+                    setRole('HOSPITAL');
+                  }}
+                />
               )}
             </div>
           </aside>
@@ -1315,6 +1368,7 @@ export const App: React.FC = () => {
           onStreamVitals={handleStreamVitals}
           onSaveToFile={() => setIsSaveModalOpen(true)}
           missionTelemetry={missionTelemetry}
+          apiBase={API_BASE}
         />
       )}
 
@@ -1444,6 +1498,15 @@ export const App: React.FC = () => {
         isOpen={isLegalModalOpen}
         onClose={() => setIsLegalModalOpen(false)}
         defaultTab={legalModalTab}
+      />
+
+      {/* Citywide Hospital ED Capacity HUD */}
+      <HospitalCapacityHUD
+        isOpen={isCapacityHudOpen}
+        onClose={() => setIsCapacityHudOpen(false)}
+        hospitals={data.hospitals}
+        apiBase={API_BASE}
+        onRefreshHospitals={fetchDashboard}
       />
 
       {/* System Audit Drawer */}

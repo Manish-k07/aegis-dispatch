@@ -1,8 +1,11 @@
-INSERT INTO hospitals(id,name,phone,address,latitude,longitude,status,emergency_department,icu_available,cardiac_services,pediatric_services,maternity_services,total_beds,available_beds,icu_beds_total,icu_beds_available,trauma_bays_total,trauma_bays_available,cath_lab_operational,demo_data) VALUES
-('10000000-0000-0000-0000-000000000001','Aegis City General','080-40001001','Demo Medical District, Bengaluru',12.9719,77.5949,'AVAILABLE',true,true,true,true,true,160,48,28,7,10,4,true,true),
-('10000000-0000-0000-0000-000000000002','Metro Trauma Centre','080-40001002','Demo Ring Road, Bengaluru',12.9621,77.6082,'AVAILABLE',true,true,false,false,false,120,22,24,4,12,5,false,true),
-('10000000-0000-0000-0000-000000000003','Southside Community Hospital','080-40001003','Demo South Avenue, Bengaluru',12.9447,77.5711,'LIMITED_CAPACITY',true,false,true,true,true,85,11,12,1,4,1,true,true)
+INSERT INTO hospitals(id,name,phone,designated_ed_phone,address,latitude,longitude,status,emergency_department,icu_available,cardiac_services,pediatric_services,maternity_services,total_beds,available_beds,icu_beds_total,icu_beds_available,trauma_bays_total,trauma_bays_available,cath_lab_operational,demo_data) VALUES
+('10000000-0000-0000-0000-000000000001','Aegis City General','080-40001001','+918022220001','Demo Medical District, Bengaluru',12.9719,77.5949,'AVAILABLE',true,true,true,true,true,160,48,28,7,10,4,true,true),
+('10000000-0000-0000-0000-000000000002','Metro Trauma Centre','080-40001002','+918022220002','Demo Ring Road, Bengaluru',12.9621,77.6082,'AVAILABLE',true,true,false,false,false,120,22,24,4,12,5,false,true),
+('10000000-0000-0000-0000-000000000003','Southside Community Hospital','080-40001003','+918022220003','Demo South Avenue, Bengaluru',12.9447,77.5711,'LIMITED_CAPACITY',true,false,true,true,true,85,11,12,1,4,1,true,true)
 ON CONFLICT DO NOTHING;
+UPDATE hospitals SET designated_ed_phone = '+918022220001' WHERE id = '10000000-0000-0000-0000-000000000001';
+UPDATE hospitals SET designated_ed_phone = '+918022220002' WHERE id = '10000000-0000-0000-0000-000000000002';
+UPDATE hospitals SET designated_ed_phone = '+918022220003' WHERE id = '10000000-0000-0000-0000-000000000003';
 INSERT INTO hospital_capabilities VALUES
 ('10000000-0000-0000-0000-000000000001','TRAUMA'),('10000000-0000-0000-0000-000000000001','CARDIAC'),('10000000-0000-0000-0000-000000000001','PEDIATRIC'),('10000000-0000-0000-0000-000000000001','MATERNITY'),
 ('10000000-0000-0000-0000-000000000002','TRAUMA'),('10000000-0000-0000-0000-000000000002','ICU'),

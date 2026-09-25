@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, AlertTriangle, Sparkles } from 'lucide-react';
+import { X, AlertTriangle, Sparkles, Mic, MicOff, Volume2 } from 'lucide-react';
 import { Emergency } from '../types';
 import { API_BASE } from '../config';
 
@@ -34,6 +34,71 @@ export const NewEmergencyModal: React.FC<NewEmergencyModalProps> = ({
 
   const [triageLoading, setTriageLoading] = useState(false);
   const [triageSuggestion, setTriageSuggestion] = useState<any>(null);
+  const [isListening, setIsListening] = useState(false);
+  const [voiceTranscript, setVoiceTranscript] = useState('');
+
+  const toggleVoiceIntake = () => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert('Web Speech API is not supported in this browser. Please type or use preset.');
+      return;
+    }
+
+    if (isListening) {
+      setIsListening(false);
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = 'en-US';
+
+    recognition.onstart = () => setIsListening(true);
+    recognition.onend = () => setIsListening(false);
+    recognition.onerror = () => setIsListening(false);
+
+    recognition.onresult = (event: any) => {
+      const speech = event.results[0][0].transcript;
+      setVoiceTranscript(speech);
+      setDescription((prev) => (prev ? prev + ' ' + speech : speech));
+
+      const lower = speech.toLowerCase();
+      // Entity extraction
+      if (lower.includes('cardiac') || lower.includes('chest pain') || lower.includes('heart attack')) {
+        setType('CARDIAC');
+        setPriority('CRITICAL');
+      } else if (lower.includes('accident') || lower.includes('crash') || lower.includes('collision')) {
+        setType('ACCIDENT');
+        setPriority('CRITICAL');
+      } else if (lower.includes('breath') || lower.includes('asthma') || lower.includes('suffocat')) {
+        setType('BREATHING');
+        setPriority('HIGH');
+      } else if (lower.includes('trauma') || lower.includes('fall') || lower.includes('bleed')) {
+        setType('TRAUMA');
+        setPriority('CRITICAL');
+      } else if (lower.includes('child') || lower.includes('baby') || lower.includes('pediatric')) {
+        setType('PEDIATRIC');
+        setPriority('HIGH');
+      }
+
+      if (lower.includes('mg road')) {
+        setAddress('MG Road Metro Station, Bengaluru');
+        setLatitude(12.9756);
+        setLongitude(77.6066);
+      } else if (lower.includes('koramangala')) {
+        setAddress('Koramangala 80ft Road, Bengaluru');
+        setLatitude(12.9352);
+        setLongitude(77.6245);
+      } else if (lower.includes('indiranagar')) {
+        setAddress('100ft Road, Indiranagar, Bengaluru');
+        setLatitude(12.9784);
+        setLongitude(77.6408);
+      }
+    };
+
+    recognition.start();
+  };
 
   const handleRunAiTriage = async () => {
     if (!description.trim()) return;
@@ -166,6 +231,38 @@ export const NewEmergencyModal: React.FC<NewEmergencyModalProps> = ({
         </div>
 
         <form onSubmit={handleSubmit} className="modal-body">
+          {/* Voice-to-Text Call Intake Bar */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: '12px',
+              padding: '8px 12px',
+              background: 'rgba(56, 189, 248, 0.05)',
+              borderRadius: '8px',
+              border: '1px solid rgba(56, 189, 248, 0.2)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <button
+                type="button"
+                className={`btn btn-xs ${isListening ? 'btn-dispatch' : 'btn-outline-sky'}`}
+                onClick={toggleVoiceIntake}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+              >
+                {isListening ? <MicOff size={13} className="animate-pulse" /> : <Mic size={13} />}
+                <span>{isListening ? 'Listening Live... (Speak)' : 'Voice-to-Text Intake'}</span>
+              </button>
+              {voiceTranscript && (
+                <span style={{ fontSize: '11px', color: '#38bdf8', fontStyle: 'italic' }}>
+                  "{voiceTranscript}"
+                </span>
+              )}
+            </div>
+            <span style={{ fontSize: '10px', color: '#64748b' }}>Speech clinical entity extraction</span>
+          </div>
+
           <div className="presets-bar">
             <span className="text-secondary text-xs flex items-center gap-1">
               <Sparkles size={12} />

@@ -46,15 +46,16 @@ export function getAmbulanceIcon(ambulance: Ambulance, isSimulating: boolean = f
   });
 }
 
-export function getEmergencyIcon(emergency: Emergency) {
+export function getEmergencyIcon(emergency: Emergency, isSelected: boolean = false) {
   const isCritical = emergency.priority === 'CRITICAL';
   const isHigh = emergency.priority === 'HIGH';
   const color = isCritical ? '#ef4444' : isHigh ? '#f97316' : '#eab308';
+  const border = isSelected ? 'border: 3px solid #38bdf8; transform: scale(1.15);' : '';
 
   const html = `
-    <div class="emergency-marker-container ${isCritical ? 'pulse-critical' : ''}">
+    <div class="emergency-marker-container ${isCritical ? 'pulse-critical' : ''} ${isSelected ? 'selected-emergency' : ''}">
       ${isCritical ? '<div class="radar-ping-ring"></div>' : ''}
-      <div class="emergency-pin" style="background: ${color}; box-shadow: 0 0 14px ${color}88;">
+      <div class="emergency-pin" style="background: ${color}; box-shadow: 0 0 14px ${color}88; ${border}">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#ffffff" stroke-width="2.5">
           <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
         </svg>

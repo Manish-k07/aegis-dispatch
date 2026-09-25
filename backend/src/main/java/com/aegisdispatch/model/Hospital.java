@@ -12,6 +12,8 @@ public class Hospital {
 
     private String name;
     private String phone;
+    @Column(name = "designated_ed_phone")
+    private String designatedEdPhone;
     private String address;
     private String status;
 
@@ -65,6 +67,9 @@ public class Hospital {
 
     public String getPhone() { return phone; }
     public void setPhone(String v) { phone = v; }
+
+    public String getDesignatedEdPhone() { return designatedEdPhone; }
+    public void setDesignatedEdPhone(String v) { designatedEdPhone = v; }
 
     public String getAddress() { return address; }
     public void setAddress(String v) { address = v; }

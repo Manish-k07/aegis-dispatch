@@ -31,6 +31,9 @@ public class DispatchController {
     private final SimulationService simulationService;
     private final RoutingService routingService;
     private final com.aegisdispatch.service.CadFileService cadFileService;
+    private final com.aegisdispatch.service.SmsService smsService;
+    private final com.aegisdispatch.service.HospitalCapacityService hospitalCapacityService;
+    private final com.aegisdispatch.service.PredictiveStagingService predictiveStagingService;
 
     public DispatchController(
             EmergencyRepository emergencies,
@@ -44,7 +47,10 @@ public class DispatchController {
             AmbulanceLocationRepository locationRepo,
             SimulationService simulationService,
             RoutingService routingService,
-            com.aegisdispatch.service.CadFileService cadFileService
+            com.aegisdispatch.service.CadFileService cadFileService,
+            com.aegisdispatch.service.SmsService smsService,
+            com.aegisdispatch.service.HospitalCapacityService hospitalCapacityService,
+            com.aegisdispatch.service.PredictiveStagingService predictiveStagingService
     ) {
         this.emergencies = emergencies;
         this.ambulances = ambulances;
@@ -58,6 +64,9 @@ public class DispatchController {
         this.simulationService = simulationService;
         this.routingService = routingService;
         this.cadFileService = cadFileService;
+        this.smsService = smsService;
+        this.hospitalCapacityService = hospitalCapacityService;
+        this.predictiveStagingService = predictiveStagingService;
     }
 
     private void triggerAutoSave(String reason) {
@@ -196,6 +205,10 @@ public class DispatchController {
                 d.getId(), eid, aid));
 
         triggerAutoSave("AMBULANCE_ASSIGNED");
+        try {
+            simulationService.startSimulation(d.getId());
+        } catch (Exception ignored) {
+        }
         return ResponseEntity.ok(d);
     }
 
@@ -354,6 +367,15 @@ public class DispatchController {
     @GetMapping("/hospitals")
     public Object allHospitals() {
         return hospitals.findAll();
+    }
+
+    @PostMapping("/dispatches/auto")
+    public ResponseEntity<?> autoDispatchGeneral(@RequestBody Map<String, String> body) {
+        String eid = body.get("emergencyId");
+        if (eid == null || eid.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "emergencyId is required"));
+        }
+        return autoAssign(UUID.fromString(eid), body);
     }
 
     @PostMapping("/emergencies/{id}/auto-assign")
@@ -732,16 +754,19 @@ public class DispatchController {
                 h.setIcuBedsAvailable(7);
                 h.setTraumaBaysAvailable(4);
                 h.setStatus("AVAILABLE");
+                h.setDesignatedEdPhone("+918022220001");
             } else if (h.getId().equals(UUID.fromString("10000000-0000-0000-0000-000000000002"))) {
                 h.setAvailableBeds(22);
                 h.setIcuBedsAvailable(4);
                 h.setTraumaBaysAvailable(5);
                 h.setStatus("AVAILABLE");
+                h.setDesignatedEdPhone("+918022220002");
             } else if (h.getId().equals(UUID.fromString("10000000-0000-0000-0000-000000000003"))) {
                 h.setAvailableBeds(11);
                 h.setIcuBedsAvailable(1);
                 h.setTraumaBaysAvailable(1);
                 h.setStatus("LIMITED_CAPACITY");
+                h.setDesignatedEdPhone("+918022220003");
             }
             hospitals.save(h);
         }
@@ -759,5 +784,81 @@ public class DispatchController {
                 "status", "SUCCESS",
                 "message", "Database reset complete. Fresh demo emergencies seeded and fleet restored to ready state."
         );
+    }
+
+    @PostMapping("/missions/notify-hospital")
+    public ResponseEntity<?> notifyHospital(@RequestBody Map<String, Object> body) {
+        String missionIdStr = (String) body.get("missionId");
+        String hospitalIdStr = (String) body.get("hospitalId");
+
+        if (missionIdStr == null || hospitalIdStr == null) {
+            return ResponseEntity.badRequest().body(Map.of("error", "missionId and hospitalId are required"));
+        }
+
+        UUID missionId = UUID.fromString(missionIdStr);
+        UUID hospitalId = UUID.fromString(hospitalIdStr);
+
+        Dispatch d = dispatches.findById(missionId).orElse(null);
+        Hospital h = hospitals.findById(hospitalId).orElse(null);
+
+        if (d == null || h == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "Dispatch mission or hospital not found"));
+        }
+
+        Ambulance a = ambulances.findById(d.getAmbulanceId()).orElse(null);
+        Emergency e = emergencies.findById(d.getEmergencyId()).orElse(null);
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> vitals = (Map<String, Object>) body.get("vitals");
+
+        Map<String, Object> smsResult = smsService.sendHospitalPreArrivalNotification(a, e, h, d, vitals);
+
+        ws.broadcast(String.format("{\"event\":\"SMS_HOSPITAL_NOTIFIED\",\"dispatchId\":\"%s\",\"hospitalId\":\"%s\",\"phone\":\"%s\"}",
+                d.getId(), h.getId(), smsResult.get("recipient")));
+
+        return ResponseEntity.ok(smsResult);
+    }
+
+    @PostMapping("/missions/sms-webhook")
+    public ResponseEntity<?> handleSmsWebhook(@RequestParam Map<String, String> params) {
+        String body = params.getOrDefault("Body", "").trim();
+        String from = params.getOrDefault("From", "");
+
+        audit.log("Hospital ED Webhook", "SMS_INBOUND_REPLY", "SMS_GATEWAY", null,
+                null, body, "from=" + from);
+
+        if ("1".equals(body)) {
+            ws.broadcast(String.format("{\"event\":\"HOSPITAL_BAY_CONFIRMED\",\"phone\":\"%s\",\"ready\":true}", from));
+        } else if ("2".equals(body)) {
+            ws.broadcast(String.format("{\"event\":\"HOSPITAL_DIVERSION_DECLARED\",\"phone\":\"%s\",\"diversion\":true}", from));
+        }
+
+        return ResponseEntity.ok(Map.of("status", "RECEIVED", "reply", body));
+    }
+
+    @GetMapping("/hospitals/capacity")
+    public ResponseEntity<?> getHospitalCapacity() {
+        return ResponseEntity.ok(hospitalCapacityService.getCapacityOverview());
+    }
+
+    @PostMapping("/hospitals/{id}/diversion")
+    public ResponseEntity<?> toggleHospitalDiversion(
+            @PathVariable UUID id,
+            @RequestBody Map<String, Object> body
+    ) {
+        boolean diversion = Boolean.TRUE.equals(body.get("diversion"));
+        String reason = (String) body.get("reason");
+        Hospital h = hospitalCapacityService.toggleDiversion(id, diversion, reason);
+        if (h == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "Hospital not found"));
+        }
+        ws.broadcast(String.format("{\"event\":\"HOSPITAL_STATUS_CHANGED\",\"hospitalId\":\"%s\",\"status\":\"%s\"}",
+                h.getId(), h.getStatus()));
+        return ResponseEntity.ok(h);
+    }
+
+    @GetMapping("/predictive/staging-zones")
+    public ResponseEntity<?> getPredictiveStagingZones() {
+        return ResponseEntity.ok(predictiveStagingService.getStagingZones());
     }
 }
