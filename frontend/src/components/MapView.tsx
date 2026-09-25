@@ -25,7 +25,7 @@ import { Ambulance, Emergency, Hospital, Dispatch } from '../types';
 import { getAmbulanceIcon, getEmergencyIcon, getHospitalIcon } from '../utils/mapIcons';
 import { MissionHUD } from './MissionHUD';
 
-export type MapTileLayer = 'DARK' | 'OSM_CLEAN' | 'STREETS' | 'SATELLITE';
+export type MapTileLayer = 'OSM_CLEAN' | 'SATELLITE';
 
 const trafficCorridors: { name: string; level: 'HEAVY' | 'MODERATE' | 'CLEAR'; color: string; coords: [number, number][] }[] = [
   {
@@ -186,7 +186,7 @@ export const MapView: React.FC<MapViewProps> = ({
   onMapClick,
   onStopSimulation,
 }) => {
-  const [mapLayer, setMapLayer] = useState<MapTileLayer>('DARK');
+  const [mapLayer, setMapLayer] = useState<MapTileLayer>('OSM_CLEAN');
   const [showLayerMenu, setShowLayerMenu] = useState(false);
   const [fitTrigger, setFitTrigger] = useState(0);
 
@@ -215,21 +215,11 @@ export const MapView: React.FC<MapViewProps> = ({
     (d) => !['COMPLETED', 'CANCELLED'].includes(d.status)
   );
 
-  // Authenticated Tile URL or Clean Watermark-Free Fallback
-  const mapApiKey = ((((import.meta as any).env?.VITE_MAP_API_KEY || (import.meta as any).env?.VITE_CARTO_API_KEY || '') as string)).trim();
+  // Clean Watermark-Free OpenStreetMap & Satellite Layers (No Carto or Dark/Street)
+  let tileUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+  let attribution = '&copy; OpenStreetMap contributors';
 
-  let tileUrl = mapApiKey
-    ? `https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?api_key=${mapApiKey}`
-    : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
-  let attribution = '&copy; CARTO &copy; OpenStreetMap';
-
-  if (mapLayer === 'OSM_CLEAN') {
-    tileUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-    attribution = '&copy; OpenStreetMap contributors';
-  } else if (mapLayer === 'STREETS') {
-    tileUrl = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
-    attribution = '&copy; CARTO &copy; OpenStreetMap';
-  } else if (mapLayer === 'SATELLITE') {
+  if (mapLayer === 'SATELLITE') {
     tileUrl = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
     attribution = '&copy; Esri World Imagery';
   }
@@ -317,7 +307,7 @@ export const MapView: React.FC<MapViewProps> = ({
           </button>
         </div>
 
-        {/* Map Layer Switcher with Free Clean OSM Option */}
+        {/* Map Layer Switcher (Clean OpenStreetMap & Satellite) */}
         <div className="map-layer-dropdown-container">
           <button
             className="map-tool-btn layer-btn"
@@ -325,31 +315,17 @@ export const MapView: React.FC<MapViewProps> = ({
             title="Switch Map Basemap Style"
           >
             <Layers size={14} />
-            <span>{mapLayer === 'OSM_CLEAN' ? 'OSM Clean' : mapLayer}</span>
+            <span>{mapLayer === 'OSM_CLEAN' ? 'OpenStreetMap' : 'Satellite'}</span>
           </button>
 
           {showLayerMenu && (
             <div className="layer-dropdown">
               <button
-                className={`layer-option ${mapLayer === 'DARK' ? 'active' : ''}`}
-                onClick={() => { setMapLayer('DARK'); setShowLayerMenu(false); }}
-              >
-                <strong>Dark CAD Ops</strong>
-                <small>High contrast emergency operations</small>
-              </button>
-              <button
                 className={`layer-option ${mapLayer === 'OSM_CLEAN' ? 'active' : ''}`}
                 onClick={() => { setMapLayer('OSM_CLEAN'); setShowLayerMenu(false); }}
               >
-                <strong>OSM (Clean & Free)</strong>
-                <small>100% Free OpenStreetMap with zero watermarks</small>
-              </button>
-              <button
-                className={`layer-option ${mapLayer === 'STREETS' ? 'active' : ''}`}
-                onClick={() => { setMapLayer('STREETS'); setShowLayerMenu(false); }}
-              >
-                <strong>Street Navigation</strong>
-                <small>Detailed street labels and road grid</small>
+                <strong>OpenStreetMap (Clean)</strong>
+                <small>High-definition live cartography with zero watermarks</small>
               </button>
               <button
                 className={`layer-option ${mapLayer === 'SATELLITE' ? 'active' : ''}`}
