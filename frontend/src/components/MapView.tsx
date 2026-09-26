@@ -25,7 +25,7 @@ import { Ambulance, Emergency, Hospital, Dispatch } from '../types';
 import { getAmbulanceIcon, getEmergencyIcon, getHospitalIcon } from '../utils/mapIcons';
 import { MissionHUD } from './MissionHUD';
 
-export type MapTileLayer = 'OSM_CLEAN' | 'SATELLITE';
+export type MapTileLayer = 'OSM_CLEAN' | 'SATELLITE' | 'TERRAIN';
 
 const trafficCorridors: { name: string; level: 'HEAVY' | 'MODERATE' | 'CLEAR'; color: string; coords: [number, number][] }[] = [
   {
@@ -238,6 +238,9 @@ export const MapView: React.FC<MapViewProps> = ({
   if (mapLayer === 'SATELLITE') {
     tileUrl = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
     attribution = '&copy; Esri World Imagery';
+  } else if (mapLayer === 'TERRAIN') {
+    tileUrl = 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png';
+    attribution = '&copy; OpenTopoMap contributors';
   }
 
   // Active mission ambulance and target for HUD
@@ -331,7 +334,7 @@ export const MapView: React.FC<MapViewProps> = ({
             title="Switch Map Basemap Style"
           >
             <Layers size={14} />
-            <span>{mapLayer === 'OSM_CLEAN' ? 'OpenStreetMap' : 'Satellite'}</span>
+            <span>{mapLayer === 'OSM_CLEAN' ? 'OpenStreetMap' : mapLayer === 'SATELLITE' ? 'Satellite' : 'Terrain'}</span>
           </button>
 
           {showLayerMenu && (
@@ -340,15 +343,22 @@ export const MapView: React.FC<MapViewProps> = ({
                 className={`layer-option ${mapLayer === 'OSM_CLEAN' ? 'active' : ''}`}
                 onClick={() => { setMapLayer('OSM_CLEAN'); setShowLayerMenu(false); }}
               >
-                <strong>OpenStreetMap (Clean)</strong>
-                <small>High-definition live cartography with zero watermarks</small>
+                <strong>🗺 OpenStreetMap</strong>
+                <small>Live cartography — roads, names, POIs</small>
               </button>
               <button
                 className={`layer-option ${mapLayer === 'SATELLITE' ? 'active' : ''}`}
                 onClick={() => { setMapLayer('SATELLITE'); setShowLayerMenu(false); }}
               >
-                <strong>Satellite Imagery</strong>
-                <small>Photorealistic aerial photography</small>
+                <strong>🛰 Satellite Imagery</strong>
+                <small>Photorealistic aerial photography (Esri)</small>
+              </button>
+              <button
+                className={`layer-option ${mapLayer === 'TERRAIN' ? 'active' : ''}`}
+                onClick={() => { setMapLayer('TERRAIN'); setShowLayerMenu(false); }}
+              >
+                <strong>🏔 Topographic Terrain</strong>
+                <small>Elevation contours for hilly rescue routes</small>
               </button>
             </div>
           )}
