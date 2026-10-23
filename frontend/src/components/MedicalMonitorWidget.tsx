@@ -95,12 +95,10 @@ export const MedicalMonitorWidget: React.FC<MedicalMonitorWidgetProps> = ({
       ctx.moveTo(prevX, prevY);
       ctx.lineTo(x, y);
 
-      ctx.strokeStyle = isStemiAlertActive ? '#ef4444' : '#10b981';
+      ctx.strokeStyle = isStemiAlertActive ? '#f28b82' : '#81c995';
       ctx.lineWidth = 2;
-      ctx.shadowBlur = 8;
-      ctx.shadowColor = isStemiAlertActive ? '#ef4444' : '#10b981';
-      ctx.stroke();
       ctx.shadowBlur = 0;
+      ctx.stroke();
 
       points[Math.floor(x / stepSize)] = y;
 
@@ -156,7 +154,14 @@ export const MedicalMonitorWidget: React.FC<MedicalMonitorWidgetProps> = ({
               letterSpacing: '0.5px',
             }}
           >
-            {isStemiAlertActive ? '⚠️ STEMI PROTOCOL ACTIVE' : 'SIMULATE ST-ELEVATION'}
+            {isStemiAlertActive ? (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                <AlertTriangle size={12} />
+                STEMI PROTOCOL ACTIVE
+              </span>
+            ) : (
+              'SIMULATE ST-ELEVATION'
+            )}
           </button>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#10b981', fontWeight: 600 }}>
             <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#10b981', display: 'inline-block', boxShadow: '0 0 8px #10b981' }} />

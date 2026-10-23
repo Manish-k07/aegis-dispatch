@@ -31,7 +31,7 @@ const trafficCorridors: { name: string; level: 'HEAVY' | 'MODERATE' | 'CLEAR'; c
   {
     name: 'MG Road Corridor',
     level: 'HEAVY',
-    color: '#ef4444',
+    color: '#f28b82',
     coords: [
       [12.9756, 77.6066],
       [12.9740, 77.6010],
@@ -42,7 +42,7 @@ const trafficCorridors: { name: string; level: 'HEAVY' | 'MODERATE' | 'CLEAR'; c
   {
     name: 'Richmond Road to Hosur Road',
     level: 'MODERATE',
-    color: '#f59e0b',
+    color: '#8ab4f8',
     coords: [
       [12.9710, 77.6050],
       [12.9680, 77.6020],
@@ -52,7 +52,7 @@ const trafficCorridors: { name: string; level: 'HEAVY' | 'MODERATE' | 'CLEAR'; c
   {
     name: 'Koramangala 80ft Road Corridor',
     level: 'CLEAR',
-    color: '#10b981',
+    color: '#81c995',
     coords: [
       [12.9340, 77.6180],
       [12.9380, 77.6220],
@@ -62,7 +62,7 @@ const trafficCorridors: { name: string; level: 'HEAVY' | 'MODERATE' | 'CLEAR'; c
   {
     name: 'Cubbon Park Transit Loop',
     level: 'CLEAR',
-    color: '#10b981',
+    color: '#81c995',
     coords: [
       [12.9760, 77.5900],
       [12.9800, 77.5880],
@@ -93,14 +93,14 @@ const trafficSignalIcon = L.divIcon({
 
 const cctvIcon = L.divIcon({
   className: 'cctv-camera-marker',
-  html: `<div class="cctv-cam-pin"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg></div>`,
+  html: `<div class="cctv-cam-pin"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8ab4f8" stroke-width="2"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg></div>`,
   iconSize: [26, 26],
   iconAnchor: [13, 13],
 });
 
 const droneIcon = L.divIcon({
   className: 'uav-drone-marker',
-  html: `<div class="drone-pulse-circle"></div><div class="uav-drone-pin"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.5"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/></svg></div>`,
+  html: `<div class="drone-pulse-circle"></div><div class="uav-drone-pin"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8ab4f8" stroke-width="2.5"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/></svg></div>`,
   iconSize: [36, 36],
   iconAnchor: [18, 18],
 });
@@ -318,11 +318,11 @@ export const MapView: React.FC<MapViewProps> = ({
           <button
             className={`filter-pill ${showStaging ? 'active-red' : ''}`}
             onClick={() => setShowStaging(!showStaging)}
-            title="Toggle AI Predictive Demand Heatmaps & Staging Zones"
+            title="Toggle Predictive Demand Heatmaps & Staging Zones"
             style={showStaging ? { background: 'rgba(239, 68, 68, 0.2)', borderColor: '#ef4444' } : undefined}
           >
             <Flame size={12} className={showStaging ? 'text-red' : ''} />
-            <span>🔥 Staging ({stagingHeatZones.length})</span>
+            <span>Staging ({stagingHeatZones.length})</span>
           </button>
         </div>
 
@@ -343,21 +343,21 @@ export const MapView: React.FC<MapViewProps> = ({
                 className={`layer-option ${mapLayer === 'OSM_CLEAN' ? 'active' : ''}`}
                 onClick={() => { setMapLayer('OSM_CLEAN'); setShowLayerMenu(false); }}
               >
-                <strong>🗺 OpenStreetMap</strong>
+                <strong>OpenStreetMap</strong>
                 <small>Live cartography — roads, names, POIs</small>
               </button>
               <button
                 className={`layer-option ${mapLayer === 'SATELLITE' ? 'active' : ''}`}
                 onClick={() => { setMapLayer('SATELLITE'); setShowLayerMenu(false); }}
               >
-                <strong>🛰 Satellite Imagery</strong>
+                <strong>Satellite Imagery</strong>
                 <small>Photorealistic aerial photography (Esri)</small>
               </button>
               <button
                 className={`layer-option ${mapLayer === 'TERRAIN' ? 'active' : ''}`}
                 onClick={() => { setMapLayer('TERRAIN'); setShowLayerMenu(false); }}
               >
-                <strong>🏔 Topographic Terrain</strong>
+                <strong>Topographic Terrain</strong>
                 <small>Elevation contours for hilly rescue routes</small>
               </button>
             </div>
@@ -370,45 +370,39 @@ export const MapView: React.FC<MapViewProps> = ({
         <span>SECTOR 4 · BENGALURU METRO · 12.9716°N 77.5946°E · LIVE CAD TELEMETRY</span>
       </div>
 
-      {/* Map Click Help Banner */}
-      <div className="map-click-hint">
-        <MapPin size={11} className="text-amber" />
-        <span>Click anywhere on map to intake incident at coordinates</span>
-      </div>
-
       {/* Dynamic Tri-Color Traffic & Transit Rerouting HUD Banner */}
       {showTraffic && (
         <div
           className="traffic-reroute-banner"
           style={{
             borderColor:
-              trafficSeverity === 'CRITICAL' ? '#ef4444' : trafficSeverity === 'MODERATE' ? '#f59e0b' : '#10b981',
+              trafficSeverity === 'CRITICAL' ? '#f28b82' : trafficSeverity === 'MODERATE' ? '#8ab4f8' : '#81c995',
             background:
               trafficSeverity === 'CRITICAL'
-                ? 'rgba(239, 68, 68, 0.18)'
+                ? 'rgba(242, 139, 130, 0.15)'
                 : trafficSeverity === 'MODERATE'
-                ? 'rgba(245, 158, 11, 0.15)'
-                : 'rgba(16, 185, 129, 0.15)',
+                ? 'rgba(138, 180, 248, 0.15)'
+                : 'rgba(129, 201, 149, 0.15)',
           }}
         >
           <div className="flex items-center gap-2">
             {trafficSeverity === 'CRITICAL' ? (
-              <span className="live-dot-red animate-ping"></span>
+              <span className="live-dot-red"></span>
             ) : trafficSeverity === 'MODERATE' ? (
-              <span className="live-dot-amber"></span>
+              <span className="live-dot-blue"></span>
             ) : (
               <span className="live-dot-green"></span>
             )}
 
-            <strong style={{ color: trafficSeverity === 'CRITICAL' ? '#f87171' : trafficSeverity === 'MODERATE' ? '#fbbf24' : '#34d399' }}>
+            <strong style={{ color: trafficSeverity === 'CRITICAL' ? '#f28b82' : trafficSeverity === 'MODERATE' ? '#8ab4f8' : '#81c995' }}>
               {trafficSeverity === 'CRITICAL'
-                ? '⚠️ CRITICAL ARTERIAL CONGESTION:'
+                ? 'CRITICAL ARTERIAL CONGESTION:'
                 : trafficSeverity === 'MODERATE'
-                ? '⚡ MODERATE TRANSIT DELAY:'
-                : '✓ CLEAR EMERGENCY CORRIDOR:'}
+                ? 'MODERATE TRANSIT DELAY:'
+                : 'CLEAR EMERGENCY CORRIDOR:'}
             </strong>
 
-            <span style={{ color: '#f8fafc', fontSize: '12px' }}>
+            <span style={{ color: '#e8eaed', fontSize: '12px' }}>
               {rerouteActive
                 ? 'Corridor cleared via Cubbon Transit Loop diversion (-4.2m ETA saved).'
                 : trafficSeverity === 'CRITICAL'
@@ -426,13 +420,13 @@ export const MapView: React.FC<MapViewProps> = ({
                 title="Bypass heavy traffic via Cubbon Transit Loop"
               >
                 <Zap size={11} />
-                <span>⚡ Reroute via Cubbon Loop</span>
+                <span>Reroute via Cubbon Loop</span>
               </button>
             )}
           </div>
 
           <div className="weather-hud-pill">
-            <span>27°C MONSOON · ROAD: WET (0.85x SPEED)</span>
+            <span>27°C MONSOON · ROAD: WET</span>
           </div>
         </div>
       )}
@@ -513,7 +507,7 @@ export const MapView: React.FC<MapViewProps> = ({
             }}
           >
             <Tooltip direction="top">
-              <span>📹 {cam.name} · Click for Live Video Feed</span>
+              <span>{cam.name} · Click for Live Video Feed</span>
             </Tooltip>
           </Marker>
         ))}
@@ -601,7 +595,7 @@ export const MapView: React.FC<MapViewProps> = ({
               }}
             >
               <Tooltip permanent={false} direction="top">
-                <span>🚁 Aerial Drone Corridor: {activeDroneMission.id} · Payload: {activeDroneMission.payload}</span>
+                <span>Aerial Drone Corridor: {activeDroneMission.id} · Payload: {activeDroneMission.payload}</span>
               </Tooltip>
             </Polyline>
 
@@ -628,7 +622,7 @@ export const MapView: React.FC<MapViewProps> = ({
             >
               <Tooltip permanent direction="top" className="drone-tooltip">
                 <div style={{ textAlign: 'center', fontWeight: 'bold' }}>
-                  <span style={{ color: '#38bdf8' }}>🚁 {activeDroneMission.id} (UAV)</span>
+                  <span style={{ color: '#8ab4f8' }}>{activeDroneMission.id} (UAV)</span>
                   <br />
                   <span style={{ fontSize: '11px', color: '#f8fafc' }}>PAYLOAD: {activeDroneMission.payload}</span>
                   <br />
@@ -677,7 +671,7 @@ export const MapView: React.FC<MapViewProps> = ({
             >
               <Popup className="custom-popup">
                 <div className="popup-card">
-                  <div className="popup-badge bg-red">EMERGENCY 911</div>
+                  <div className="popup-badge bg-red">112 EMERGENCY (ERSS)</div>
                   <h3>{em.type}</h3>
                   <p className="popup-address">{em.address}</p>
                   <p className="popup-caller">

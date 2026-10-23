@@ -73,14 +73,14 @@ export const NG911CallerVideoModal: React.FC<NG911CallerVideoModalProps> = ({
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <strong style={{ fontSize: '16px', color: '#f8fafc', letterSpacing: '0.5px' }}>
-                  NG911 Multi-Modal Telemetry & Live Caller Video
+                  Next-Gen 112 Multi-Modal Telemetry & Live Caller Video
                 </strong>
                 <span style={{ fontSize: '10px', background: '#dc2626', color: '#ffffff', padding: '2px 8px', borderRadius: '4px', fontWeight: 800, letterSpacing: '0.8px' }}>
                   LIVE WEBRTC
                 </span>
               </div>
               <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px' }}>
-                Encrypted Emergency Stream · Incident #{emergency ? emergency.id.slice(-6) : 'DEMO-911'} ({emergency?.type || 'ACCIDENT'})
+                Encrypted Emergency Stream · Incident #{emergency ? emergency.id.slice(-6) : 'INC-112'} ({emergency?.type || 'ACCIDENT'})
               </div>
             </div>
           </div>

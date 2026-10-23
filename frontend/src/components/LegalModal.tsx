@@ -178,7 +178,7 @@ export const LegalModal: React.FC<LegalModalProps> = ({
               <p style={{ color: 'var(--text-muted)', marginBottom: '16px' }}>
                 Aegis Dispatch CAD ("System") is committed to maintaining the highest level of privacy and confidentiality
                 for patient health records, emergency callers, paramedic crews, and healthcare providers. All Protected
-                Health Information (PHI) collected during 911/112 emergency calls—including symptoms, patient vitals
+                Health Information (PHI) collected during 112/108 emergency calls—including symptoms, patient vitals
                 (heart rate, blood pressure, SpO2, respiratory rates), medical priority dispatch codes, and incident
                 addresses—is classified as Restricted Medical Data.
               </p>

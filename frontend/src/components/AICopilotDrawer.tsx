@@ -121,7 +121,7 @@ export const AICopilotDrawer: React.FC<AICopilotDrawerProps> = ({
       if (lower.includes('auto') || lower.includes('dispatch') || lower.includes('assign') || lower.includes('send')) {
         executedAction = 'AUTO_ASSIGN';
         onAutoAssignNext();
-        reply = '⚡ Autonomous Auto-Dispatch executed: Nearest high-capability unit has been assigned to the highest priority pending incident with live turn-by-turn route telemetry.';
+        reply = 'Auto-Dispatch executed: Nearest high-capability unit has been assigned to the highest priority pending incident with live turn-by-turn route telemetry.';
       } else if (lower.includes('fleet') || lower.includes('ambulance') || lower.includes('unit')) {
         const avail = ambulances.filter((a) => a.status === 'AVAILABLE').length;
         reply = `Fleet Status: ${avail} of ${ambulances.length} ambulances are ready for immediate dispatch. GPS tracking active.`;
@@ -204,11 +204,11 @@ export const AICopilotDrawer: React.FC<AICopilotDrawerProps> = ({
       <div className="copilot-header">
         <div className="flex items-center gap-2">
           <div className="copilot-badge-icon">
-            <Bot size={18} className="text-indigo" />
+            <Bot size={18} />
           </div>
           <div>
-            <h2 className="copilot-title">Aegis AI Dispatch Copilot</h2>
-            <span className="copilot-subtitle">Neural CAD Assistant · Live Ops Telemetry</span>
+            <h2 className="copilot-title">CAD Dispatch Assistant</h2>
+            <span className="copilot-subtitle">112 ERSS Operations & Fleet Telemetry</span>
           </div>
         </div>
         <button className="btn-close" onClick={onClose}>
@@ -216,50 +216,73 @@ export const AICopilotDrawer: React.FC<AICopilotDrawerProps> = ({
         </button>
       </div>
 
-      {/* Quick Action Shortcut Pills */}
-      <div className="copilot-quick-pills">
-        <button
-          className="quick-action-pill"
-          onClick={() => {
-            onAutoAssignNext();
-            handleSend('Auto dispatch closest ambulance to highest priority pending emergency');
-          }}
-        >
-          <Zap size={12} className="text-amber" />
-          <span>⚡ Auto-Dispatch Next</span>
-        </button>
+      {/* Stacked Quick Operational Prompts */}
+      <div className="copilot-stacked-actions">
+        <span className="stacked-actions-title">OPERATIONAL PROMPTS</span>
+        <div className="stacked-buttons-col">
+          <button
+            className="stacked-chat-btn"
+            onClick={() => {
+              onAutoAssignNext();
+              handleSend('Auto dispatch closest ambulance to highest priority pending emergency');
+            }}
+          >
+            <div className="stacked-btn-icon amber">
+              <Zap size={14} />
+            </div>
+            <div className="stacked-btn-info">
+              <strong>Auto-Dispatch Next Incident</strong>
+              <small>Assign closest unit to highest priority pending call</small>
+            </div>
+          </button>
 
-        <button
-          className="quick-action-pill"
-          onClick={() => handleSend('What ambulances are available in our fleet?')}
-        >
-          <Shield size={12} className="text-emerald" />
-          <span>Fleet Readiness</span>
-        </button>
+          <button
+            className="stacked-chat-btn"
+            onClick={() => handleSend('What ambulances are available in our fleet?')}
+          >
+            <div className="stacked-btn-icon emerald">
+              <Shield size={14} />
+            </div>
+            <div className="stacked-btn-info">
+              <strong>Fleet Readiness & Unit Status</strong>
+              <small>Report available emergency vehicles</small>
+            </div>
+          </button>
 
-        <button
-          className="quick-action-pill"
-          onClick={() => handleSend('Show hospital ICU and trauma bed availability')}
-        >
-          <Building2 size={12} className="text-sky" />
-          <span>Hospital Beds</span>
-        </button>
+          <button
+            className="stacked-chat-btn"
+            onClick={() => handleSend('Show hospital ICU and trauma bed availability')}
+          >
+            <div className="stacked-btn-icon sky">
+              <Building2 size={14} />
+            </div>
+            <div className="stacked-btn-info">
+              <strong>Hospital Capacity & Trauma Beds</strong>
+              <small>Inspect trauma bay bed availability and divert status</small>
+            </div>
+          </button>
 
-        <button
-          className="quick-action-pill"
-          onClick={() => setShowTriageTool(!showTriageTool)}
-        >
-          <Activity size={12} className="text-red" />
-          <span>{showTriageTool ? 'Hide Triage Tool' : 'Clinical Triage Tool'}</span>
-        </button>
+          <button
+            className="stacked-chat-btn"
+            onClick={() => setShowTriageTool(!showTriageTool)}
+          >
+            <div className="stacked-btn-icon red">
+              <Activity size={14} />
+            </div>
+            <div className="stacked-btn-info">
+              <strong>{showTriageTool ? 'Close Clinical Triage' : 'Clinical Protocol Triage'}</strong>
+              <small>Evaluate symptom acuity and ESI classification</small>
+            </div>
+          </button>
+        </div>
       </div>
 
       {/* Embedded Clinical Triage Testing Tool */}
       {showTriageTool && (
         <div className="embedded-triage-panel">
           <div className="flex items-center gap-2 mb-2">
-            <Sparkles size={14} className="text-indigo" />
-            <strong className="text-xs uppercase tracking-wider">AI Symptom Triage Analyzer</strong>
+            <Sparkles size={14} className="text-sky" />
+            <strong className="text-xs uppercase tracking-wider">Clinical Protocol Triage Assessment</strong>
           </div>
           <div className="flex gap-2">
             <input

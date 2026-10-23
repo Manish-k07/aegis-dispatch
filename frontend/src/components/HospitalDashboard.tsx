@@ -23,7 +23,8 @@ import {
   RefreshCw,
   Plus,
   Minus,
-  Save
+  Save,
+  LogOut
 } from 'lucide-react';
 import { MedicalMonitorWidget } from './MedicalMonitorWidget';
 
@@ -38,6 +39,7 @@ interface HospitalDashboardProps {
   onUpdateCapacity: (hospitalId: string, capacity: Partial<Hospital>) => void;
   onAdvanceStatus: (dispatch: Dispatch, nextStatus: string) => void;
   onSaveToFile?: () => void;
+  onLogout?: () => void;
 }
 
 export const HospitalDashboard: React.FC<HospitalDashboardProps> = ({
@@ -51,6 +53,7 @@ export const HospitalDashboard: React.FC<HospitalDashboardProps> = ({
   onUpdateCapacity,
   onAdvanceStatus,
   onSaveToFile,
+  onLogout,
 }) => {
   // Local bed states for editing
   const [availableBeds, setAvailableBeds] = useState(hospital.availableBeds ?? 48);
@@ -149,6 +152,28 @@ export const HospitalDashboard: React.FC<HospitalDashboardProps> = ({
               ))}
             </select>
           </div>
+
+          {onLogout && (
+            <button
+              className="btn btn-sm btn-outline btn-logout-hosp"
+              onClick={onLogout}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                color: '#f87171',
+                borderColor: 'rgba(248, 113, 113, 0.4)',
+                background: 'rgba(248, 113, 113, 0.08)',
+                padding: '6px 12px',
+                borderRadius: '6px',
+                cursor: 'pointer',
+              }}
+              title="Sign Out of Hospital Console & Lock Terminal"
+            >
+              <LogOut size={13} />
+              <span>Sign Out</span>
+            </button>
+          )}
         </div>
       </div>
 

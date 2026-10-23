@@ -29,9 +29,11 @@ import {
   HardDrive,
   MessageSquare,
   Phone,
-  X
+  X,
+  LogOut
 } from 'lucide-react';
 import { MedicalMonitorWidget } from './MedicalMonitorWidget';
+import { AmbulanceRouteMap } from './AmbulanceRouteMap';
 
 interface DriverDashboardProps {
   ambulance: Ambulance;
@@ -48,8 +50,10 @@ interface DriverDashboardProps {
   missionTelemetry?: {
     maneuver?: string;
     etaRemaining?: number;
+    roadWaypoints?: [number, number][];
   };
   apiBase?: string;
+  onLogout?: () => void;
 }
 
 export const DriverDashboard: React.FC<DriverDashboardProps> = ({
@@ -66,6 +70,7 @@ export const DriverDashboard: React.FC<DriverDashboardProps> = ({
   onSaveToFile,
   missionTelemetry,
   apiBase,
+  onLogout,
 }) => {
   // SMS Pre-Arrival Hospital Notification State
   const [isSmsModalOpen, setIsSmsModalOpen] = useState(false);
@@ -313,6 +318,28 @@ export const DriverDashboard: React.FC<DriverDashboardProps> = ({
               ))}
             </select>
           </div>
+
+          {onLogout && (
+            <button
+              className="btn btn-sm btn-outline btn-logout-mdt"
+              onClick={onLogout}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                color: '#f87171',
+                borderColor: 'rgba(248, 113, 113, 0.4)',
+                background: 'rgba(248, 113, 113, 0.08)',
+                padding: '6px 12px',
+                borderRadius: '6px',
+                cursor: 'pointer',
+              }}
+              title="Sign Out of Paramedic MDT & Lock Console"
+            >
+              <LogOut size={13} />
+              <span>Sign Out</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -320,6 +347,26 @@ export const DriverDashboard: React.FC<DriverDashboardProps> = ({
       <div className="driver-mdt-grid">
         {/* Left Column: Navigation, Mission Lifecycle & Voice Controls */}
         <div className="driver-left-column">
+          {/* Paramedic Live GIS Mapping & Tactical Routing System */}
+          <div className="driver-card ambulance-map-card">
+            <div className="card-header-row">
+              <div className="flex items-center gap-2">
+                <Compass size={18} className="text-emerald" />
+                <span className="font-bold text-sm tracking-wider uppercase">Paramedic GPS Mapping & Preempted Routing</span>
+              </div>
+              <span className="pulse-tag text-emerald">LIVE GIS RADAR</span>
+            </div>
+            <AmbulanceRouteMap
+              ambulance={ambulance}
+              dispatch={dispatch}
+              emergency={emergency}
+              hospital={hospital}
+              isSimulating={isSimulating}
+              onToggleSimulation={onToggleSimulation}
+              missionTelemetry={missionTelemetry}
+            />
+          </div>
+
           {/* Mission Status & Destination Card */}
           <div className="driver-card mission-brief-card">
             <div className="card-header-row">
@@ -413,7 +460,7 @@ export const DriverDashboard: React.FC<DriverDashboardProps> = ({
                       title="Transmit HIPAA-compliant pre-arrival alert to receiving Emergency Department"
                     >
                       <MessageSquare size={14} />
-                      <span>📲 Notify Receiving ED (SMS)</span>
+                      <span>Notify Receiving ED (SMS)</span>
                     </button>
 
                     {smsFeedback && (
@@ -703,8 +750,9 @@ REPLY:
   2 for ED DIVERSION (REROUTE)`}
             </div>
 
-            <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '16px' }}>
-              🔒 <strong>Strict HIPAA / DPDP Compliance:</strong> Patient names, exact addresses, and direct phone numbers are never transmitted over unencrypted SMS.
+            <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Shield size={13} className="text-blue" />
+              <span><strong>Strict HIPAA / DPDP Compliance:</strong> Patient names, exact addresses, and direct phone numbers are never transmitted over unencrypted SMS.</span>
             </div>
 
             <div className="flex items-center justify-end gap-2">

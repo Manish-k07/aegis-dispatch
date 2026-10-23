@@ -117,7 +117,33 @@ export interface DashboardData {
   activeSimulations?: string[];
 }
 
-export type UserRole = 'DISPATCHER' | 'DRIVER' | 'HOSPITAL';
+export type UserRole = 'DISPATCHER' | 'DRIVER' | 'HOSPITAL' | 'CITIZEN' | null;
+
+export interface CitizenProfile {
+  id: string;
+  name: string;
+  gender: 'MALE' | 'FEMALE' | 'OTHER' | 'PREFER_NOT_TO_SAY';
+  age: number;
+  phone: string;
+  email?: string;
+  diseases: string[];
+  allergies: string[];
+  bloodGroup?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  registeredAt?: string;
+}
+
+export interface AuthSession {
+  role: 'DISPATCHER' | 'DRIVER' | 'HOSPITAL' | 'CITIZEN';
+  userLabel: string;
+  subLabel?: string;
+  ambulanceId?: string;
+  hospitalId?: string;
+  dispatcherBadge?: string;
+  citizenProfile?: CitizenProfile;
+  loginTime: string;
+}
 
 export interface PatientVitals {
   heartRate: number;

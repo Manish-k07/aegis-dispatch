@@ -177,8 +177,8 @@ export const V2XPreemptionHUD: React.FC<V2XPreemptionHUDProps> = ({
         </div>
 
         {/* Footer info */}
-        <div style={{ fontSize: '11px', color: '#64748b', textAlign: 'center', borderTop: '1px solid rgba(255, 255, 255, 0.06)', paddingTop: '14px' }}>
-          🔒 Signals automatically release to municipal timing cycle 10 seconds post ambulance GPS intersection clearance.
+        <div style={{ fontSize: '11px', color: '#9aa0a6', textAlign: 'center', borderTop: '1px solid var(--border, #3c4043)', paddingTop: '14px' }}>
+          Signals automatically release to municipal timing cycle 10 seconds post ambulance GPS intersection clearance.
         </div>
       </div>
     </div>

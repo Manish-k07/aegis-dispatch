@@ -6,7 +6,7 @@ interface HospitalListProps {
   hospitals: Hospital[];
   searchQuery?: string;
   onSelectHospital: (hospital: Hospital) => void;
-  onOpenHospitalDashboard: (hospital: Hospital) => void;
+  onOpenHospitalDashboard?: (hospital: Hospital) => void;
 }
 
 export const HospitalList: React.FC<HospitalListProps> = ({
@@ -157,25 +157,27 @@ export const HospitalList: React.FC<HospitalListProps> = ({
                     ) : null}
                   </span>
 
-                  <button
-                    className="btn btn-xs btn-outline"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onOpenHospitalDashboard(hosp);
-                    }}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '5px',
-                      color: '#10b981',
-                      borderColor: 'rgba(16, 185, 129, 0.4)',
-                      background: 'rgba(16, 185, 129, 0.08)',
-                    }}
-                    title="Launch full Hospital Emergency Reception Console"
-                  >
-                    <span>Open Hospital Dashboard</span>
-                    <ExternalLink size={11} />
-                  </button>
+                  {onOpenHospitalDashboard && (
+                    <button
+                      className="btn btn-xs btn-outline"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onOpenHospitalDashboard(hosp);
+                      }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '5px',
+                        color: '#10b981',
+                        borderColor: 'rgba(16, 185, 129, 0.4)',
+                        background: 'rgba(16, 185, 129, 0.08)',
+                      }}
+                      title="Launch full Hospital Emergency Reception Console"
+                    >
+                      <span>Open Hospital Dashboard</span>
+                      <ExternalLink size={11} />
+                    </button>
+                  )}
                 </div>
               </div>
             );

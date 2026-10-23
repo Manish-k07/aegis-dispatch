@@ -23,6 +23,8 @@ import { V2XPreemptionHUD } from './components/V2XPreemptionHUD';
 import { MciTriageModal } from './components/MciTriageModal';
 import { ClinicalQaModal } from './components/ClinicalQaModal';
 import { DroneDispatchModal } from './components/DroneDispatchModal';
+import { LoginGateway } from './components/LoginGateway';
+import { CitizenDashboard } from './components/CitizenDashboard';
 import {
   DashboardData,
   Emergency,
@@ -32,7 +34,9 @@ import {
   Ambulance,
   AuditLog,
   UserRole,
-  PatientVitals
+  PatientVitals,
+  AuthSession,
+  CitizenProfile
 } from './types';
 import { audioSystem } from './utils/audio';
 import { API_BASE, WS_URL } from './config';
@@ -77,10 +81,104 @@ function generateRoadWaypoints(
 export const App: React.FC = () => {
   const [data, setData] = useState<DashboardData>(INITIAL_DEMO_DATA);
 
-  // Role Management
-  const [role, setRole] = useState<UserRole>('DISPATCHER');
-  const [selectedDriverAmbulanceId, setSelectedDriverAmbulanceId] = useState<string | null>(null);
-  const [selectedHospitalId, setSelectedHospitalId] = useState<string | null>(null);
+  // Authentication & Role Session Isolation
+  const [authSession, setAuthSession] = useState<AuthSession | null>(() => {
+    try {
+      const saved = localStorage.getItem('aegis_auth_session');
+      if (saved) return JSON.parse(saved);
+    } catch {
+      // ignore
+    }
+    return null;
+  });
+
+  const [role, setRole] = useState<UserRole>(() => {
+    try {
+      const saved = localStorage.getItem('aegis_auth_session');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return parsed.role || null;
+      }
+    } catch {
+      // ignore
+    }
+    return null;
+  });
+
+  const [citizenProfile, setCitizenProfile] = useState<CitizenProfile | null>(() => {
+    try {
+      const saved = localStorage.getItem('aegis_auth_session');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return parsed.citizenProfile || null;
+      }
+    } catch {
+      // ignore
+    }
+    return null;
+  });
+
+  const [selectedDriverAmbulanceId, setSelectedDriverAmbulanceId] = useState<string | null>(() => {
+    try {
+      const saved = localStorage.getItem('aegis_auth_session');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return parsed.ambulanceId || null;
+      }
+    } catch {
+      // ignore
+    }
+    return null;
+  });
+
+  const [selectedHospitalId, setSelectedHospitalId] = useState<string | null>(() => {
+    try {
+      const saved = localStorage.getItem('aegis_auth_session');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return parsed.hospitalId || null;
+      }
+    } catch {
+      // ignore
+    }
+    return null;
+  });
+
+  const handleLogin = (session: AuthSession) => {
+    setAuthSession(session);
+    setRole(session.role);
+    if (session.ambulanceId) {
+      setSelectedDriverAmbulanceId(session.ambulanceId);
+    }
+    if (session.hospitalId) {
+      setSelectedHospitalId(session.hospitalId);
+    }
+    if (session.citizenProfile) {
+      setCitizenProfile(session.citizenProfile);
+    }
+    try {
+      localStorage.setItem('aegis_auth_session', JSON.stringify(session));
+    } catch {
+      // ignore
+    }
+    audioSystem.playMissionCompleteChime();
+    setToastMessage(`Authenticated: ${session.userLabel} (${session.role})`);
+    setTimeout(() => setToastMessage(null), 4000);
+  };
+
+  const handleLogout = () => {
+    setAuthSession(null);
+    setRole(null);
+    setSelectedDriverAmbulanceId(null);
+    setSelectedHospitalId(null);
+    try {
+      localStorage.removeItem('aegis_auth_session');
+    } catch {
+      // ignore
+    }
+    setToastMessage('Terminal locked. Returned to Security Gateway.');
+    setTimeout(() => setToastMessage(null), 3000);
+  };
 
   // Tools & Dialogs
   const [isAICopilotOpen, setIsAICopilotOpen] = useState(false);
@@ -476,7 +574,7 @@ export const App: React.FC = () => {
               };
               audioSystem.playUnitArrivalChime();
               setLiveEvents((evts) => [
-                `${new Date().toLocaleTimeString()} · 🏁 Unit ${amb.registrationNumber} ARRIVED AT SCENE`,
+                `${new Date().toLocaleTimeString()} · [SCENE ARRIVAL] Unit ${amb.registrationNumber} ARRIVED AT SCENE`,
                 ...evts.slice(0, 19),
               ]);
             } else {
@@ -501,7 +599,7 @@ export const App: React.FC = () => {
             };
             dataModified = true;
             setLiveEvents((evts) => [
-              `${new Date().toLocaleTimeString()} · 🩺 Unit ${amb.registrationNumber}: Patient onboard & stabilized`,
+              `${new Date().toLocaleTimeString()} · [TRIAGE] Unit ${amb.registrationNumber}: Patient onboard & stabilized`,
               ...evts.slice(0, 19),
             ]);
             return;
@@ -512,7 +610,7 @@ export const App: React.FC = () => {
             nextDispatches[dispatchIndex] = { ...dispatch, status: 'EN_ROUTE_TO_HOSPITAL' };
             dataModified = true;
             setLiveEvents((evts) => [
-              `${new Date().toLocaleTimeString()} · 🚨 Unit ${amb.registrationNumber} EN ROUTE to Hospital ED`,
+              `${new Date().toLocaleTimeString()} · [TRANSIT] Unit ${amb.registrationNumber} EN ROUTE to Hospital ED`,
               ...evts.slice(0, 19),
             ]);
             return;
@@ -548,7 +646,7 @@ export const App: React.FC = () => {
               };
               audioSystem.playUnitArrivalChime();
               setLiveEvents((evts) => [
-                `${new Date().toLocaleTimeString()} · 🏥 Unit ${amb.registrationNumber} ARRIVED AT HOSPITAL ED (${hosp.name})`,
+                `${new Date().toLocaleTimeString()} · [HOSPITAL ARRIVAL] Unit ${amb.registrationNumber} ARRIVED AT HOSPITAL ED (${hosp.name})`,
                 ...evts.slice(0, 19),
               ]);
             } else {
@@ -569,7 +667,7 @@ export const App: React.FC = () => {
             nextDispatches[dispatchIndex] = { ...dispatch, status: 'PATIENT_HANDED_OVER' };
             dataModified = true;
             setLiveEvents((evts) => [
-              `${new Date().toLocaleTimeString()} · 📋 Unit ${amb.registrationNumber}: Patient handed over to triage`,
+              `${new Date().toLocaleTimeString()} · [HANDOVER] Unit ${amb.registrationNumber}: Patient handed over to triage`,
               ...evts.slice(0, 19),
             ]);
             return;
@@ -587,7 +685,7 @@ export const App: React.FC = () => {
             audioSystem.playMissionCompleteChime();
             dataModified = true;
             setLiveEvents((evts) => [
-              `${new Date().toLocaleTimeString()} · ✨ MISSION COMPLETE: Unit ${amb.registrationNumber} back in service`,
+              `${new Date().toLocaleTimeString()} · [MISSION COMPLETE] Unit ${amb.registrationNumber} back in service`,
               ...evts.slice(0, 19),
             ]);
           }
@@ -871,7 +969,7 @@ export const App: React.FC = () => {
     ]);
 
     setLiveEvents((prev) => [
-      `${new Date().toLocaleTimeString()} · ⚡ AUTO-DISPATCH: ${bestAmbulance.registrationNumber} -> #${emg.id} (${emg.type})`,
+      `${new Date().toLocaleTimeString()} · [AUTO-DISPATCH] ${bestAmbulance.registrationNumber} -> #${emg.id} (${emg.type})`,
       ...prev.slice(0, 19),
     ]);
   };
@@ -1133,7 +1231,7 @@ export const App: React.FC = () => {
     ]);
 
     setLiveEvents((prev) => [
-      `${new Date().toLocaleTimeString()} · 🚨 NEW CALL: #${newEmergency.id.slice(-6)} · ${newEmergency.type} [${newEmergency.priority}]`,
+      `${new Date().toLocaleTimeString()} · [INCOMING CALL] #${newEmergency.id.slice(-6)} · ${newEmergency.type} [${newEmergency.priority}]`,
       ...prev.slice(0, 19),
     ]);
   };
@@ -1217,6 +1315,214 @@ export const App: React.FC = () => {
     (d) => !['COMPLETED', 'CANCELLED'].includes(d.status)
   ).length;
 
+  // 1. If not authenticated, render LoginGateway exclusively
+  if (!authSession || !role) {
+    return (
+      <div className="aegis-app">
+        <LoginGateway
+          ambulances={data.ambulances}
+          hospitals={data.hospitals}
+          onLogin={handleLogin}
+        />
+        {toastMessage && (
+          <div className="system-toast-banner">
+            <span>{toastMessage}</span>
+            <button className="toast-close-btn" onClick={() => setToastMessage(null)}>×</button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // 2. Citizen Dashboard (Strictly Isolated)
+  if (role === 'CITIZEN' && citizenProfile) {
+    return (
+      <div className="aegis-app">
+        <CitizenDashboard
+          profile={citizenProfile}
+          emergencies={data.emergencies}
+          ambulances={data.ambulances}
+          hospitals={data.hospitals}
+          dispatches={data.dispatches}
+          onRequestSOS={async (sosData) => {
+            const newEmgId = `emg-${Date.now()}`;
+            const newEmg: Emergency = {
+              id: newEmgId,
+              type: sosData.type,
+              priority: 'CRITICAL',
+              status: 'PENDING_DISPATCH',
+              address: sosData.address,
+              latitude: sosData.latitude,
+              longitude: sosData.longitude,
+              callerName: sosData.callerName,
+              phone: sosData.phone,
+              description: sosData.description,
+              patientCount: 1,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            };
+
+            setData((prev) => ({
+              ...prev,
+              emergencies: [newEmg, ...prev.emergencies],
+            }));
+
+            audioSystem.playCriticalIncidentChime();
+            setToastMessage(`Emergency SOS logged. Dispatching nearest first responder...`);
+            setTimeout(() => setToastMessage(null), 5000);
+
+            // Auto-assign nearest ambulance
+            await handleAutoAssign(newEmgId);
+          }}
+          onCancelSOS={(emgId) => {
+            setData((prev) => ({
+              ...prev,
+              emergencies: prev.emergencies.map((e) =>
+                e.id === emgId ? { ...e, status: 'CANCELLED' } : e
+              ),
+              dispatches: prev.dispatches.map((d) =>
+                d.emergencyId === emgId ? { ...d, status: 'CANCELLED' } : d
+              ),
+            }));
+            setToastMessage('Emergency request cancelled.');
+            setTimeout(() => setToastMessage(null), 4000);
+          }}
+          onUpdateProfile={(updated) => {
+            setCitizenProfile(updated);
+            if (authSession) {
+              const nextSession = {
+                ...authSession,
+                userLabel: updated.name,
+                citizenProfile: updated,
+                subLabel: `Citizen Profile · Blood: ${updated.bloodGroup || 'O+'}`,
+              };
+              setAuthSession(nextSession);
+              try {
+                localStorage.setItem('aegis_auth_session', JSON.stringify(nextSession));
+              } catch {}
+            }
+            try {
+              const saved = localStorage.getItem('aegis_registered_citizens');
+              if (saved) {
+                const accounts = JSON.parse(saved);
+                const updatedAccounts = accounts.map((acc: any) => {
+                  if (acc.profile?.id === updated.id || acc.loginId === updated.phone || acc.profile?.phone === updated.phone) {
+                    return { ...acc, profile: updated };
+                  }
+                  return acc;
+                });
+                localStorage.setItem('aegis_registered_citizens', JSON.stringify(updatedAccounts));
+              }
+            } catch {}
+            setToastMessage('Medical profile and emergency details updated successfully.');
+            setTimeout(() => setToastMessage(null), 3500);
+          }}
+          onLogout={handleLogout}
+        />
+        {toastMessage && (
+          <div className="system-toast-banner">
+            <span>{toastMessage}</span>
+            <button className="toast-close-btn" onClick={() => setToastMessage(null)}>×</button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // 3. Ambulance Driver MDT Dashboard (Strictly Isolated with Mapping & Routing)
+  if (role === 'DRIVER') {
+    return (
+      <div className="aegis-app">
+        {currentDriverAmbulance ? (
+          <DriverDashboard
+            ambulance={currentDriverAmbulance}
+            allAmbulances={data.ambulances}
+            onSelectAmbulance={(a) => setSelectedDriverAmbulanceId(a.id)}
+            dispatch={driverDispatch}
+            emergency={driverEmergency}
+            hospital={driverHospital}
+            isSimulating={(data.activeSimulations || []).includes(driverDispatch?.id || '')}
+            onToggleSimulation={handleToggleSimulation}
+            onAdvanceStatus={handleAdvanceStatus}
+            onStreamVitals={handleStreamVitals}
+            onSaveToFile={() => setIsSaveModalOpen(true)}
+            missionTelemetry={missionTelemetry}
+            apiBase={API_BASE}
+            onLogout={handleLogout}
+          />
+        ) : (
+          <div className="p-8 text-center">
+            <h3>Vehicle unit not selected</h3>
+            <button className="btn btn-primary mt-4" onClick={handleLogout}>Return to Login Gateway</button>
+          </div>
+        )}
+        {isSaveModalOpen && (
+          <SaveToFileModal
+            isOpen={isSaveModalOpen}
+            onClose={() => setIsSaveModalOpen(false)}
+            data={data}
+            onSaveSuccess={(res) => {
+              setToastMessage(`MDT snapshot saved: ${res.snapshotFile}`);
+              setTimeout(() => setToastMessage(null), 5000);
+            }}
+          />
+        )}
+        {toastMessage && (
+          <div className="system-toast-banner">
+            <span>{toastMessage}</span>
+            <button className="toast-close-btn" onClick={() => setToastMessage(null)}>×</button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // 4. Hospital Emergency Department Console (Strictly Isolated)
+  if (role === 'HOSPITAL') {
+    return (
+      <div className="aegis-app">
+        {currentHospital ? (
+          <HospitalDashboard
+            hospital={currentHospital}
+            allHospitals={data.hospitals}
+            onSelectHospital={(h) => setSelectedHospitalId(h.id)}
+            dispatches={data.dispatches}
+            emergencies={data.emergencies}
+            ambulances={data.ambulances}
+            liveVitalsByDispatch={liveVitalsByDispatch}
+            onUpdateCapacity={handleUpdateHospitalCapacity}
+            onAdvanceStatus={handleAdvanceStatus}
+            onSaveToFile={() => setIsSaveModalOpen(true)}
+            onLogout={handleLogout}
+          />
+        ) : (
+          <div className="p-8 text-center">
+            <h3>Hospital facility not selected</h3>
+            <button className="btn btn-primary mt-4" onClick={handleLogout}>Return to Login Gateway</button>
+          </div>
+        )}
+        {isSaveModalOpen && (
+          <SaveToFileModal
+            isOpen={isSaveModalOpen}
+            onClose={() => setIsSaveModalOpen(false)}
+            data={data}
+            onSaveSuccess={(res) => {
+              setToastMessage(`Hospital log saved: ${res.snapshotFile}`);
+              setTimeout(() => setToastMessage(null), 5000);
+            }}
+          />
+        )}
+        {toastMessage && (
+          <div className="system-toast-banner">
+            <span>{toastMessage}</span>
+            <button className="toast-close-btn" onClick={() => setToastMessage(null)}>×</button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // 5. Central CAD Command Dashboard (DISPATCHER Only)
   return (
     <div className="aegis-app">
       <Navbar
@@ -1226,6 +1532,8 @@ export const App: React.FC = () => {
         isAudioEnabled={isAudioEnabled}
         currentRole={role}
         onSelectRole={setRole}
+        authSession={authSession}
+        onLogout={handleLogout}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         onToggleAudio={handleToggleAudio}
@@ -1356,10 +1664,6 @@ export const App: React.FC = () => {
                 <FleetList
                   ambulances={data.ambulances}
                   searchQuery={searchQuery}
-                  onOpenDriverDashboard={(amb) => {
-                    setSelectedDriverAmbulanceId(amb.id);
-                    setRole('DRIVER');
-                  }}
                 />
               )}
 
@@ -1368,50 +1672,11 @@ export const App: React.FC = () => {
                   hospitals={data.hospitals}
                   searchQuery={searchQuery}
                   onSelectHospital={(h) => setSelectedHospitalId(h.id)}
-                  onOpenHospitalDashboard={(h) => {
-                    setSelectedHospitalId(h.id);
-                    setRole('HOSPITAL');
-                  }}
                 />
               )}
             </div>
           </aside>
         </main>
-      )}
-
-      {/* Ambulance Driver MDT Dashboard */}
-      {role === 'DRIVER' && currentDriverAmbulance && (
-        <DriverDashboard
-          ambulance={currentDriverAmbulance}
-          allAmbulances={data.ambulances}
-          onSelectAmbulance={(a) => setSelectedDriverAmbulanceId(a.id)}
-          dispatch={driverDispatch}
-          emergency={driverEmergency}
-          hospital={driverHospital}
-          isSimulating={(data.activeSimulations || []).includes(driverDispatch?.id || '')}
-          onToggleSimulation={handleToggleSimulation}
-          onAdvanceStatus={handleAdvanceStatus}
-          onStreamVitals={handleStreamVitals}
-          onSaveToFile={() => setIsSaveModalOpen(true)}
-          missionTelemetry={missionTelemetry}
-          apiBase={API_BASE}
-        />
-      )}
-
-      {/* Hospital Emergency Reception Console */}
-      {role === 'HOSPITAL' && currentHospital && (
-        <HospitalDashboard
-          hospital={currentHospital}
-          allHospitals={data.hospitals}
-          onSelectHospital={(h) => setSelectedHospitalId(h.id)}
-          dispatches={data.dispatches}
-          emergencies={data.emergencies}
-          ambulances={data.ambulances}
-          liveVitalsByDispatch={liveVitalsByDispatch}
-          onUpdateCapacity={handleUpdateHospitalCapacity}
-          onAdvanceStatus={handleAdvanceStatus}
-          onSaveToFile={() => setIsSaveModalOpen(true)}
-        />
       )}
 
       {/* AI Copilot Drawer */}
@@ -1494,7 +1759,7 @@ export const App: React.FC = () => {
         onClose={() => setIsSaveModalOpen(false)}
         data={data}
         onSaveSuccess={(res) => {
-          setToastMessage(`✓ CAD snapshot saved to file: ${res.snapshotFile} (${res.fileSizeFormatted})`);
+          setToastMessage(`CAD snapshot saved to file: ${res.snapshotFile} (${res.fileSizeFormatted})`);
           setTimeout(() => setToastMessage(null), 5000);
         }}
       />
@@ -1572,7 +1837,7 @@ export const App: React.FC = () => {
             etaMinutes: 2.8,
             altitudeMeters: 65,
           });
-          setToastMessage(`✓ UAV ${droneId} airborne with ${payload} payload · Estimated delivery: 2.8m`);
+          setToastMessage(`UAV ${droneId} airborne with ${payload} payload · Estimated delivery: 2.8m`);
           setTimeout(() => setToastMessage(null), 6000);
           setLiveEvents(prev => [
             `${new Date().toLocaleTimeString()} · AUTONOMOUS DRONE LAUNCH: ${droneId} dispatched (${payload})`,

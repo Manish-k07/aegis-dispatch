@@ -26,9 +26,10 @@ import {
   Award,
   ShieldAlert,
   Navigation,
-  ChevronDown
+  ChevronDown,
+  LogOut
 } from 'lucide-react';
-import { DashboardData, UserRole } from '../types';
+import { DashboardData, UserRole, AuthSession } from '../types';
 
 interface NavbarProps {
   data: DashboardData;
@@ -37,6 +38,8 @@ interface NavbarProps {
   isAudioEnabled: boolean;
   currentRole: UserRole;
   onSelectRole: (role: UserRole) => void;
+  authSession?: AuthSession | null;
+  onLogout?: () => void;
   searchQuery?: string;
   onSearchChange?: (q: string) => void;
   onToggleAudio: () => void;
@@ -65,6 +68,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   isAudioEnabled,
   currentRole,
   onSelectRole,
+  authSession,
+  onLogout,
   searchQuery = '',
   onSearchChange,
   onToggleAudio,
@@ -126,40 +131,21 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
           <div className="brand-meta">
             <div className="brand-heading">
-              <span className="brand-name">AEGIS</span>
-              <span className="brand-pill">CAD v2.5</span>
+              <span className="brand-name">Aegis CAD</span>
             </div>
-            <span className="brand-subtext">Emergency Operations</span>
+            <span className="brand-subtext">112 ERSS Karnataka</span>
           </div>
         </div>
 
-        {/* Prominent Primary Dashboard Console Switcher */}
-        <nav className="role-switcher-bar" aria-label="Console Interface Switcher">
-          <button
-            className={`role-tab-btn ${currentRole === 'DISPATCHER' ? 'active-cad' : ''}`}
-            onClick={() => onSelectRole('DISPATCHER')}
-            title="Central Dispatch CAD Command Interface"
-          >
-            <Radio size={14} className="tab-icon" />
-            <span>🚨 Central CAD</span>
-          </button>
-          <button
-            className={`role-tab-btn ${currentRole === 'DRIVER' ? 'active-driver' : ''}`}
-            onClick={() => onSelectRole('DRIVER')}
-            title="Ambulance Driver Mobile Data Terminal (MDT) Dashboard"
-          >
-            <Truck size={14} className="tab-icon" />
-            <span>🚑 Ambulance Dashboard</span>
-          </button>
-          <button
-            className={`role-tab-btn ${currentRole === 'HOSPITAL' ? 'active-hosp' : ''}`}
-            onClick={() => onSelectRole('HOSPITAL')}
-            title="Hospital Emergency Department & Trauma Reception Dashboard"
-          >
-            <Building2 size={14} className="tab-icon" />
-            <span>🏥 Hospital Dashboard</span>
-          </button>
-        </nav>
+        {/* Isolated Session Badge: CAD Central Command Only */}
+        <div className="authenticated-session-badge">
+          <div className="session-role-indicator">
+            <Radio size={14} className="text-sky" />
+            <span className="session-role-title">Central CAD Command</span>
+          </div>
+          <span className="session-badge-sep">·</span>
+          <span className="session-user-badge">{authSession?.userLabel || 'Chief Dispatcher (DISP-901)'}</span>
+        </div>
       </div>
 
       {/* 2. Center Section: Calm Search & Status Telemetry */}
@@ -227,7 +213,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 title="Auto-dispatch nearest ambulance and hospital to highest priority incident"
               >
                 <Zap size={13} />
-                <span>⚡ Auto-Dispatch</span>
+                <span>Auto-Dispatch</span>
               </button>
             )}
 
@@ -238,7 +224,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               title="Intake New Emergency Incident"
             >
               <PlusCircle size={14} />
-              <span>+ New Call</span>
+              <span>New Incident</span>
             </button>
 
             {/* Consolidated Tactical Operations Suite Dropdown */}
@@ -246,10 +232,10 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button
                 className={`btn-calm-secondary tactical-ops-trigger ${isTacticalOpsOpen ? 'active' : ''} ${isMciActive ? 'mci-alert' : ''}`}
                 onClick={() => setIsTacticalOpsOpen(!isTacticalOpsOpen)}
-                title="Open Advanced Tactical Operations Suite (NG911, V2X, MCI, Drone DFR, QA, ED Capacity)"
+                title="Open Advanced Tactical Operations Suite (Next-Gen 112, V2X, MCI, Drone DFR, QA, ED Capacity)"
               >
-                <Activity size={13} className={isMciActive ? 'text-red animate-pulse' : 'text-sky'} />
-                <span>⚡ Tactical Ops</span>
+                <Activity size={13} className={isMciActive ? 'text-red' : 'text-sky'} />
+                <span>Operations Suite</span>
                 <ChevronDown size={12} className={`transition-transform ${isTacticalOpsOpen ? 'rotate-180' : ''}`} />
                 {isMciActive && <span className="mci-dot-badge" />}
               </button>
@@ -264,7 +250,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <button className="tactical-menu-item" onClick={onOpenNG911Video}>
                       <Video size={14} className="text-sky" />
                       <div className="menu-text">
-                        <strong>NG911 Live Video</strong>
+                        <strong>Next-Gen 112 Live Video</strong>
                         <small>Caller WebRTC feed & indoor altimetry</small>
                       </div>
                     </button>
@@ -434,6 +420,17 @@ export const Navbar: React.FC<NavbarProps> = ({
           <span className="connection-beacon" />
           <span className="connection-label">{isConnected ? 'LIVE' : 'OFFLINE'}</span>
         </div>
+
+        {onLogout && (
+          <button
+            className="btn-calm-logout"
+            onClick={onLogout}
+            title="Sign Out of Central CAD and Return to Gateway"
+          >
+            <LogOut size={13} />
+            <span>Sign Out</span>
+          </button>
+        )}
       </div>
     </header>
   );

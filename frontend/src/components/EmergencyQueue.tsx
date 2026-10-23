@@ -100,7 +100,7 @@ export const EmergencyQueue: React.FC<EmergencyQueueProps> = ({
               title="Automatically dispatch nearest ambulance to highest priority incident"
             >
               <Zap size={11} />
-              <span>⚡ Auto-Dispatch Next</span>
+              <span>Auto-Dispatch Next</span>
             </button>
           )}
           <span className="badge-count text-red">{activeEmergencies.length} Active</span>
@@ -159,7 +159,7 @@ export const EmergencyQueue: React.FC<EmergencyQueueProps> = ({
                 title="Seed 3 active high-acuity emergency calls into the dispatch queue"
               >
                 <Zap size={13} />
-                <span>🚨 Seed Live Emergency Calls</span>
+                <span>Seed Emergency Calls</span>
               </button>
             )}
           </div>
@@ -192,7 +192,7 @@ export const EmergencyQueue: React.FC<EmergencyQueueProps> = ({
                     )}
                     {isClosed && (
                       <span className="chip" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#34d399', fontSize: '10px' }}>
-                        ✓ CLOSED
+                        CLOSED
                       </span>
                     )}
                   </div>
@@ -237,7 +237,7 @@ export const EmergencyQueue: React.FC<EmergencyQueueProps> = ({
                           title="Instant auto-assign closest ambulance & matching hospital"
                         >
                           <Zap size={11} className="text-amber" />
-                          <span>⚡ Auto-Assign</span>
+                          <span>Auto-Assign</span>
                         </button>
                       )}
                       <button
