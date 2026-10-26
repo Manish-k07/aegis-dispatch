@@ -312,10 +312,35 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Accessible focus ring */
-:focus-visible {
+/* Accessible focus ring for buttons, links and standalone interactive elements */
+:focus-visible:not(input):not(textarea):not(select):not(.m3-select-box):not(.m3-field-box) {
   outline: 2px solid var(--md-sys-color-primary) !important;
   outline-offset: 2px !important;
+}
+
+/* Ensure inputs, textareas and custom select boxes never show a duplicate inner outline */
+input,
+textarea,
+select,
+.m3-field-input,
+.m3-select-box,
+input:focus,
+input:focus-visible,
+textarea:focus,
+textarea:focus-visible,
+select:focus,
+select:focus-visible,
+.m3-field-input:focus,
+.m3-field-input:focus-visible,
+.m3-select-box:focus,
+.m3-select-box:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.m3-select-box:focus-visible {
+  border-color: var(--md-sys-color-primary) !important;
+  box-shadow: 0 0 0 1px var(--md-sys-color-primary) !important;
 }
 
 /* Material Symbols Outlined Helper */

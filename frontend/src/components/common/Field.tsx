@@ -94,6 +94,7 @@ export const Field: React.FC<FieldProps> = ({
         {multiline ? (
           <textarea
             id={inputId}
+            className="m3-field-input"
             value={value as string}
             defaultValue={defaultValue as string}
             placeholder={isFocused ? placeholder : ''}
@@ -114,6 +115,7 @@ export const Field: React.FC<FieldProps> = ({
               background: 'transparent',
               border: 'none',
               outline: 'none',
+              boxShadow: 'none',
               resize: 'vertical',
               paddingTop: isFloating ? '8px' : '0',
               fontFamily: 'var(--md-ref-typeface-plain)',
@@ -126,6 +128,7 @@ export const Field: React.FC<FieldProps> = ({
         ) : (
           <input
             id={inputId}
+            className="m3-field-input"
             value={value}
             defaultValue={defaultValue}
             placeholder={isFocused ? placeholder : ''}
@@ -145,6 +148,7 @@ export const Field: React.FC<FieldProps> = ({
               background: 'transparent',
               border: 'none',
               outline: 'none',
+              boxShadow: 'none',
               paddingTop: isFloating ? '16px' : '0',
               fontFamily: 'var(--md-ref-typeface-plain)',
               fontSize: '16px',

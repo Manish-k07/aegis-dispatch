@@ -104,6 +104,7 @@ export const Select: React.FC<SelectProps> = ({
     >
       <div
         role="button"
+        className="m3-select-box"
         tabIndex={disabled ? -1 : 0}
         onClick={() => !disabled && setIsOpen(!isOpen)}
         onKeyDown={handleKeyDown}
