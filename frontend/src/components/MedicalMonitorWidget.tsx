@@ -122,11 +122,12 @@ export const MedicalMonitorWidget: React.FC<MedicalMonitorWidgetProps> = ({
     <div
       className="medical-monitor-card"
       style={{
-        background: 'rgba(10, 15, 29, 0.95)',
-        border: isStemiAlertActive ? '1px solid rgba(239, 68, 68, 0.6)' : '1px solid rgba(56, 189, 248, 0.25)',
-        borderRadius: '16px',
-        padding: compact ? '16px' : '22px',
-        boxShadow: isStemiAlertActive ? '0 0 25px rgba(239, 68, 68, 0.25)' : '0 10px 30px rgba(0, 0, 0, 0.4)',
+        background: 'var(--md-sys-color-surface-high)',
+        border: isStemiAlertActive
+          ? '1px solid var(--md-sys-color-error)'
+          : '1px solid var(--md-sys-color-outline)',
+        borderRadius: '12px',
+        padding: compact ? '16px' : '20px',
         position: 'relative',
         overflow: 'hidden',
       }}
@@ -134,38 +135,45 @@ export const MedicalMonitorWidget: React.FC<MedicalMonitorWidgetProps> = ({
       {/* Header bar */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Activity size={18} style={{ color: isStemiAlertActive ? '#ef4444' : '#38bdf8' }} />
-          <strong style={{ fontSize: '13px', color: '#f8fafc', letterSpacing: '0.8px', textTransform: 'uppercase' }}>
-            ZOLL X-Series Telemetry Sync · Lead II Continuous
+          <Activity size={18} style={{ color: isStemiAlertActive ? 'var(--md-sys-color-error)' : 'var(--md-sys-color-primary)' }} />
+          <strong style={{ fontSize: '14px', color: 'var(--md-sys-color-text)', fontWeight: 500 }}>
+            ECG Monitor · Lead II Continuous
           </strong>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <button
             onClick={() => setIsStemiAlertActive(!isStemiAlertActive)}
             style={{
-              background: isStemiAlertActive ? 'rgba(239, 68, 68, 0.2)' : 'rgba(255, 255, 255, 0.05)',
-              border: `1px solid ${isStemiAlertActive ? '#ef4444' : 'rgba(255, 255, 255, 0.1)'}`,
-              color: isStemiAlertActive ? '#fca5a5' : '#94a3b8',
-              fontSize: '10px',
+              background: isStemiAlertActive ? 'var(--md-sys-color-error-container)' : 'transparent',
+              border: `1px solid ${isStemiAlertActive ? 'var(--md-sys-color-error)' : 'var(--md-sys-color-outline)'}`,
+              color: isStemiAlertActive ? 'var(--md-sys-color-error)' : 'var(--md-sys-color-text-secondary)',
+              fontSize: '11px',
               padding: '4px 8px',
-              borderRadius: '6px',
-              fontWeight: 700,
+              borderRadius: '9999px',
+              fontWeight: 500,
               cursor: 'pointer',
-              letterSpacing: '0.5px',
             }}
           >
             {isStemiAlertActive ? (
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                 <AlertTriangle size={12} />
-                STEMI PROTOCOL ACTIVE
+                STEMI simulated
               </span>
             ) : (
-              'SIMULATE ST-ELEVATION'
+              'Simulate ST-elevation'
             )}
           </button>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#10b981', fontWeight: 600 }}>
-            <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#10b981', display: 'inline-block', boxShadow: '0 0 8px #10b981' }} />
-            ePCR LIVE
+          <span
+            style={{
+              fontSize: '11px',
+              padding: '2px 8px',
+              borderRadius: '8px',
+              background: 'var(--md-sys-color-surface-variant)',
+              color: 'var(--md-sys-color-text-secondary)',
+              fontWeight: 500,
+            }}
+          >
+            Simulated
           </span>
         </div>
       </div>
@@ -291,7 +299,7 @@ export const MedicalMonitorWidget: React.FC<MedicalMonitorWidgetProps> = ({
       {isStemiAlertActive && (
         <div
           style={{
-            background: 'linear-gradient(90deg, rgba(239, 68, 68, 0.2), rgba(185, 28, 28, 0.3))',
+            background: 'var(--md-sys-color-error-container)',
             border: '1px solid #ef4444',
             borderRadius: '10px',
             padding: '12px 16px',

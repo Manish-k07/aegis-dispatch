@@ -2,7 +2,6 @@
 
 [![CI/CD Pipeline](https://github.com/Manish-k07/aegis-dispatch/actions/workflows/deploy.yml/badge.svg)](https://github.com/Manish-k07/aegis-dispatch/actions/workflows/deploy.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Security: Hardened](https://img.shields.io/badge/Security-Hardened%20(TLS%201.3%20%7C%20HIPAA)-emerald.svg)](SECURITY.md)
 [![Docker: Deploy-Ready](https://img.shields.io/badge/Docker-Deploy--Ready-sky.svg)](docker-compose.yml)
 
 Enterprise-grade, full-stack, real-time Computer-Aided Emergency Medical Dispatch (CAD) command & control platform. Engineered for 911/112 public safety answering points, paramedic ambulance fleets, and regional hospital Emergency Departments (ED).
@@ -29,8 +28,6 @@ Aegis Dispatch Pro incorporates defense-in-depth architectural safeguards:
 - **Zero Host Disclosure**: System backup endpoints sanitize server disk paths, ensuring host internal directories are never leaked to API consumers.
 - **Exception Shielding**: `GlobalExceptionHandler` intercepts server errors, providing structured JSON payloads while suppressing internal stack traces.
 - **Payload & Coordinate Boundary Checks**: Latitude/longitude constraints ($[-90, 90]$, $[-180, 180]$) and string length bounds prevent memory abuse.
-
-📄 Read our complete [Security Policy](SECURITY.md), [Privacy Policy](PRIVACY_POLICY.md), and [Terms & Conditions of Service](TERMS_OF_SERVICE.md).
 
 ---
 
@@ -176,11 +173,18 @@ graph TD
 
 ---
 
-## 📜 Legal & Compliance
+## 🗺️ Product Roadmap
 
-- [Privacy Policy (HIPAA / HITECH / GDPR / NDHM)](PRIVACY_POLICY.md)
-- [Terms & Conditions of Service](TERMS_OF_SERVICE.md)
-- [Security Policy & Vulnerability Disclosure](SECURITY.md)
+The following advanced emergency response capabilities were evaluated during the platform audit and are deferred to future production milestones:
+
+- **Mass Casualty Incident (MCI) Triage Matrix**: START/SALT field triage tag scanning (Red/Yellow/Green/Black), multi-patient transport tracking, and automated casualty distribution across regional trauma networks.
+- **Drone First Responder (DFR)**: Autonomous UAV dispatch for early pre-arrival payload delivery (Automated External Defibrillator, Naloxone/Narcan, Epinephrine) ahead of ground ambulances.
+- **Next-Gen 112 Live Video (WebRTC)**: Direct caller camera video stream ingestion for dispatcher-guided CPR and bystander emergency coaching.
+- **Predictive Surge Staging**: Machine-learning driven ambulance prepositioning based on historical weather, traffic density, and call volume patterns.
+- **IoT Fleet Diagnostics**: Real-time vehicle OBD-II telemetry, oxygen cylinder pressure monitoring, and automated defibrillator self-test reporting.
+- **Automated Clinical QA/QI Scorecard**: Post-incident chart audit and protocol adherence evaluation against AHA/ATLS guidelines.
+
+For the active feature matrix and implementation status of all current modules, see [FEATURES.md](FEATURES.md).
 
 ---
 

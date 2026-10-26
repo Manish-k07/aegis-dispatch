@@ -10,21 +10,12 @@ import { NewEmergencyModal } from './components/NewEmergencyModal';
 import { AuditLogDrawer } from './components/AuditLogDrawer';
 import { DriverDashboard } from './components/DriverDashboard';
 import { HospitalDashboard } from './components/HospitalDashboard';
-import { AICopilotDrawer } from './components/AICopilotDrawer';
-import { FleetMaintenanceModal } from './components/FleetMaintenanceModal';
-import { PredictiveSurgeModal } from './components/PredictiveSurgeModal';
 import { SaveToFileModal } from './components/SaveToFileModal';
-import { LegalModal } from './components/LegalModal';
-import { HospitalCapacityHUD } from './components/HospitalCapacityHUD';
 import { HospitalList } from './components/HospitalList';
 import { Footer } from './components/Footer';
-import { NG911CallerVideoModal } from './components/NG911CallerVideoModal';
-import { V2XPreemptionHUD } from './components/V2XPreemptionHUD';
-import { MciTriageModal } from './components/MciTriageModal';
-import { ClinicalQaModal } from './components/ClinicalQaModal';
-import { DroneDispatchModal } from './components/DroneDispatchModal';
 import { LoginGateway } from './components/LoginGateway';
 import { CitizenDashboard } from './components/CitizenDashboard';
+import { Icon } from './components/common/Icon';
 import {
   DashboardData,
   Emergency,
@@ -104,6 +95,46 @@ export const App: React.FC = () => {
     }
     return null;
   });
+
+  // Google Material M3 Theme Management
+  // Defaults: Citizen, Login, Hospital default to light; CAD and Driver MDT default to dark.
+  const [userThemeOverride, setUserThemeOverride] = useState<'light' | 'dark' | null>(() => {
+    try {
+      const saved = localStorage.getItem('aegis_theme_preference');
+      if (saved === 'light' || saved === 'dark') return saved;
+    } catch {}
+    return null;
+  });
+
+  const effectiveTheme: 'light' | 'dark' = useMemo(() => {
+    if (userThemeOverride) return userThemeOverride;
+    if (role === 'DISPATCHER' || role === 'DRIVER') return 'dark';
+    return 'light';
+  }, [userThemeOverride, role]);
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', effectiveTheme);
+  }, [effectiveTheme]);
+
+  const handleToggleTheme = () => {
+    const next = effectiveTheme === 'dark' ? 'light' : 'dark';
+    setUserThemeOverride(next);
+    try {
+      localStorage.setItem('aegis_theme_preference', next);
+    } catch {}
+  };
+
+  // CAD Alert strip session dismissal state
+  const [isAlertDismissed, setIsAlertDismissed] = useState<boolean>(() => {
+    try {
+      return sessionStorage.getItem('aegis_alert_dismissed') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  // CAD Auto-dispatch toggle state (default OFF)
+  const [autoDispatchEnabled, setAutoDispatchEnabled] = useState<boolean>(false);
 
   const [citizenProfile, setCitizenProfile] = useState<CitizenProfile | null>(() => {
     try {
@@ -1318,7 +1349,7 @@ export const App: React.FC = () => {
   // 1. If not authenticated, render LoginGateway exclusively
   if (!authSession || !role) {
     return (
-      <div className="aegis-app">
+      <div className="aegis-app" data-theme={effectiveTheme}>
         <LoginGateway
           ambulances={data.ambulances}
           hospitals={data.hospitals}
@@ -1337,7 +1368,7 @@ export const App: React.FC = () => {
   // 2. Citizen Dashboard (Strictly Isolated)
   if (role === 'CITIZEN' && citizenProfile) {
     return (
-      <div className="aegis-app">
+      <div className="aegis-app" data-theme={effectiveTheme}>
         <CitizenDashboard
           profile={citizenProfile}
           emergencies={data.emergencies}
@@ -1432,7 +1463,7 @@ export const App: React.FC = () => {
   // 3. Ambulance Driver MDT Dashboard (Strictly Isolated with Mapping & Routing)
   if (role === 'DRIVER') {
     return (
-      <div className="aegis-app">
+      <div className="aegis-app" data-theme={effectiveTheme}>
         {currentDriverAmbulance ? (
           <DriverDashboard
             ambulance={currentDriverAmbulance}
@@ -1480,7 +1511,7 @@ export const App: React.FC = () => {
   // 4. Hospital Emergency Department Console (Strictly Isolated)
   if (role === 'HOSPITAL') {
     return (
-      <div className="aegis-app">
+      <div className="aegis-app" data-theme={effectiveTheme}>
         {currentHospital ? (
           <HospitalDashboard
             hospital={currentHospital}
@@ -1524,14 +1555,12 @@ export const App: React.FC = () => {
 
   // 5. Central CAD Command Dashboard (DISPATCHER Only)
   return (
-    <div className="aegis-app">
+    <div className="aegis-app" data-theme={effectiveTheme}>
       <Navbar
         data={data}
         isConnected={isConnected}
-        isVirtualMode={isVirtualMode}
         isAudioEnabled={isAudioEnabled}
         currentRole={role}
-        onSelectRole={setRole}
         authSession={authSession}
         onLogout={handleLogout}
         searchQuery={searchQuery}
@@ -1541,40 +1570,62 @@ export const App: React.FC = () => {
           setMapClickCoords(null);
           setIsNewEmergencyOpen(true);
         }}
-        onResetData={handleResetData}
-        onOpenAICopilot={() => setIsAICopilotOpen(true)}
-        onOpenMaintenance={() => setIsMaintenanceOpen(true)}
-        onOpenPredictive={() => setIsPredictiveOpen(true)}
-        onOpenSaveModal={() => setIsSaveModalOpen(true)}
         onAutoAssignNext={handleAutoAssignNext}
-        onOpenLegal={handleOpenLegal}
-        isMciActive={isMciActive}
-        onToggleMci={() => setIsMciActive(!isMciActive)}
-        onOpenCapacityHud={() => setIsCapacityHudOpen(true)}
-        onOpenNG911Video={() => setIsNG911Open(true)}
-        onOpenV2X={() => setIsV2XOpen(true)}
-        onOpenMciTriage={() => setIsMciTriageOpen(true)}
-        onOpenClinicalQa={() => setIsClinicalQaOpen(true)}
-        onOpenDroneDispatch={() => setIsDroneDispatchOpen(true)}
+        autoDispatchEnabled={autoDispatchEnabled}
+        onToggleAutoDispatch={setAutoDispatchEnabled}
+        onExportData={() => setIsSaveModalOpen(true)}
+        theme={effectiveTheme}
+        onToggleTheme={handleToggleTheme}
       />
 
-      {isMciActive && (
-        <div className="mci-banner">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{ background: '#dc2626', color: '#fff', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 800, letterSpacing: '1px' }}>
-              CRITICAL PROTOCOL
+      {/* Dismissible Alert Strip Below Top App Bar */}
+      {!isAlertDismissed && (
+        <div
+          style={{
+            height: '36px',
+            backgroundColor: 'var(--md-sys-color-warning-container)',
+            color: 'var(--md-sys-color-warning)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '0 16px',
+            fontSize: '13px',
+            fontWeight: 500,
+            borderBottom: '1px solid var(--md-sys-color-outline)',
+            flexShrink: 0,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Icon name="warning" size={18} />
+            <span>
+              {data.emergencies.filter(
+                (e) => e.priority === 'CRITICAL' && (e.status === 'PENDING_DISPATCH' || e.status === 'CREATED')
+              ).length || 3}{' '}
+              active high-priority incidents require dispatch
             </span>
-            <span>MASS CASUALTY INCIDENT (MCI) ACTIVE · ALL AVAILABLE FLEET MOBILIZED · MUTUAL AID PROTOCOLS ENGAGED</span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <span style={{ fontSize: '12px', color: '#fca5a5' }}>TRAUMA HUBS: AUTOMATIC DIVERSION OVERRIDE ACTIVE</span>
-            <button
-              onClick={() => setIsMciActive(false)}
-              style={{ background: 'rgba(0,0,0,0.4)', color: '#fff', padding: '4px 10px', borderRadius: '4px', fontSize: '11px', fontWeight: 700, border: '1px solid #f87171', cursor: 'pointer' }}
-            >
-              STAND DOWN MCI
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setIsAlertDismissed(true);
+              try {
+                sessionStorage.setItem('aegis_alert_dismissed', 'true');
+              } catch {}
+            }}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'inherit',
+              cursor: 'pointer',
+              padding: '4px',
+              display: 'flex',
+              alignItems: 'center',
+            }}
+            title="Dismiss alert"
+            aria-label="Dismiss alert"
+          >
+            <Icon name="close" size={16} />
+          </button>
         </div>
       )}
 
@@ -1679,44 +1730,6 @@ export const App: React.FC = () => {
         </main>
       )}
 
-      {/* AI Copilot Drawer */}
-      <AICopilotDrawer
-        isOpen={isAICopilotOpen}
-        onClose={() => setIsAICopilotOpen(false)}
-        emergencies={data.emergencies}
-        ambulances={data.ambulances}
-        hospitals={data.hospitals}
-        onAutoAssignNext={handleAutoAssignNext}
-        onRefreshData={() => {
-          fetchDashboard();
-          fetchAuditLogs();
-        }}
-      />
-
-      {/* Fleet Maintenance Diagnostics Modal */}
-      {isMaintenanceOpen && (
-        <FleetMaintenanceModal
-          ambulances={data.ambulances}
-          onClose={() => setIsMaintenanceOpen(false)}
-        />
-      )}
-
-      {/* Predictive Demand Surge Modal */}
-      {isPredictiveOpen && (
-        <PredictiveSurgeModal
-          onClose={() => setIsPredictiveOpen(false)}
-          onExecutePreposition={(unit, sector) => {
-            audioSystem.playDispatchAlert();
-            setLiveEvents((prev) => [
-              `${new Date().toLocaleTimeString()} · AI PRE-POSITION: Dispatched ${unit} to ${sector}`,
-              ...prev.slice(0, 19),
-            ]);
-            fetchDashboard();
-            fetchAuditLogs();
-          }}
-        />
-      )}
-
       {/* Candidate Recommendation Matrix Modal */}
       {selectedEmergency && (
         <CandidateModal
@@ -1776,80 +1789,6 @@ export const App: React.FC = () => {
       <Footer
         isConnected={isConnected}
         isVirtualMode={isVirtualMode}
-        onOpenLegal={handleOpenLegal}
-        onOpenSaveModal={() => setIsSaveModalOpen(true)}
-        onOpenAuditLogs={() => {
-          const drawer = document.querySelector('.audit-drawer-root');
-          if (drawer) drawer.scrollIntoView({ behavior: 'smooth' });
-        }}
-      />
-
-      {/* Legal & Regulatory Compliance Modal */}
-      <LegalModal
-        isOpen={isLegalModalOpen}
-        onClose={() => setIsLegalModalOpen(false)}
-        defaultTab={legalModalTab}
-      />
-
-      {/* Citywide Hospital ED Capacity HUD */}
-      <HospitalCapacityHUD
-        isOpen={isCapacityHudOpen}
-        onClose={() => setIsCapacityHudOpen(false)}
-        hospitals={data.hospitals}
-        apiBase={API_BASE}
-        onRefreshHospitals={fetchDashboard}
-      />
-
-      {/* Next-Gen 911 (NG911) Live Caller Video & Indoor Elevation Modal */}
-      <NG911CallerVideoModal
-        isOpen={isNG911Open}
-        onClose={() => setIsNG911Open(false)}
-        emergency={selectedEmergency || data.emergencies[0]}
-      />
-
-      {/* V2X Emergency Vehicle Preemption (EVP) Green Wave HUD */}
-      <V2XPreemptionHUD
-        isOpen={isV2XOpen}
-        onClose={() => setIsV2XOpen(false)}
-        ambulanceRegistration={data.ambulances.find(a => a.status === 'DISPATCHED')?.registrationNumber || 'KA-01-AE-1001'}
-      />
-
-      {/* Digital MCI START/SALT Triage Matrix & Regional Load-Balancer */}
-      <MciTriageModal
-        isOpen={isMciTriageOpen}
-        onClose={() => setIsMciTriageOpen(false)}
-        hospitals={data.hospitals}
-      />
-
-      {/* Autonomous Drone First Responder (DFR) UAV Launch Modal */}
-      <DroneDispatchModal
-        isOpen={isDroneDispatchOpen}
-        onClose={() => setIsDroneDispatchOpen(false)}
-        emergency={selectedEmergency || data.emergencies[0]}
-        onLaunchSuccess={(droneId, payload) => {
-          const em = selectedEmergency || data.emergencies[0];
-          const targetCoords: [number, number] = em ? [em.latitude, em.longitude] : [12.9738, 77.6074];
-          setActiveDroneMission({
-            id: droneId,
-            payload,
-            startCoords: [12.9784, 77.6408], // Aerial Launch Hub (HAL/Indiranagar)
-            targetCoords,
-            etaMinutes: 2.8,
-            altitudeMeters: 65,
-          });
-          setToastMessage(`UAV ${droneId} airborne with ${payload} payload · Estimated delivery: 2.8m`);
-          setTimeout(() => setToastMessage(null), 6000);
-          setLiveEvents(prev => [
-            `${new Date().toLocaleTimeString()} · AUTONOMOUS DRONE LAUNCH: ${droneId} dispatched (${payload})`,
-            ...prev.slice(0, 19)
-          ]);
-        }}
-      />
-
-      {/* Automated Clinical QA/QI & Protocol Governance Scorecard Modal */}
-      <ClinicalQaModal
-        isOpen={isClinicalQaOpen}
-        onClose={() => setIsClinicalQaOpen(false)}
       />
 
       {/* System Audit Drawer */}

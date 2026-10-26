@@ -30,3 +30,8 @@ backend/data/backups/
 Thumbs.db
 ehthumbs.db
 Desktop.ini
+
+
+# Local tooling & QA screenshots
+.tools/
+frontend/screenshots/

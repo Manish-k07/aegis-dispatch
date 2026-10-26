@@ -1,134 +1,89 @@
-import React from 'react';
-import {
-  ShieldCheck,
-  Lock,
-  Radio,
-  FileText,
-  Server,
-  HeartPulse,
-  Scale,
-  Sparkles,
-  ExternalLink,
-  Activity
-} from 'lucide-react';
+import React, { useState, useEffect } from 'react';
 
 interface FooterProps {
   isConnected: boolean;
   isVirtualMode?: boolean;
-  onOpenLegal: (tab: 'privacy' | 'terms' | 'security') => void;
-  onOpenSaveModal: () => void;
-  onOpenAuditLogs: () => void;
 }
 
-export const Footer: React.FC<FooterProps> = ({
-  isConnected,
-  isVirtualMode = false,
-  onOpenLegal,
-  onOpenSaveModal,
-  onOpenAuditLogs,
-}) => {
+/**
+ * Material Design 3 Single 32px Status Bar:
+ * - Left: connection dot + "Connected to CAD server"
+ * - Center: "Last sync hh:mm:ss"
+ * - Right: "Simulated data" chip only when VITE_DEMO_MODE=true
+ */
+export const Footer: React.FC<FooterProps> = ({ isConnected }) => {
+  const [syncTime, setSyncTime] = useState<string>('');
+
+  useEffect(() => {
+    const updateTime = () => {
+      setSyncTime(new Date().toLocaleTimeString('en-US', { hour12: false }));
+    };
+    updateTime();
+    const interval = setInterval(updateTime, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const isDemo =
+    typeof window !== 'undefined' &&
+    ((import.meta as any).env?.VITE_DEMO_MODE === 'true' ||
+      window.location.search.includes('demo=1'));
+
   return (
-    <footer className="footer-modern-bar">
-      {/* 1. Left Cluster: Real-Time Engine & Encryption Telemetry */}
-      <div className="footer-zone footer-zone-left">
-        <div className="telemetry-beacon-item">
-          <span
-            className="pulse-indicator"
-            style={{
-              backgroundColor: isConnected ? '#34d399' : '#f87171',
-              boxShadow: isConnected
-                ? '0 0 10px rgba(52, 211, 153, 0.7)'
-                : '0 0 10px rgba(248, 113, 113, 0.7)',
-            }}
-          />
-          <span className="telemetry-engine-text">
-            Aegis CAD Engine: <strong style={{ color: isConnected ? '#34d399' : '#f87171' }}>
-              {isConnected ? (isVirtualMode ? 'ACTIVE (Virtual Cloud Gateway)' : 'NOMINAL') : 'RECONNECTING'}
-            </strong>
-          </span>
-        </div>
-
-        <span className="footer-separator">|</span>
-
-        <div className="telemetry-security-badge" title="Protected Health Information Encrypted in Transit">
-          <Lock size={12} color="#34d399" />
-          <span>TLS 1.3 / WSS • HIPAA / DPDP Encrypted</span>
-        </div>
-
-        <span className="footer-separator">|</span>
-
-        <div className="telemetry-health-badge" title="Sub-second GPS & clinical telemetry streaming active">
-          <HeartPulse size={12} color="#38bdf8" />
-          <span>Live PHI Telemetry Bridge</span>
-        </div>
-      </div>
-
-      {/* 2. Center Cluster: Regulatory Compliance, Security Posture & Audit Trail */}
-      <div className="footer-zone footer-zone-center">
-        <button
-          className="footer-nav-link"
-          onClick={() => onOpenLegal('privacy')}
-          title="Review HIPAA / GDPR / DPDP Healthcare Data Protection Policy"
-        >
-          <FileText size={12} />
-          <span>Privacy Policy</span>
-        </button>
-
-        <span className="footer-dot">•</span>
-
-        <button
-          className="footer-nav-link"
-          onClick={() => onOpenLegal('terms')}
-          title="Terms of Medical Service & CAD SLAs"
-        >
-          <Scale size={12} />
-          <span>Terms of Service</span>
-        </button>
-
-        <span className="footer-dot">•</span>
-
-        <button
-          className="footer-nav-link"
-          onClick={() => onOpenLegal('security')}
-          title="Cryptographic verification and role-based access posture"
-        >
-          <ShieldCheck size={12} />
-          <span>Security Posture</span>
-        </button>
-
-        <span className="footer-dot">•</span>
-
-        <button
-          className="footer-nav-link"
-          onClick={onOpenAuditLogs}
-          title="Immutable mission action logs & operator dispatch trail"
-        >
-          <Activity size={12} />
-          <span>Audit Log</span>
-        </button>
-      </div>
-
-      {/* 3. Right Cluster: Enterprise Snapshot & System Metadata */}
-      <div className="footer-zone footer-zone-right">
-        <button
-          className="btn btn-xs btn-outline-sky"
-          onClick={onOpenSaveModal}
+    <footer
+      style={{
+        height: '32px',
+        backgroundColor: 'var(--md-sys-color-surface-high)',
+        borderTop: '1px solid var(--md-sys-color-outline)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '0 16px',
+        fontSize: '12px',
+        color: 'var(--md-sys-color-text-secondary)',
+        boxSizing: 'border-box',
+        flexShrink: 0,
+        zIndex: 50,
+      }}
+    >
+      {/* Left: connection dot + "Connected to CAD server" */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <span
           style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '5px',
-            padding: '3px 10px',
-            fontSize: '0.72rem',
+            width: '8px',
+            height: '8px',
+            borderRadius: '50%',
+            backgroundColor: isConnected
+              ? 'var(--md-sys-color-success)'
+              : 'var(--md-sys-color-error)',
+            display: 'inline-block',
           }}
-          title="Export instant CAD state snapshot JSON for disaster recovery"
-        >
-          <Server size={11} />
-          <span>Server Snapshot</span>
-        </button>
+        />
+        <span>{isConnected ? 'Connected to CAD server' : 'Disconnected from CAD server'}</span>
+      </div>
 
-        <span className="footer-version-tag">
-          v2.5 Pro <span style={{ opacity: 0.6 }}>(Build 2026.09)</span>
-        </span>
+      {/* Center: "Last sync hh:mm:ss" */}
+      <div style={{ fontFeatureSettings: '"tnum"', fontVariantNumeric: 'tabular-nums' }}>
+        Last sync {syncTime || '00:00:00'}
+      </div>
+
+      {/* Right: "Simulated data" chip only when VITE_DEMO_MODE=true */}
+      <div>
+        {isDemo ? (
+          <span
+            style={{
+              fontSize: '11px',
+              padding: '2px 8px',
+              borderRadius: '8px',
+              backgroundColor: 'var(--md-sys-color-warning-container)',
+              color: 'var(--md-sys-color-warning)',
+              fontWeight: 500,
+            }}
+          >
+            Simulated data
+          </span>
+        ) : (
+          <span style={{ fontSize: '11px', opacity: 0.7 }}>Aegis OS</span>
+        )}
       </div>
     </footer>
   );

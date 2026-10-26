@@ -148,11 +148,8 @@ export const AmbulanceRouteMap: React.FC<AmbulanceRouteMapProps> = ({
     if (mapStyle === 'SATELLITE') {
       return 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
     }
-    if (mapStyle === 'STREETS') {
-      return 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-    }
-    // CartoDB Dark Matter
-    return 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+    // OpenStreetMap standard clean tiles (no API key required)
+    return 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
   }, [mapStyle]);
 
   const handleFitRoute = () => {

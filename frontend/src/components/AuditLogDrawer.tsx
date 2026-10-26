@@ -16,7 +16,7 @@ export const AuditLogDrawer: React.FC<AuditLogDrawerProps> = ({ logs, liveEvents
       <div className="audit-drawer-header" onClick={() => setIsOpen(!isOpen)}>
         <div className="flex items-center gap-2">
           <History size={16} className="text-secondary" />
-          <span className="font-semibold text-xs tracking-wider uppercase">System Operations & Audit Trail</span>
+          <span className="font-semibold text-xs tracking-wider">Event log</span>
           <span className="live-event-ticker text-secondary text-xs">
             {liveEvents[0] || 'Awaiting dispatch events…'}
           </span>

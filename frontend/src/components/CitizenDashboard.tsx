@@ -1,38 +1,17 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import {
-  Shield,
-  Heart,
-  Phone,
-  MapPin,
-  AlertTriangle,
-  Clock,
-  Truck,
-  Building2,
-  LogOut,
-  User,
-  Mail,
-  CheckCircle2,
-  Activity,
-  Flame,
-  Radio,
-  Navigation,
-  FileText,
-  HelpCircle,
-  ExternalLink,
-  ChevronRight,
-  Edit3,
-  X,
-  Compass,
-  Settings,
-  Plus,
-  Save,
-  Check,
-  ShieldAlert
-} from 'lucide-react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { CitizenProfile, Emergency, Ambulance, Hospital, Dispatch } from '../types';
 import { getAmbulanceIcon, getEmergencyIcon, getHospitalIcon } from '../utils/mapIcons';
+import { Icon } from './common/Icon';
+import { Button } from './common/Button';
+import { Card } from './common/Card';
+import { StatusChip } from './common/StatusChip';
+import { SectionHeader } from './common/SectionHeader';
+import { Field } from './common/Field';
+import { Select } from './common/Select';
+import { Dialog } from './common/Dialog';
+import { Snackbar } from './common/Snackbar';
 
 interface CitizenDashboardProps {
   profile: CitizenProfile;
@@ -55,37 +34,56 @@ interface CitizenDashboardProps {
   onLogout: () => void;
 }
 
-const EMERGENCY_TYPES = [
-  { id: 'CARDIAC', label: 'Cardiac / Chest Pain', code: 'ALS-1' },
-  { id: 'BREATHING', label: 'Severe Respiratory Distress', code: 'ALS-2' },
-  { id: 'TRAUMA', label: 'Severe Bleeding / Trauma', code: 'TRM-1' },
-  { id: 'ACCIDENT', label: 'Road Vehicle Accident', code: 'RTA-1' },
-  { id: 'MATERNITY', label: 'Maternity / Active Labor', code: 'MAT-1' },
-  { id: 'UNCONSCIOUS', label: 'Unconscious / Stroke', code: 'NEU-1' },
-  { id: 'GENERAL', label: 'General Emergency', code: 'GEN-1' },
+interface EmergencyTypeOption {
+  id: string;
+  label: string;
+  icon: string;
+}
+
+// Exactly 6 options: 2 columns on mobile, 3 columns on desktop, no orphan cards
+const EMERGENCY_TYPES: EmergencyTypeOption[] = [
+  { id: 'CARDIAC', label: 'Cardiac & chest pain', icon: 'favorite' },
+  { id: 'BREATHING', label: 'Breathing difficulty', icon: 'air' },
+  { id: 'TRAUMA', label: 'Severe bleeding & trauma', icon: 'healing' },
+  { id: 'ACCIDENT', label: 'Road traffic accident', icon: 'car_crash' },
+  { id: 'MATERNITY', label: 'Maternity emergency', icon: 'pregnant_woman' },
+  { id: 'UNCONSCIOUS', label: 'Unconscious or stroke', icon: 'personal_injury' },
 ];
 
 const PRESET_DISEASES = [
   'Diabetes Type 1/2',
   'Hypertension (BP)',
-  'Severe Asthma',
-  'Coronary Heart Disease',
-  'Epilepsy / Seizures',
-  'Chronic Kidney Disease',
+  'Severe asthma',
+  'Coronary heart disease',
+  'Epilepsy / seizures',
+  'Chronic kidney disease',
   'COPD',
-  'None / Healthy',
+  'None / healthy',
 ];
 
 const PRESET_ALLERGIES = [
-  'Penicillin / Amoxicillin',
-  'Peanuts / Tree Nuts',
+  'Penicillin / amoxicillin',
+  'Peanuts / tree nuts',
   'Latex',
   'Aspirin / NSAIDs',
-  'Sulfa Drugs',
-  'Shellfish / Seafood',
-  'Egg Proteins',
-  'No Known Allergies (NKDA)',
+  'Sulfa drugs',
+  'Shellfish / seafood',
+  'Egg proteins',
+  'No known allergies (NKDA)',
 ];
+
+function formatGender(gender: string): string {
+  if (gender === 'PREFER_NOT_TO_SAY') return 'Prefer not to say';
+  if (gender === 'FEMALE') return 'Female';
+  if (gender === 'MALE') return 'Male';
+  if (gender === 'OTHER') return 'Other';
+  return gender;
+}
+
+function toTitleCase(str: string): string {
+  if (!str) return '';
+  return str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
+}
 
 export const CitizenDashboard: React.FC<CitizenDashboardProps> = ({
   profile,
@@ -105,14 +103,22 @@ export const CitizenDashboard: React.FC<CitizenDashboardProps> = ({
     lon: 77.6412,
   });
   const [isEditingAddress, setIsEditingAddress] = useState(false);
+  const [addressDraft, setAddressDraft] = useState('100ft Road, Indiranagar, Bengaluru');
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   const [activeFirstAidTab, setActiveFirstAidTab] = useState<'CPR' | 'BLEEDING' | 'ASTHMA' | 'STROKE'>('CPR');
+
+  // Metronome state: visual beat + real Web Audio API oscillator
   const [cprBeat, setCprBeat] = useState(false);
+  const [isMetronomeAudioOn, setIsMetronomeAudioOn] = useState(false);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+
+  // Confirmation dialog & undo state for emergency SOS
+  const [isConfirmSosOpen, setIsConfirmSosOpen] = useState(false);
+  const [undoSnackbarOpen, setUndoSnackbarOpen] = useState(false);
+  const [recentlyDispatchedId, setRecentlyDispatchedId] = useState<string | null>(null);
 
   // Editable profile state for modal
   const [editForm, setEditForm] = useState<CitizenProfile>(profile);
-  const [customDiseaseInput, setCustomDiseaseInput] = useState('');
-  const [customAllergyInput, setCustomAllergyInput] = useState('');
   const [saveSuccessMsg, setSaveSuccessMsg] = useState(false);
 
   // Sync editForm when profile updates
@@ -120,73 +126,70 @@ export const CitizenDashboard: React.FC<CitizenDashboardProps> = ({
     setEditForm(profile);
   }, [profile]);
 
-  const handleToggleDisease = (disease: string) => {
-    if (disease.includes('None')) {
-      setEditForm({ ...editForm, diseases: ['None / Healthy'] });
-      return;
-    }
-    const current = editForm.diseases.filter((d) => !d.includes('None'));
-    if (current.includes(disease)) {
-      const next = current.filter((d) => d !== disease);
-      setEditForm({ ...editForm, diseases: next.length > 0 ? next : ['None / Healthy'] });
-    } else {
-      setEditForm({ ...editForm, diseases: [...current, disease] });
-    }
-  };
-
-  const handleAddCustomDisease = () => {
-    if (customDiseaseInput.trim()) {
-      const val = customDiseaseInput.trim();
-      const current = editForm.diseases.filter((d) => !d.includes('None'));
-      if (!current.includes(val)) {
-        setEditForm({ ...editForm, diseases: [...current, val] });
-      }
-      setCustomDiseaseInput('');
-    }
-  };
-
-  const handleRemoveDisease = (disease: string) => {
-    const next = editForm.diseases.filter((d) => d !== disease);
-    setEditForm({ ...editForm, diseases: next.length > 0 ? next : ['None / Healthy'] });
-  };
-
-  const handleToggleAllergy = (allergy: string) => {
-    if (allergy.includes('No Known Allergies')) {
-      setEditForm({ ...editForm, allergies: ['No Known Allergies (NKDA)'] });
-      return;
-    }
-    const current = editForm.allergies.filter((a) => !a.includes('No Known Allergies'));
-    if (current.includes(allergy)) {
-      const next = current.filter((a) => a !== allergy);
-      setEditForm({ ...editForm, allergies: next.length > 0 ? next : ['No Known Allergies (NKDA)'] });
-    } else {
-      setEditForm({ ...editForm, allergies: [...current, allergy] });
-    }
-  };
-
-  const handleAddCustomAllergy = () => {
-    if (customAllergyInput.trim()) {
-      const val = customAllergyInput.trim();
-      const current = editForm.allergies.filter((a) => !a.includes('No Known Allergies'));
-      if (!current.includes(val)) {
-        setEditForm({ ...editForm, allergies: [...current, val] });
-      }
-      setCustomAllergyInput('');
-    }
-  };
-
-  const handleRemoveAllergy = (allergy: string) => {
-    const next = editForm.allergies.filter((a) => a !== allergy);
-    setEditForm({ ...editForm, allergies: next.length > 0 ? next : ['No Known Allergies (NKDA)'] });
-  };
-
-  // Heartbeat pulse for CPR metronome (105 BPM)
+  // Visual pulse metronome (110 BPM = 545ms interval)
   useEffect(() => {
     const interval = setInterval(() => {
       setCprBeat((prev) => !prev);
-    }, 570);
+      if (isMetronomeAudioOn) {
+        playBeep();
+      }
+    }, 545);
     return () => clearInterval(interval);
-  }, []);
+  }, [isMetronomeAudioOn]);
+
+  const playBeep = () => {
+    try {
+      if (!audioCtxRef.current) {
+        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+        if (AudioContextClass) {
+          audioCtxRef.current = new AudioContextClass();
+        }
+      }
+      if (audioCtxRef.current) {
+        if (audioCtxRef.current.state === 'suspended') {
+          audioCtxRef.current.resume();
+        }
+        const osc = audioCtxRef.current.createOscillator();
+        const gain = audioCtxRef.current.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(800, audioCtxRef.current.currentTime);
+        gain.gain.setValueAtTime(0.2, audioCtxRef.current.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtxRef.current.currentTime + 0.08);
+        osc.connect(gain);
+        gain.connect(audioCtxRef.current.destination);
+        osc.start();
+        osc.stop(audioCtxRef.current.currentTime + 0.08);
+      }
+    } catch {
+      // ignore audio context restrictions
+    }
+  };
+
+  const toggleAudioMetronome = () => {
+    if (!isMetronomeAudioOn) {
+      playBeep();
+    }
+    setIsMetronomeAudioOn(!isMetronomeAudioOn);
+  };
+
+  const handleUseMyLocation = () => {
+    if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setUserCoords({
+            lat: pos.coords.latitude,
+            lon: pos.coords.longitude,
+          });
+          setUserAddress(`Current location (${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)})`);
+          setAddressDraft(`Current location (${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)})`);
+        },
+        () => {
+          // Fallback if denied
+        },
+        { enableHighAccuracy: true, timeout: 5000 }
+      );
+    }
+  };
 
   // Find active emergency submitted by this citizen (by phone or callerName)
   const activeEmergency = useMemo(() => {
@@ -218,17 +221,17 @@ export const CitizenDashboard: React.FC<CitizenDashboardProps> = ({
   }, [activeDispatch, hospitals]);
 
   // Handle Trigger SOS
-  const handleTriggerSOS = () => {
+  const executeTriggerSOS = () => {
+    setIsConfirmSosOpen(false);
     const emgTypeObj = EMERGENCY_TYPES.find((t) => t.id === selectedEmergencyType) || EMERGENCY_TYPES[0];
-    
-    // Auto-compile clinical note with personal medical conditions and allergies
-    const clinicalNotes = `[CITIZEN 112 ERSS DISPATCH]:
-• Citizen Name: ${profile.name} (${profile.age}y, ${profile.gender})
-• Contact Phone: ${profile.phone}${profile.email ? ` | Email: ${profile.email}` : ''}
-• Blood Group: ${profile.bloodGroup || 'Unknown'}
-• Known Diseases/History: ${profile.diseases.join(', ') || 'None reported'}
-• Known Allergies: ${profile.allergies.join(', ') || 'No known drug allergies (NKDA)'}
-• Emergency Contact: ${profile.emergencyContactName || 'N/A'} (${profile.emergencyContactPhone || 'N/A'})`;
+
+    const clinicalNotes = `[CITIZEN EMERGENCY DISPATCH]:
+• Citizen name: ${toTitleCase(profile.name)} (${profile.age}y, ${formatGender(profile.gender)})
+• Contact phone: ${profile.phone}${profile.email ? ` | Email: ${profile.email}` : ''}
+• Blood group: ${profile.bloodGroup && profile.bloodGroup !== 'Not Specified' ? profile.bloodGroup : 'Not reported'}
+• Known diseases/history: ${profile.diseases.join(', ') || 'None reported'}
+• Known allergies: ${profile.allergies.join(', ') || 'No known drug allergies (NKDA)'}
+• Emergency contact: ${profile.emergencyContactName || 'N/A'} (${profile.emergencyContactPhone || 'N/A'})`;
 
     onRequestSOS({
       type: emgTypeObj.id,
@@ -240,159 +243,353 @@ export const CitizenDashboard: React.FC<CitizenDashboardProps> = ({
       longitude: userCoords.lon,
       description: clinicalNotes,
     });
+
+    setUndoSnackbarOpen(true);
+  };
+
+  const handleUndoDispatch = () => {
+    setUndoSnackbarOpen(false);
+    if (activeEmergency && onCancelSOS) {
+      onCancelSOS(activeEmergency.id);
+    }
+  };
+
+  const handleToggleDisease = (disease: string) => {
+    if (disease.toLowerCase().includes('none')) {
+      setEditForm({ ...editForm, diseases: ['None / healthy'] });
+      return;
+    }
+    const current = editForm.diseases.filter((d) => !d.toLowerCase().includes('none'));
+    if (current.includes(disease)) {
+      const next = current.filter((d) => d !== disease);
+      setEditForm({ ...editForm, diseases: next.length > 0 ? next : ['None / healthy'] });
+    } else {
+      setEditForm({ ...editForm, diseases: [...current, disease] });
+    }
+  };
+
+  const handleToggleAllergy = (allergy: string) => {
+    if (allergy.toLowerCase().includes('no known')) {
+      setEditForm({ ...editForm, allergies: ['No known allergies (NKDA)'] });
+      return;
+    }
+    const current = editForm.allergies.filter((a) => !a.toLowerCase().includes('no known'));
+    if (current.includes(allergy)) {
+      const next = current.filter((a) => a !== allergy);
+      setEditForm({ ...editForm, allergies: next.length > 0 ? next : ['No known allergies (NKDA)'] });
+    } else {
+      setEditForm({ ...editForm, allergies: [...current, allergy] });
+    }
   };
 
   // Determine dispatch status step index
   const currentStep = useMemo(() => {
     if (!activeEmergency) return 0;
-    if (!activeDispatch) return 1; // SOS Registered, finding ambulance
+    if (!activeDispatch) return 1;
     const status = activeDispatch.status;
-    if (status === 'DISPATCHED' || status === 'AMBULANCE_ACCEPTED') return 2; // Ambulance en route
+    if (status === 'DISPATCHED' || status === 'AMBULANCE_ACCEPTED') return 2;
     if (status === 'EN_ROUTE_TO_SCENE') return 2;
-    if (status === 'ARRIVED_AT_SCENE' || status === 'PATIENT_ONBOARD') return 3; // At scene / onboard
-    if (status === 'EN_ROUTE_TO_HOSPITAL') return 4; // Transporting to hospital
-    if (status === 'ARRIVED_AT_HOSPITAL' || status === 'PATIENT_HANDED_OVER') return 5; // Arrived at ED
+    if (status === 'ARRIVED_AT_SCENE' || status === 'PATIENT_ONBOARD') return 3;
+    if (status === 'EN_ROUTE_TO_HOSPITAL') return 4;
+    if (status === 'ARRIVED_AT_HOSPITAL' || status === 'PATIENT_HANDED_OVER') return 5;
     return 1;
   }, [activeEmergency, activeDispatch]);
 
+  const hasBloodGroup = profile.bloodGroup && profile.bloodGroup !== 'Not Specified' && profile.bloodGroup !== 'Unknown';
+
   return (
-    <div className="citizen-dashboard-container">
-      {/* Top Citizen Header Bar (Google Material M3 App Bar) */}
-      <header className="citizen-header-bar">
-        <div className="citizen-header-left">
-          <div className="citizen-shield-badge">
-            <Heart size={20} className="text-red" />
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: '100vh',
+        backgroundColor: 'var(--md-sys-color-background)',
+        color: 'var(--md-sys-color-text)',
+        fontFamily: 'Roboto, sans-serif',
+      }}
+    >
+      {/* M3 Top App Bar (64px) */}
+      <header
+        style={{
+          height: '64px',
+          backgroundColor: 'var(--md-sys-color-surface)',
+          borderBottom: '1px solid var(--md-sys-color-outline)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '0 16px',
+          boxSizing: 'border-box',
+          flexShrink: 0,
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+          <div
+            style={{
+              width: '36px',
+              height: '36px',
+              borderRadius: '8px',
+              backgroundColor: 'var(--md-sys-color-primary-container)',
+              color: 'var(--md-sys-color-primary)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}
+          >
+            <Icon name="e911_emergency" size={22} />
           </div>
-          <div>
-            <div className="citizen-sub-tag">112 ERSS · CITIZEN EMERGENCY PORTAL</div>
-            <h1 className="citizen-user-name">{profile.name}</h1>
-          </div>
+          <span style={{ fontSize: '18px', fontWeight: 600, color: 'var(--md-sys-color-text)', whiteSpace: 'nowrap' }}>
+            Aegis SOS
+          </span>
+          <span className="m3-hide-mobile">
+            <StatusChip label="Citizen portal" tone="neutral" size="small" />
+          </span>
         </div>
 
-        <div className="citizen-header-right">
-          <div className="citizen-health-badge" title="Verified Medical Emergency ID">
-            <span>Blood: <strong>{profile.bloodGroup || 'O+'}</strong></span>
-            <span className="dot-sep">·</span>
-            <span>Age: <strong>{profile.age}</strong></span>
-          </div>
-
-          <button
-            className="btn-citizen-header-action"
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+          <Button
+            variant="outlined"
+            size="small"
             onClick={() => {
               setEditForm(profile);
               setSaveSuccessMsg(false);
               setIsEditProfileOpen(true);
             }}
-            title="Edit personal medical information & settings"
+            startIcon={<Icon name="manage_accounts" size={18} />}
           >
-            <Settings size={14} />
-            <span>Edit Profile / Settings</span>
-          </button>
+            <span className="m3-hide-mobile">Edit profile</span>
+          </Button>
 
-          <button
-            className="btn-citizen-logout"
+          <Button
+            variant="text"
+            size="small"
             onClick={onLogout}
-            title="Sign Out of Citizen Portal"
+            startIcon={<Icon name="logout" size={18} />}
           >
-            <LogOut size={14} />
-            <span>Sign Out</span>
-          </button>
+            <span className="m3-hide-mobile">Sign out</span>
+          </Button>
         </div>
       </header>
 
-      {/* Main Content Layout */}
-      <main className="citizen-main-content">
-        {/* Left Column: SOS Action & Tracking */}
-        <div className="citizen-left-col">
-          {/* Active Emergency Tracker (If SOS is Active) */}
-          {activeEmergency ? (
-            <div className="citizen-active-sos-card">
-              <div className="sos-card-header">
-                <div className="flex items-center gap-2">
-                  <span className="sos-live-beacon"></span>
-                  <span className="font-bold tracking-wider text-rose">EMERGENCY ASSISTANCE DISPATCHED</span>
-                </div>
-                <span className="sos-id-pill">INCIDENT #{activeEmergency.id.slice(-6)}</span>
-              </div>
-
-              {/* Progress Stepper */}
-              <div className="sos-stepper">
-                <div className={`step-item ${currentStep >= 1 ? 'completed' : ''} ${currentStep === 1 ? 'current' : ''}`}>
-                  <div className="step-circle">{currentStep > 1 ? <Check size={12} /> : '1'}</div>
-                  <span className="step-label">Call Logged</span>
-                </div>
-                <div className={`step-line ${currentStep >= 2 ? 'active' : ''}`} />
-
-                <div className={`step-item ${currentStep >= 2 ? 'completed' : ''} ${currentStep === 2 ? 'current' : ''}`}>
-                  <div className="step-circle">{currentStep > 2 ? <Check size={12} /> : '2'}</div>
-                  <span className="step-label">Ambulance Dispatched</span>
-                </div>
-                <div className={`step-line ${currentStep >= 3 ? 'active' : ''}`} />
-
-                <div className={`step-item ${currentStep >= 3 ? 'completed' : ''} ${currentStep === 3 ? 'current' : ''}`}>
-                  <div className="step-circle">{currentStep > 3 ? <Check size={12} /> : '3'}</div>
-                  <span className="step-label">At Scene</span>
-                </div>
-                <div className={`step-line ${currentStep >= 4 ? 'active' : ''}`} />
-
-                <div className={`step-item ${currentStep >= 4 ? 'completed' : ''} ${currentStep === 4 ? 'current' : ''}`}>
-                  <div className="step-circle">{currentStep > 4 ? <Check size={12} /> : '4'}</div>
-                  <span className="step-label">Hospital Transit</span>
-                </div>
-              </div>
-
-              {/* ETA & Ambulance Info Banner */}
-              <div className="sos-tracking-details">
-                <div className="sos-eta-box">
-                  <Clock size={28} className="text-amber" />
-                  <div>
-                    <span className="eta-title">ESTIMATED PARAMEDIC ARRIVAL</span>
-                    <div className="eta-countdown text-amber">
-                      {activeDispatch?.etaMinutes ? `${activeDispatch.etaMinutes} MINUTES` : 'APPROX 3.5 MIN'}
-                    </div>
+      {/* Main Content Area: Responsive Grid */}
+      <main className="citizen-page-main">
+        <div className="citizen-main-grid">
+          {/* Column 1: SOS Card (or Active Tracking Card) & Direct Emergency Numbers */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            {activeEmergency ? (
+              /* Active Emergency Tracking Card */
+              <Card
+                variant="outlined"
+                style={{
+                  padding: '24px',
+                  backgroundColor: 'var(--md-sys-color-surface)',
+                  borderColor: 'var(--md-sys-color-outline)',
+                }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginBottom: '20px',
+                    flexWrap: 'wrap',
+                    gap: '12px',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span
+                      style={{
+                        width: '8px',
+                        height: '8px',
+                        borderRadius: '50%',
+                        backgroundColor: 'var(--md-sys-color-error)',
+                        display: 'inline-block',
+                      }}
+                    />
+                    <span style={{ fontSize: '16px', fontWeight: 600, color: 'var(--md-sys-color-error)' }}>
+                      Emergency assistance dispatched
+                    </span>
                   </div>
-                </div>
-
-                <div className="sos-unit-box">
-                  <Truck size={24} className="text-emerald" />
-                  <div>
-                    <span className="unit-label">ASSIGNED UNIT</span>
-                    <div className="unit-name font-bold">
-                      {assignedAmbulance ? `${assignedAmbulance.registrationNumber} (${assignedAmbulance.type})` : 'Nearest ALS Unit En Route'}
-                    </div>
-                    <small className="text-secondary">
-                      Paramedic Crew: {assignedAmbulance?.driverName || 'Arun Kumar'} & {assignedAmbulance?.emtName || 'Meena R'}
-                    </small>
-                  </div>
-                </div>
-              </div>
-
-              {/* Destination Hospital ED */}
-              <div className="sos-hospital-banner">
-                <Building2 size={20} className="text-sky flex-shrink-0" />
-                <div className="flex-1">
-                  <div className="text-xs text-muted">PRE-ALERTED EMERGENCY DEPARTMENT</div>
-                  <div className="text-sm font-bold text-sky">{assignedHospital?.name || 'Aegis City General ED'}</div>
-                  <small className="text-secondary">{assignedHospital?.address} · Trauma team on standby</small>
-                </div>
-                {assignedHospital?.phone && (
-                  <a
-                    href={`tel:${assignedHospital.phone}`}
-                    className="btn btn-xs btn-outline-sky flex items-center gap-1"
+                  <span
+                    className="mono"
+                    style={{
+                      fontSize: '12px',
+                      color: 'var(--md-sys-color-text-secondary)',
+                      backgroundColor: 'var(--md-sys-color-surface-container-high)',
+                      padding: '4px 10px',
+                      borderRadius: '8px',
+                    }}
                   >
-                    <Phone size={12} />
-                    <span>Call ED</span>
-                  </a>
-                )}
-              </div>
-
-              {/* Live Tracking Leaflet Map for Citizen */}
-              <div className="citizen-map-frame">
-                <div className="citizen-map-title-bar">
-                  <span>LIVE PARAMEDIC GPS RADAR</span>
-                  <span className="text-emerald font-bold">● LIVE TRACKING</span>
+                    #{activeEmergency.id.slice(-6)}
+                  </span>
                 </div>
-                <div style={{ height: '240px', width: '100%', borderRadius: '0 0 10px 10px', overflow: 'hidden' }}>
+
+                {/* Progress Stepper */}
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginBottom: '24px',
+                    padding: '0 8px',
+                  }}
+                >
+                  {[
+                    { step: 1, label: 'Call logged' },
+                    { step: 2, label: 'Dispatched' },
+                    { step: 3, label: 'At scene' },
+                    { step: 4, label: 'Hospital transit' },
+                  ].map((item, idx) => {
+                    const isCompleted = currentStep > item.step;
+                    const isCurrent = currentStep === item.step;
+                    return (
+                      <React.Fragment key={item.step}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
+                          <div
+                            style={{
+                              width: '32px',
+                              height: '32px',
+                              borderRadius: '50%',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: '12px',
+                              fontWeight: 600,
+                              backgroundColor: isCompleted
+                                ? 'var(--md-sys-color-success)'
+                                : isCurrent
+                                ? 'var(--md-sys-color-error)'
+                                : 'var(--md-sys-color-surface-container-high)',
+                              color: isCompleted || isCurrent ? '#FFFFFF' : 'var(--md-sys-color-text-secondary)',
+                            }}
+                          >
+                            {isCompleted ? <Icon name="check" size={16} /> : item.step}
+                          </div>
+                          <span
+                            style={{
+                              fontSize: '11px',
+                              fontWeight: isCurrent ? 600 : 400,
+                              color: isCurrent
+                                ? 'var(--md-sys-color-text)'
+                                : 'var(--md-sys-color-text-secondary)',
+                              textAlign: 'center',
+                            }}
+                          >
+                            {item.label}
+                          </span>
+                        </div>
+                        {idx < 3 && (
+                          <div
+                            style={{
+                              flex: 1,
+                              height: '2px',
+                              margin: '-16px 8px 0',
+                              backgroundColor:
+                                currentStep > item.step
+                                  ? 'var(--md-sys-color-success)'
+                                  : 'var(--md-sys-color-outline)',
+                            }}
+                          />
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
+                </div>
+
+                {/* ETA & Unit Information */}
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 1fr',
+                    gap: '12px',
+                    marginBottom: '16px',
+                  }}
+                >
+                  <div
+                    style={{
+                      padding: '12px 16px',
+                      borderRadius: '8px',
+                      backgroundColor: 'var(--md-sys-color-surface-container-low)',
+                      border: '1px solid var(--md-sys-color-outline)',
+                    }}
+                  >
+                    <div style={{ fontSize: '11px', color: 'var(--md-sys-color-text-secondary)', marginBottom: '4px' }}>
+                      Estimated arrival
+                    </div>
+                    <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--md-sys-color-warning)' }}>
+                      {activeDispatch?.etaMinutes ? `${activeDispatch.etaMinutes} min` : 'Approx 3-4 min'}
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      padding: '12px 16px',
+                      borderRadius: '8px',
+                      backgroundColor: 'var(--md-sys-color-surface-container-low)',
+                      border: '1px solid var(--md-sys-color-outline)',
+                    }}
+                  >
+                    <div style={{ fontSize: '11px', color: 'var(--md-sys-color-text-secondary)', marginBottom: '4px' }}>
+                      Assigned unit
+                    </div>
+                    <div className="mono" style={{ fontSize: '14px', fontWeight: 600, color: 'var(--md-sys-color-text)' }}>
+                      {assignedAmbulance ? assignedAmbulance.registrationNumber : 'En route'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Pre-alerted Hospital */}
+                {assignedHospital && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '12px 16px',
+                      borderRadius: '8px',
+                      backgroundColor: 'var(--md-sys-color-surface-container-low)',
+                      border: '1px solid var(--md-sys-color-outline)',
+                      marginBottom: '16px',
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontSize: '11px', color: 'var(--md-sys-color-text-secondary)' }}>
+                        Destination hospital
+                      </div>
+                      <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--md-sys-color-text)' }}>
+                        {assignedHospital.name}
+                      </div>
+                    </div>
+                    {assignedHospital.phone && (
+                      <a
+                        href={`tel:${assignedHospital.phone}`}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          textDecoration: 'none',
+                          color: 'var(--md-sys-color-primary)',
+                          fontSize: '13px',
+                          fontWeight: 500,
+                        }}
+                      >
+                        <Icon name="phone" size={16} />
+                        <span>Call ED</span>
+                      </a>
+                    )}
+                  </div>
+                )}
+
+                {/* Live Tracking Map with OSM Standard Tiles */}
+                <div
+                  style={{
+                    height: '240px',
+                    borderRadius: '8px',
+                    overflow: 'hidden',
+                    border: '1px solid var(--md-sys-color-outline)',
+                    marginBottom: '16px',
+                  }}
+                >
                   <MapContainer
                     center={[userCoords.lat, userCoords.lon]}
                     zoom={14}
@@ -400,31 +597,29 @@ export const CitizenDashboard: React.FC<CitizenDashboardProps> = ({
                     style={{ height: '100%', width: '100%' }}
                   >
                     <TileLayer
-                      attribution='&copy; <a href="https://carto.com/">CARTO</a>'
-                      url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+                      attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                     />
 
-                    {/* Citizen Pin */}
                     <Marker
                       position={[userCoords.lat, userCoords.lon]}
                       icon={getEmergencyIcon(activeEmergency, true)}
                     >
                       <Popup>
-                        <div className="text-xs">
-                          <strong>Your SOS Location</strong><br />
+                        <div style={{ fontSize: '12px' }}>
+                          <strong>Your location</strong><br />
                           {userAddress}
                         </div>
                       </Popup>
                     </Marker>
 
-                    {/* Ambulance Pin */}
                     {assignedAmbulance && (
                       <Marker
                         position={[assignedAmbulance.latitude, assignedAmbulance.longitude]}
                         icon={getAmbulanceIcon(assignedAmbulance, true)}
                       >
                         <Popup>
-                          <div className="text-xs">
+                          <div style={{ fontSize: '12px' }}>
                             <strong>Ambulance {assignedAmbulance.registrationNumber}</strong><br />
                             Speed: {assignedAmbulance.speed} km/h
                           </div>
@@ -432,7 +627,6 @@ export const CitizenDashboard: React.FC<CitizenDashboardProps> = ({
                       </Marker>
                     )}
 
-                    {/* Route line */}
                     {assignedAmbulance && (
                       <Polyline
                         positions={[
@@ -440,22 +634,21 @@ export const CitizenDashboard: React.FC<CitizenDashboardProps> = ({
                           [userCoords.lat, userCoords.lon],
                         ]}
                         pathOptions={{
-                          color: '#f43f5e',
+                          color: '#D93025',
                           weight: 4,
-                          dashArray: '8, 8',
+                          dashArray: '6, 6',
                           opacity: 0.9,
                         }}
                       />
                     )}
 
-                    {/* Destination Hospital */}
                     {assignedHospital && (
                       <Marker
                         position={[assignedHospital.latitude, assignedHospital.longitude]}
                         icon={getHospitalIcon(assignedHospital)}
                       >
                         <Popup>
-                          <div className="text-xs">
+                          <div style={{ fontSize: '12px' }}>
                             <strong>{assignedHospital.name}</strong>
                           </div>
                         </Popup>
@@ -463,659 +656,894 @@ export const CitizenDashboard: React.FC<CitizenDashboardProps> = ({
                     )}
                   </MapContainer>
                 </div>
-              </div>
 
-              {/* Cancel SOS Button */}
-              {onCancelSOS && (
-                <div className="mt-3 flex justify-end">
-                  <button
-                    className="btn-cancel-sos"
-                    onClick={() => {
-                      if (confirm('Are you sure you want to cancel this emergency request?')) {
-                        onCancelSOS(activeEmergency.id);
-                      }
-                    }}
-                  >
-                    Cancel Emergency Request
-                  </button>
-                </div>
-              )}
-            </div>
-          ) : (
-            /* Google Material Emergency Intake Card */
-            <div className="citizen-sos-trigger-card">
-              <div className="sos-hero-header">
-                <div className="sos-material-icon-box">
-                  <ShieldAlert size={24} className="text-red" />
-                </div>
-                <div>
-                  <h2 className="sos-hero-title">Emergency Medical Assistance Request</h2>
-                  <p className="sos-hero-sub">
-                    Directly alerts the 112 ERSS central dispatch console to assign the nearest emergency medical unit.
+                {onCancelSOS && (
+                  <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={() => {
+                        if (window.confirm('Are you sure you want to cancel this emergency request?')) {
+                          onCancelSOS(activeEmergency.id);
+                        }
+                      }}
+                    >
+                      Cancel emergency request
+                    </Button>
+                  </div>
+                )}
+              </Card>
+            ) : (
+              /* Emergency Medical Request Intake Card */
+              <Card
+                variant="outlined"
+                style={{
+                  padding: '24px',
+                  backgroundColor: 'var(--md-sys-color-surface)',
+                  borderColor: 'var(--md-sys-color-outline)',
+                }}
+              >
+                <div style={{ marginBottom: '20px' }}>
+                  <SectionHeader
+                    icon="e911_emergency"
+                    title="Request emergency medical assistance"
+                  />
+                  <p style={{ fontSize: '13px', margin: '6px 0 0 0', color: 'var(--md-sys-color-text-secondary)', lineHeight: '1.4' }}>
+                    Directly alerts the central dispatch console to mobilize the closest emergency medical unit.
                   </p>
                 </div>
-              </div>
 
-              {/* Emergency Category Selector */}
-              <div className="sos-category-zone">
-                <label className="section-label">INCIDENT NATURE & CLASSIFICATION</label>
-                <div className="category-grid">
-                  {EMERGENCY_TYPES.map((type) => (
-                    <button
-                      key={type.id}
-                      type="button"
-                      className={`cat-tile ${selectedEmergencyType === type.id ? 'active' : ''}`}
-                      onClick={() => setSelectedEmergencyType(type.id)}
-                    >
-                      <span className="cat-code">{type.code}</span>
-                      <span className="cat-text">{type.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Location Box */}
-              <div className="sos-location-zone">
-                <div className="flex items-center justify-between mb-1">
-                  <label className="section-label">CONFIRMED INCIDENT LOCATION</label>
-                  <button
-                    type="button"
-                    className="btn-link-edit"
-                    onClick={() => setIsEditingAddress(!isEditingAddress)}
+                {/* Incident Type Selector: 24px outlined radiogroup (2 cols mobile, 3 cols desktop, no orphan cards) */}
+                <div style={{ marginBottom: '20px' }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: '12px',
+                      fontWeight: 500,
+                      color: 'var(--md-sys-color-text-secondary)',
+                      marginBottom: '10px',
+                    }}
                   >
-                    {isEditingAddress ? 'Done' : 'Change Address'}
-                  </button>
+                    Select emergency type
+                  </label>
+                  <div className="citizen-emergency-types">
+                    {EMERGENCY_TYPES.map((type) => {
+                      const isSelected = selectedEmergencyType === type.id;
+                      return (
+                        <button
+                          key={type.id}
+                          type="button"
+                          onClick={() => setSelectedEmergencyType(type.id)}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '10px',
+                            padding: '12px',
+                            borderRadius: '12px',
+                            border: `1px solid ${isSelected ? 'var(--md-sys-color-primary)' : 'var(--md-sys-color-outline)'}`,
+                            backgroundColor: isSelected
+                              ? 'var(--md-sys-color-primary-container)'
+                              : 'var(--md-sys-color-surface-container-low)',
+                            color: isSelected
+                              ? 'var(--md-sys-color-on-primary-container)'
+                              : 'var(--md-sys-color-text)',
+                            cursor: 'pointer',
+                            textAlign: 'left',
+                            transition: 'all 0.15s ease',
+                            fontFamily: 'inherit',
+                            minHeight: '48px',
+                          }}
+                        >
+                          <Icon
+                            name={isSelected ? 'radio_button_checked' : 'radio_button_unchecked'}
+                            size={20}
+                            style={{
+                              color: isSelected ? 'var(--md-sys-color-primary)' : 'var(--md-sys-color-text-secondary)',
+                              flexShrink: 0,
+                            }}
+                          />
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
+                            <Icon
+                              name={type.icon}
+                              size={18}
+                              style={{
+                                color: isSelected ? 'var(--md-sys-color-primary)' : 'var(--md-sys-color-text-secondary)',
+                                flexShrink: 0,
+                              }}
+                            />
+                            <span style={{ fontSize: '13px', fontWeight: isSelected ? 600 : 500, lineHeight: '1.2' }}>
+                              {type.label}
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
 
-                <div className="location-box">
-                  <MapPin size={18} className="text-red flex-shrink-0" />
+                {/* Incident Location Box: Single row with Use my location, accuracy chip, address, change button */}
+                <div
+                  style={{
+                    marginBottom: '20px',
+                    padding: '14px 16px',
+                    borderRadius: '12px',
+                    backgroundColor: 'var(--md-sys-color-surface-container-low)',
+                    border: '1px solid var(--md-sys-color-outline)',
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      marginBottom: '8px',
+                      flexWrap: 'wrap',
+                      gap: '8px',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Icon name="location_on" size={20} style={{ color: 'var(--md-sys-color-error)', flexShrink: 0 }} />
+                      <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--md-sys-color-text)' }}>
+                        Incident location
+                      </span>
+                      <StatusChip label="GPS ±5m" tone="success" size="small" />
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <Button
+                        variant="text"
+                        size="small"
+                        onClick={handleUseMyLocation}
+                        startIcon={<Icon name="my_location" size={16} />}
+                      >
+                        Locate me
+                      </Button>
+                      <Button
+                        variant="text"
+                        size="small"
+                        onClick={() => {
+                          if (isEditingAddress) {
+                            setUserAddress(addressDraft);
+                            setIsEditingAddress(false);
+                          } else {
+                            setAddressDraft(userAddress);
+                            setIsEditingAddress(true);
+                          }
+                        }}
+                        startIcon={<Icon name={isEditingAddress ? 'check' : 'edit'} size={16} />}
+                      >
+                        {isEditingAddress ? 'Save' : 'Change'}
+                      </Button>
+                    </div>
+                  </div>
+
                   {isEditingAddress ? (
                     <input
                       type="text"
-                      className="location-input-edit"
-                      value={userAddress}
-                      onChange={(e) => setUserAddress(e.target.value)}
+                      value={addressDraft}
+                      onChange={(e) => setAddressDraft(e.target.value)}
                       placeholder="Enter street address, building or landmark"
+                      style={{
+                        width: '100%',
+                        padding: '10px 12px',
+                        borderRadius: '6px',
+                        border: '1px solid var(--md-sys-color-primary)',
+                        backgroundColor: 'var(--md-sys-color-surface)',
+                        color: 'var(--md-sys-color-text)',
+                        fontSize: '13px',
+                        outline: 'none',
+                        fontFamily: 'inherit',
+                        boxSizing: 'border-box',
+                      }}
                     />
                   ) : (
-                    <span className="location-text">{userAddress}</span>
+                    <div style={{ fontSize: '13px', color: 'var(--md-sys-color-text)', paddingLeft: '28px' }}>
+                      {userAddress}
+                    </div>
                   )}
                 </div>
-              </div>
 
-              {/* Medical Notice */}
-              <div className="citizen-medical-alert-notice">
-                <AlertTriangle size={16} className="text-amber flex-shrink-0" />
-                <span>
-                  <strong>Clinical Notice:</strong> Pre-existing medical conditions (
-                  {profile.diseases.join(', ') || 'None'}) and known drug allergies (
-                  {profile.allergies.join(', ') || 'None'}) will be securely transmitted to responding paramedics upon dispatch.
-                </span>
-              </div>
-
-              {/* Professional Google Material Emergency Dispatch Button */}
-              <button
-                type="button"
-                className="btn-material-emergency"
-                onClick={handleTriggerSOS}
-              >
-                <ShieldAlert size={20} />
-                <div className="btn-emergency-text">
-                  <span className="emergency-main-txt">Dispatch Emergency Ambulance</span>
-                  <span className="emergency-sub-txt">112 ERSS Priority Medical Request</span>
-                </div>
-              </button>
-            </div>
-          )}
-
-          {/* Emergency Direct Call Numbers */}
-          <div className="citizen-hotlines-card">
-            <div className="hotline-title">
-              <Phone size={16} className="text-sky" />
-              <span>Direct Emergency Telephone Numbers</span>
-            </div>
-            <div className="hotline-grid">
-              <a href="tel:112" className="hotline-pill">
-                <strong>112</strong>
-                <small>National SOS</small>
-              </a>
-              <a href="tel:108" className="hotline-pill">
-                <strong>108</strong>
-                <small>Ambulance</small>
-              </a>
-              <a href="tel:102" className="hotline-pill">
-                <strong>102</strong>
-                <small>Maternity</small>
-              </a>
-              <a href="tel:100" className="hotline-pill">
-                <strong>100</strong>
-                <small>Police CAD</small>
-              </a>
-            </div>
-          </div>
-        </div>
-
-        {/* Right Column: Personal Medical Emergency ID & First Aid Guide */}
-        <div className="citizen-right-col">
-          {/* Medical Emergency ID Card */}
-          <div className="citizen-medical-id-card">
-            <div className="id-card-header">
-              <div className="flex items-center gap-2">
-                <Shield size={20} className="text-rose" />
-                <span className="font-bold text-sm tracking-wider uppercase">DIGITAL EMERGENCY HEALTH ID</span>
-              </div>
-              <span className="id-blood-badge">BLOOD {profile.bloodGroup || 'O+'}</span>
-            </div>
-
-            <div className="id-card-body">
-              <div className="id-user-meta">
-                <div className="id-avatar">
-                  <User size={28} className="text-secondary" />
-                </div>
-                <div>
-                  <h3 className="id-name">{profile.name}</h3>
-                  <div className="id-sub-info">
-                    <span>{profile.gender}</span>
-                    <span className="dot-sep">·</span>
-                    <span>{profile.age} Years Old</span>
-                    <span className="dot-sep">·</span>
-                    <span>{profile.phone}</span>
-                  </div>
-                  {profile.email && <div className="text-xs text-muted">{profile.email}</div>}
-                </div>
-              </div>
-
-              {/* Known Allergies Alert Box (CRITICAL) */}
-              <div className="id-alert-block allergy-block">
-                <div className="id-block-header text-red">
-                  <AlertTriangle size={14} />
-                  <span>KNOWN ALLERGIES (CRITICAL CONTRAINDICATIONS)</span>
-                </div>
-                <div className="id-chip-list">
-                  {profile.allergies.map((allergy, i) => (
-                    <span key={i} className="id-alert-chip red">
-                      {allergy}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              {/* Pre-existing Diseases / Medical Conditions */}
-              <div className="id-alert-block disease-block">
-                <div className="id-block-header text-amber">
-                  <Activity size={14} />
-                  <span>PRE-EXISTING MEDICAL CONDITIONS & CHRONIC ILLNESS</span>
-                </div>
-                <div className="id-chip-list">
-                  {profile.diseases.map((disease, i) => (
-                    <span key={i} className="id-alert-chip amber">
-                      {disease}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              {/* Emergency Contact */}
-              <div className="id-contact-box">
-                <div className="text-xs text-muted mb-1">EMERGENCY NEXT OF KIN CONTACT</div>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <strong>{profile.emergencyContactName || 'Amit Patel (Spouse)'}</strong>
-                    <div className="text-xs text-secondary">{profile.emergencyContactPhone || '+91 98450 99887'}</div>
-                  </div>
-                  {profile.emergencyContactPhone && (
-                    <a
-                      href={`tel:${profile.emergencyContactPhone}`}
-                      className="btn-call-kin"
-                    >
-                      <Phone size={13} />
-                      <span>Call Kin</span>
-                    </a>
-                  )}
-                </div>
-              </div>
-
-              {/* Edit Profile & Settings Action Button in ID Card */}
-              <div className="id-card-actions-row">
-                <button
-                  type="button"
-                  className="btn-edit-profile-card"
-                  onClick={() => {
-                    setEditForm(profile);
-                    setSaveSuccessMsg(false);
-                    setIsEditProfileOpen(true);
+                {/* Consent & Clinical Note */}
+                <div
+                  style={{
+                    fontSize: '12px',
+                    color: 'var(--md-sys-color-text-secondary)',
+                    lineHeight: '1.4',
+                    marginBottom: '20px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
                   }}
                 >
-                  <Settings size={15} />
-                  <span>Edit Profile / Settings</span>
-                </button>
+                  <Icon name="info" size={16} style={{ flexShrink: 0 }} />
+                  <span>Medical conditions and allergies are shared only with responding paramedics upon emergency activation.</span>
+                </div>
+
+                {/* Primary Emergency Action Button (Solid #D93025 with white text in BOTH themes, 56px tall) */}
+                <Button
+                  variant="emergency"
+                  size="large"
+                  fullWidth
+                  onClick={() => setIsConfirmSosOpen(true)}
+                  startIcon={<Icon name="e911_emergency" size={24} />}
+                  style={{
+                    height: '56px',
+                    borderRadius: '9999px',
+                    fontSize: '15px',
+                    fontWeight: 600,
+                  }}
+                >
+                  Request emergency ambulance
+                </Button>
+              </Card>
+            )}
+
+            {/* Direct Emergency Telephone Numbers: 4 outlined buttons with tel: links */}
+            <Card
+              variant="outlined"
+              style={{
+                padding: '20px',
+                backgroundColor: 'var(--md-sys-color-surface)',
+                borderColor: 'var(--md-sys-color-outline)',
+              }}
+            >
+              <div style={{ marginBottom: '14px' }}>
+                <SectionHeader
+                  icon="call"
+                  title="Direct emergency hotlines"
+                />
               </div>
-            </div>
+
+              <div className="citizen-direct-numbers">
+                {[
+                  { number: '112', label: 'National emergency' },
+                  { number: '108', label: 'Ambulance service' },
+                  { number: '102', label: 'Maternity helpline' },
+                  { number: '100', label: 'Police control' },
+                ].map((item) => (
+                  <a
+                    key={item.number}
+                    href={`tel:${item.number}`}
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      minHeight: '56px',
+                      padding: '8px 4px',
+                      borderRadius: '8px',
+                      border: '1px solid var(--md-sys-color-outline)',
+                      backgroundColor: 'var(--md-sys-color-surface-container-low)',
+                      textDecoration: 'none',
+                      color: 'var(--md-sys-color-text)',
+                      transition: 'background-color 0.15s ease, border-color 0.15s ease',
+                      boxSizing: 'border-box',
+                    }}
+                  >
+                    <span
+                      className="mono"
+                      style={{
+                        fontSize: '16px',
+                        fontWeight: 700,
+                        color: 'var(--md-sys-color-primary)',
+                      }}
+                    >
+                      {item.number}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: '11px',
+                        color: 'var(--md-sys-color-text-secondary)',
+                        textAlign: 'center',
+                        lineHeight: '1.2',
+                        marginTop: '2px',
+                      }}
+                    >
+                      {item.label}
+                    </span>
+                  </a>
+                ))}
+              </div>
+            </Card>
           </div>
 
-          {/* Interactive First Aid Protocols while waiting */}
-          <div className="citizen-first-aid-card">
-            <div className="first-aid-header">
-              <div className="flex items-center gap-2">
-                <Activity size={18} className="text-emerald" />
-                <span className="font-bold text-sm tracking-wider uppercase">Emergency First-Aid Guide</span>
+          {/* Column 2: Personal Medical Emergency ID & First Aid Guide */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            {/* Clean Medical Emergency ID Card: 3 rows with sentence-case 12px secondary labels */}
+            <Card
+              variant="outlined"
+              style={{
+                backgroundColor: 'var(--md-sys-color-surface)',
+                borderColor: 'var(--md-sys-color-outline)',
+                padding: '24px',
+              }}
+            >
+              <div style={{ marginBottom: '16px' }}>
+                <SectionHeader
+                  icon="badge"
+                  title="Emergency health profile"
+                  action={
+                    hasBloodGroup ? (
+                      <StatusChip label={`Blood: ${profile.bloodGroup}`} tone="info" size="small" />
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditForm(profile);
+                          setSaveSuccessMsg(false);
+                          setIsEditProfileOpen(true);
+                        }}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: 'var(--md-sys-color-primary)',
+                          fontSize: '12px',
+                          fontWeight: 500,
+                          cursor: 'pointer',
+                          padding: 0,
+                          textDecoration: 'underline',
+                          fontFamily: 'inherit',
+                        }}
+                      >
+                        Add blood group
+                      </button>
+                    )
+                  }
+                />
               </div>
-              <small className="text-secondary">Actionable steps while unit is en route</small>
-            </div>
 
-            <div className="first-aid-tabs">
-              <button
-                className={`first-aid-tab-btn ${activeFirstAidTab === 'CPR' ? 'active' : ''}`}
-                onClick={() => setActiveFirstAidTab('CPR')}
+              {/* User Meta Row */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  paddingBottom: '16px',
+                  borderBottom: '1px solid var(--md-sys-color-outline)',
+                  marginBottom: '16px',
+                }}
               >
-                Hands-Only CPR
-              </button>
-              <button
-                className={`first-aid-tab-btn ${activeFirstAidTab === 'BLEEDING' ? 'active' : ''}`}
-                onClick={() => setActiveFirstAidTab('BLEEDING')}
-              >
-                Severe Bleeding
-              </button>
-              <button
-                className={`first-aid-tab-btn ${activeFirstAidTab === 'ASTHMA' ? 'active' : ''}`}
-                onClick={() => setActiveFirstAidTab('ASTHMA')}
-              >
-                Asthma Attack
-              </button>
-              <button
-                className={`first-aid-tab-btn ${activeFirstAidTab === 'STROKE' ? 'active' : ''}`}
-                onClick={() => setActiveFirstAidTab('STROKE')}
-              >
-                Stroke (FAST)
-              </button>
-            </div>
+                <div
+                  style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '50%',
+                    backgroundColor: 'var(--md-sys-color-surface-container-high)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'var(--md-sys-color-text-secondary)',
+                  }}
+                >
+                  <Icon name="person" size={22} />
+                </div>
+                <div>
+                  <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--md-sys-color-text)' }}>
+                    {toTitleCase(profile.name)}
+                  </div>
+                  <div style={{ fontSize: '12px', color: 'var(--md-sys-color-text-secondary)', marginTop: '2px' }}>
+                    {formatGender(profile.gender)} · {profile.age} years · {profile.phone}
+                  </div>
+                </div>
+              </div>
 
-            <div className="first-aid-content">
-              {activeFirstAidTab === 'CPR' && (
-                <div className="protocol-body">
-                  <div className="cpr-metronome-pill">
-                    <span className={`cpr-heart-icon ${cprBeat ? 'beat' : ''}`}>
-                      <Heart size={18} className="text-red fill-current" />
-                    </span>
+              {/* 3 Clean Rows: Allergies, Conditions, Emergency Contact */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                {/* Row 1: Allergies */}
+                <div>
+                  <div
+                    style={{
+                      fontSize: '12px',
+                      fontWeight: 500,
+                      color: 'var(--md-sys-color-text-secondary)',
+                      marginBottom: '6px',
+                    }}
+                  >
+                    Allergies
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                    {profile.allergies.length > 0 ? (
+                      profile.allergies.map((allergy, i) => (
+                        <StatusChip key={i} label={allergy} tone="neutral" size="small" />
+                      ))
+                    ) : (
+                      <span style={{ fontSize: '12px', color: 'var(--md-sys-color-text-secondary)' }}>
+                        No known drug allergies (NKDA)
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Row 2: Conditions */}
+                <div>
+                  <div
+                    style={{
+                      fontSize: '12px',
+                      fontWeight: 500,
+                      color: 'var(--md-sys-color-text-secondary)',
+                      marginBottom: '6px',
+                    }}
+                  >
+                    Medical conditions
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                    {profile.diseases.length > 0 ? (
+                      profile.diseases.map((disease, i) => (
+                        <StatusChip key={i} label={disease} tone="neutral" size="small" />
+                      ))
+                    ) : (
+                      <span style={{ fontSize: '12px', color: 'var(--md-sys-color-text-secondary)' }}>
+                        None reported
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Row 3: Emergency Contact */}
+                <div>
+                  <div
+                    style={{
+                      fontSize: '12px',
+                      fontWeight: 500,
+                      color: 'var(--md-sys-color-text-secondary)',
+                      marginBottom: '6px',
+                    }}
+                  >
+                    Next-of-kin emergency contact
+                  </div>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      fontSize: '13px',
+                      color: 'var(--md-sys-color-text)',
+                    }}
+                  >
                     <div>
-                      <strong>CPR Metronome: 100 - 120 Beats / Min</strong>
-                      <small>Compress center of chest hard & fast to this beat</small>
+                      <div style={{ fontWeight: 500 }}>
+                        {profile.emergencyContactName || 'Amit Patel (Spouse)'}
+                      </div>
+                      <div style={{ fontSize: '12px', color: 'var(--md-sys-color-text-secondary)' }}>
+                        {profile.emergencyContactPhone || '+91 98450 99887'}
+                      </div>
                     </div>
+                    {profile.emergencyContactPhone && (
+                      <a
+                        href={`tel:${profile.emergencyContactPhone}`}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          textDecoration: 'none',
+                          color: 'var(--md-sys-color-primary)',
+                          fontSize: '12px',
+                          fontWeight: 500,
+                        }}
+                      >
+                        <Icon name="call" size={16} />
+                        <span>Call</span>
+                      </a>
+                    )}
                   </div>
-                  <ol className="protocol-steps">
-                    <li>Place heel of one hand in center of patient's chest; place other hand on top.</li>
-                    <li>Push hard and fast at 2 inches (5 cm) depth.</li>
-                    <li>Allow chest to fully recoil between each compression.</li>
-                    <li>Do not stop until paramedics arrive or AED is applied.</li>
-                  </ol>
                 </div>
-              )}
+              </div>
+            </Card>
 
-              {activeFirstAidTab === 'BLEEDING' && (
-                <div className="protocol-body">
-                  <ol className="protocol-steps">
-                    <li>Apply direct, firm, continuous pressure to the wound with a clean cloth.</li>
-                    <li>Do not remove soaked gauze; add more cloth on top.</li>
-                    <li>If on an arm or leg and bleeding is life-threatening, apply a tourniquet 2-3 inches above wound.</li>
-                    <li>Keep patient warm and lying down to prevent shock.</li>
+            {/* Emergency First-Aid Protocols with real CPR Metronome */}
+            <Card
+              variant="outlined"
+              style={{
+                backgroundColor: 'var(--md-sys-color-surface)',
+                borderColor: 'var(--md-sys-color-outline)',
+                padding: '24px',
+              }}
+            >
+              <div style={{ marginBottom: '16px' }}>
+                <SectionHeader
+                  icon="medical_services"
+                  title="First-aid guidance"
+                />
+                <p style={{ fontSize: '12px', margin: '4px 0 0 0', color: 'var(--md-sys-color-text-secondary)' }}>
+                  Actionable steps while the emergency crew is en route
+                </p>
+              </div>
+
+              {/* First Aid Tabs */}
+              <div
+                style={{
+                  display: 'flex',
+                  gap: '6px',
+                  backgroundColor: 'var(--md-sys-color-surface-container-low)',
+                  padding: '4px',
+                  borderRadius: '8px',
+                  marginBottom: '16px',
+                }}
+              >
+                {[
+                  { id: 'CPR', label: 'CPR' },
+                  { id: 'BLEEDING', label: 'Bleeding' },
+                  { id: 'ASTHMA', label: 'Asthma' },
+                  { id: 'STROKE', label: 'Stroke' },
+                ].map((tab) => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setActiveFirstAidTab(tab.id as any)}
+                    style={{
+                      flex: 1,
+                      border: 'none',
+                      backgroundColor:
+                        activeFirstAidTab === tab.id
+                          ? 'var(--md-sys-color-surface)'
+                          : 'transparent',
+                      color:
+                        activeFirstAidTab === tab.id
+                          ? 'var(--md-sys-color-primary)'
+                          : 'var(--md-sys-color-text-secondary)',
+                      padding: '8px 4px',
+                      fontSize: '12px',
+                      fontWeight: activeFirstAidTab === tab.id ? 600 : 500,
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      fontFamily: 'inherit',
+                      boxShadow: activeFirstAidTab === tab.id ? '0 1px 2px rgba(0,0,0,0.08)' : 'none',
+                    }}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Protocol Content */}
+              <div>
+                {activeFirstAidTab === 'CPR' && (
+                  <div>
+                    {/* CPR Metronome Box with 110 BPM visual pulse + AudioContext Oscillator */}
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '12px 16px',
+                        borderRadius: '8px',
+                        backgroundColor: 'var(--md-sys-color-surface-container-low)',
+                        border: '1px solid var(--md-sys-color-outline)',
+                        marginBottom: '16px',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                        <span
+                          style={{
+                            transform: cprBeat ? 'scale(1.25)' : 'scale(1.0)',
+                            transition: 'transform 0.1s ease',
+                            display: 'inline-flex',
+                            color: 'var(--md-sys-color-error)',
+                            flexShrink: 0,
+                          }}
+                        >
+                          <Icon name="favorite" size={24} />
+                        </span>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                          <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--md-sys-color-text)' }}>
+                            CPR Metronome: 110 BPM
+                          </div>
+                          <div style={{ fontSize: '12px', color: 'var(--md-sys-color-text-secondary)', lineHeight: '1.4' }}>
+                            Compress chest firmly to this beat.
+                          </div>
+                        </div>
+                      </div>
+
+                      <Button
+                        variant={isMetronomeAudioOn ? 'filled' : 'outlined'}
+                        size="small"
+                        onClick={toggleAudioMetronome}
+                        startIcon={<Icon name={isMetronomeAudioOn ? 'volume_up' : 'volume_off'} size={16} />}
+                      >
+                        {isMetronomeAudioOn ? 'Audio on' : 'Start sound'}
+                      </Button>
+                    </div>
+
+                    <ol
+                      style={{
+                        margin: 0,
+                        paddingLeft: '20px',
+                        fontSize: '13px',
+                        color: 'var(--md-sys-color-text)',
+                        lineHeight: '1.6',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '6px',
+                      }}
+                    >
+                      <li>Place the heel of one hand in the center of the chest; place other hand on top.</li>
+                      <li>Push hard and fast at a depth of 5 to 6 cm (2 inches).</li>
+                      <li>Allow the chest to fully recoil between each compression.</li>
+                      <li>Do not pause until professional responders take over or an AED is ready.</li>
+                    </ol>
+                  </div>
+                )}
+
+                {activeFirstAidTab === 'BLEEDING' && (
+                  <ol
+                    style={{
+                      margin: 0,
+                      paddingLeft: '20px',
+                      fontSize: '13px',
+                      color: 'var(--md-sys-color-text)',
+                      lineHeight: '1.6',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '6px',
+                    }}
+                  >
+                    <li>Apply direct, firm, continuous pressure to the wound with a clean cloth or dressing.</li>
+                    <li>Do not remove blood-soaked dressings; apply additional cloths directly over them.</li>
+                    <li>If bleeding is severe on an extremity, apply a tourniquet 5–7 cm above the wound.</li>
+                    <li>Keep the patient warm and lying down to reduce the risk of shock.</li>
                   </ol>
-                </div>
-              )}
+                )}
 
-              {activeFirstAidTab === 'ASTHMA' && (
-                <div className="protocol-body">
-                  <ol className="protocol-steps">
+                {activeFirstAidTab === 'ASTHMA' && (
+                  <ol
+                    style={{
+                      margin: 0,
+                      paddingLeft: '20px',
+                      fontSize: '13px',
+                      color: 'var(--md-sys-color-text)',
+                      lineHeight: '1.6',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '6px',
+                    }}
+                  >
                     <li>Help the person sit upright and loosen any tight clothing around the neck.</li>
-                    <li>Administer their reliever inhaler (Blue/Salbutamol): 4 puffs, 1 puff every 4 breaths.</li>
-                    <li>Keep them calm; panic increases oxygen demand and airway constriction.</li>
-                    <li>If no improvement after 4 minutes, give 4 more puffs until ambulance arrives.</li>
+                    <li>Administer their reliever inhaler (Salbutamol): 4 puffs, 1 puff every 4 breaths.</li>
+                    <li>Reassure the patient calmly; anxiety increases oxygen demand and airway resistance.</li>
+                    <li>If symptoms persist after 4 minutes, repeat 4 puffs until the ambulance arrives.</li>
                   </ol>
-                </div>
-              )}
+                )}
 
-              {activeFirstAidTab === 'STROKE' && (
-                <div className="protocol-body">
-                  <div className="fast-grid">
-                    <div className="fast-item">
-                      <strong>F - Face</strong>
-                      <span>Ask them to smile. Does one side of the face droop?</span>
-                    </div>
-                    <div className="fast-item">
-                      <strong>A - Arms</strong>
-                      <span>Ask them to raise both arms. Does one arm drift down?</span>
-                    </div>
-                    <div className="fast-item">
-                      <strong>S - Speech</strong>
-                      <span>Ask them to repeat a simple sentence. Is speech slurred?</span>
-                    </div>
-                    <div className="fast-item">
-                      <strong>T - Time</strong>
-                      <span>Ambulance has been alerted. Note exact time symptoms began.</span>
-                    </div>
+                {activeFirstAidTab === 'STROKE' && (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                    {[
+                      { code: 'F - Face', text: 'Ask them to smile. Does one side of the face droop?' },
+                      { code: 'A - Arms', text: 'Ask them to raise both arms. Does one arm drift downward?' },
+                      { code: 'S - Speech', text: 'Ask them to repeat a simple sentence. Is speech slurred?' },
+                      { code: 'T - Time', text: 'Ambulance requested. Record the exact time symptoms began.' },
+                    ].map((item) => (
+                      <div
+                        key={item.code}
+                        style={{
+                          padding: '10px 12px',
+                          borderRadius: '8px',
+                          backgroundColor: 'var(--md-sys-color-surface-container-low)',
+                          border: '1px solid var(--md-sys-color-outline)',
+                        }}
+                      >
+                        <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--md-sys-color-primary)', marginBottom: '2px' }}>
+                          {item.code}
+                        </div>
+                        <div style={{ fontSize: '11px', color: 'var(--md-sys-color-text-secondary)', lineHeight: '1.3' }}>
+                          {item.text}
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            </Card>
           </div>
         </div>
       </main>
 
-      {/* Comprehensive Edit Profile / Settings Modal */}
-      {isEditProfileOpen && (
-        <div className="modal-overlay" style={{ zIndex: 1200 }}>
-          <div className="modal-content modal-lg citizen-settings-modal">
-            <div className="modal-header">
-              <div className="flex items-center gap-2">
-                <Settings size={20} className="text-rose" />
-                <div>
-                  <h3 className="font-bold text-lg">Citizen Emergency Profile & Settings</h3>
-                  <p className="text-xs text-muted">Update your personal medical data and emergency responder details anytime</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                className="btn-icon"
-                onClick={() => setIsEditProfileOpen(false)}
-              >
-                <X size={18} />
-              </button>
+      {/* Confirmation Dialog Before Triggering Emergency Dispatch */}
+      <Dialog
+        isOpen={isConfirmSosOpen}
+        onClose={() => setIsConfirmSosOpen(false)}
+        title="Confirm emergency dispatch"
+        confirmLabel="Confirm & dispatch"
+        cancelLabel="Cancel"
+        onConfirm={executeTriggerSOS}
+      >
+        <p style={{ margin: '0 0 12px 0', fontSize: '14px', lineHeight: '1.5', color: 'var(--md-sys-color-text)' }}>
+          This action will immediately alert central dispatch to mobilize an emergency medical unit to:
+        </p>
+        <div
+          style={{
+            padding: '10px 14px',
+            borderRadius: '8px',
+            backgroundColor: 'var(--md-sys-color-surface-container-high)',
+            fontSize: '13px',
+            fontWeight: 500,
+            color: 'var(--md-sys-color-text)',
+            marginBottom: '12px',
+          }}
+        >
+          {userAddress}
+        </div>
+        <p style={{ margin: 0, fontSize: '12px', color: 'var(--md-sys-color-text-secondary)' }}>
+          Only submit genuine emergency requests. Responding units are mobilized immediately.
+        </p>
+      </Dialog>
+
+      {/* 5-second Undo Dispatch Snackbar */}
+      <Snackbar
+        message="Emergency ambulance dispatched. Dispatcher notified."
+        actionLabel="Undo"
+        onAction={handleUndoDispatch}
+        isOpen={undoSnackbarOpen}
+        onClose={() => setUndoSnackbarOpen(false)}
+        durationMs={5000}
+      />
+
+      {/* Edit Profile / Settings Modal */}
+      <Dialog
+        isOpen={isEditProfileOpen}
+        onClose={() => setIsEditProfileOpen(false)}
+        title="Citizen emergency profile & settings"
+      >
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (onUpdateProfile) {
+              onUpdateProfile(editForm);
+            }
+            setSaveSuccessMsg(true);
+            setTimeout(() => {
+              setSaveSuccessMsg(false);
+              setIsEditProfileOpen(false);
+            }, 800);
+          }}
+          style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}
+        >
+          {saveSuccessMsg && (
+            <div
+              style={{
+                padding: '10px 14px',
+                borderRadius: '8px',
+                backgroundColor: 'var(--md-sys-color-success-container)',
+                color: 'var(--md-sys-color-success)',
+                fontSize: '13px',
+                fontWeight: 500,
+              }}
+            >
+              Profile and responder details updated successfully.
+            </div>
+          )}
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <Field
+              label="Full legal name"
+              value={editForm.name}
+              onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+              required
+            />
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <Field
+                label="Mobile number"
+                type="tel"
+                value={editForm.phone}
+                onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                required
+              />
+
+              <Field
+                label="Age"
+                type="number"
+                value={editForm.age.toString()}
+                onChange={(e) => setEditForm({ ...editForm, age: parseInt(e.target.value) || 25 })}
+                required
+              />
             </div>
 
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (onUpdateProfile) {
-                  onUpdateProfile(editForm);
-                }
-                setSaveSuccessMsg(true);
-                setTimeout(() => {
-                  setSaveSuccessMsg(false);
-                  setIsEditProfileOpen(false);
-                }, 800);
-              }}
-              className="modal-body citizen-settings-body space-y-4"
-            >
-              {saveSuccessMsg && (
-                <div className="citizen-save-success-banner">
-                  <Check size={16} className="text-emerald" />
-                  <span>Profile & medical settings saved successfully! Responder data updated.</span>
-                </div>
-              )}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <Select
+                label="Gender"
+                value={editForm.gender}
+                onChange={(val) => setEditForm({ ...editForm, gender: val as any })}
+                options={[
+                  { value: 'FEMALE', label: 'Female' },
+                  { value: 'MALE', label: 'Male' },
+                  { value: 'OTHER', label: 'Other' },
+                  { value: 'PREFER_NOT_TO_SAY', label: 'Prefer not to say' },
+                ]}
+              />
 
-              {/* Section 1: Basic Personal Info */}
-              <div className="settings-section">
-                <div className="settings-section-heading">
-                  <User size={15} className="text-sky" />
-                  <span>1. Personal & Contact Information</span>
-                </div>
+              <Select
+                label="Blood group"
+                value={editForm.bloodGroup || 'O+'}
+                onChange={(val) => setEditForm({ ...editForm, bloodGroup: val })}
+                options={[
+                  { value: 'O+', label: 'O+' },
+                  { value: 'O-', label: 'O-' },
+                  { value: 'A+', label: 'A+' },
+                  { value: 'A-', label: 'A-' },
+                  { value: 'B+', label: 'B+' },
+                  { value: 'B-', label: 'B-' },
+                  { value: 'AB+', label: 'AB+' },
+                  { value: 'AB-', label: 'AB-' },
+                  { value: 'Not Specified', label: 'Not Specified' },
+                ]}
+              />
+            </div>
 
-                <div className="form-row-2">
-                  <div className="form-group-item">
-                    <label>Full Legal Name *</label>
-                    <input
-                      type="text"
-                      value={editForm.name}
-                      onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="form-group-item">
-                    <label>Mobile Number (Emergency Contact) *</label>
-                    <input
-                      type="tel"
-                      value={editForm.phone}
-                      onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="form-row-3">
-                  <div className="form-group-item">
-                    <label>Age *</label>
-                    <input
-                      type="number"
-                      min={1}
-                      max={120}
-                      value={editForm.age}
-                      onChange={(e) => setEditForm({ ...editForm, age: parseInt(e.target.value) || 25 })}
-                      required
-                    />
-                  </div>
-                  <div className="form-group-item">
-                    <label>Gender *</label>
-                    <select
-                      value={editForm.gender}
-                      onChange={(e) => setEditForm({ ...editForm, gender: e.target.value as any })}
-                    >
-                      <option value="FEMALE">Female</option>
-                      <option value="MALE">Male</option>
-                      <option value="OTHER">Other</option>
-                      <option value="PREFER_NOT_TO_SAY">Prefer not to say</option>
-                    </select>
-                  </div>
-                  <div className="form-group-item">
-                    <label>Blood Group *</label>
-                    <select
-                      value={editForm.bloodGroup || 'O+'}
-                      onChange={(e) => setEditForm({ ...editForm, bloodGroup: e.target.value })}
-                    >
-                      <option value="O+">O+ (Universal Donor Red)</option>
-                      <option value="O-">O- (Universal Donor)</option>
-                      <option value="A+">A+</option>
-                      <option value="A-">A-</option>
-                      <option value="B+">B+</option>
-                      <option value="B-">B-</option>
-                      <option value="AB+">AB+ (Universal Recipient)</option>
-                      <option value="AB-">AB-</option>
-                      <option value="Not Specified">Not Specified</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="form-group-item">
-                  <label>Email Address (Optional for e-prescriptions & discharge summaries)</label>
-                  <input
-                    type="email"
-                    value={editForm.email || ''}
-                    placeholder="e.g. citizen@example.com"
-                    onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              {/* Section 2: Chronic Diseases & Medical History */}
-              <div className="settings-section">
-                <div className="settings-section-heading">
-                  <Activity size={15} className="text-amber" />
-                  <span>2. Chronic Diseases & Pre-Existing Conditions</span>
-                </div>
-                <p className="text-xs text-muted mb-2">
-                  Select common medical conditions or type custom ones below. Responding paramedics receive this immediately upon dispatch.
-                </p>
-
-                {/* Preset Chips */}
-                <div className="chip-selector-grid mb-2">
-                  {PRESET_DISEASES.map((disease) => {
-                    const isSelected = editForm.diseases.includes(disease);
-                    return (
-                      <button
-                        key={disease}
-                        type="button"
-                        className={`chip-btn ${isSelected ? 'active amber' : ''}`}
-                        onClick={() => handleToggleDisease(disease)}
-                      >
-                        {isSelected ? <Check size={12} className="inline mr-1" /> : <Plus size={12} className="inline mr-1" />}
-                        {disease}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {/* Custom disease input */}
-                <div className="custom-input-row">
-                  <input
-                    type="text"
-                    value={customDiseaseInput}
-                    onChange={(e) => setCustomDiseaseInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleAddCustomDisease();
-                      }
-                    }}
-                    placeholder="Add custom condition (e.g. Sickle Cell, Pacemaker)..."
-                  />
-                  <button
-                    type="button"
-                    className="btn btn-sm btn-outline"
-                    onClick={handleAddCustomDisease}
-                  >
-                    <Plus size={14} />
-                    <span>Add</span>
-                  </button>
-                </div>
-
-                {/* Selected chips list */}
-                <div className="selected-chips-row mt-2">
-                  <span className="text-xs text-muted">Active Conditions:</span>
-                  <div className="chips-wrap">
-                    {editForm.diseases.map((d, i) => (
-                      <span key={i} className="active-item-chip amber">
-                        <span>{d}</span>
-                        <button
-                          type="button"
-                          className="chip-remove"
-                          onClick={() => handleRemoveDisease(d)}
-                          title="Remove condition"
-                        >
-                          ×
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Section 3: Known Allergies & Drug Contraindications */}
-              <div className="settings-section">
-                <div className="settings-section-heading">
-                  <AlertTriangle size={15} className="text-rose" />
-                  <span>3. Known Drug & Environmental Allergies (Critical)</span>
-                </div>
-                <p className="text-xs text-muted mb-2">
-                  Vital for field paramedics to avoid administering contraindicated medication.
-                </p>
-
-                {/* Preset Allergy Chips */}
-                <div className="chip-selector-grid mb-2">
-                  {PRESET_ALLERGIES.map((allergy) => {
-                    const isSelected = editForm.allergies.includes(allergy);
-                    return (
-                      <button
-                        key={allergy}
-                        type="button"
-                        className={`chip-btn ${isSelected ? 'active red' : ''}`}
-                        onClick={() => handleToggleAllergy(allergy)}
-                      >
-                        {isSelected ? <Check size={12} className="inline mr-1" /> : <Plus size={12} className="inline mr-1" />}
-                        {allergy}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {/* Custom allergy input */}
-                <div className="custom-input-row">
-                  <input
-                    type="text"
-                    value={customAllergyInput}
-                    onChange={(e) => setCustomAllergyInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleAddCustomAllergy();
-                      }
-                    }}
-                    placeholder="Add custom allergy (e.g. Ciprofloxacin, Morphine)..."
-                  />
-                  <button
-                    type="button"
-                    className="btn btn-sm btn-outline"
-                    onClick={handleAddCustomAllergy}
-                  >
-                    <Plus size={14} />
-                    <span>Add</span>
-                  </button>
-                </div>
-
-                {/* Selected allergy chips list */}
-                <div className="selected-chips-row mt-2">
-                  <span className="text-xs text-muted">Active Allergies:</span>
-                  <div className="chips-wrap">
-                    {editForm.allergies.map((a, i) => (
-                      <span key={i} className="active-item-chip red">
-                        <span>{a}</span>
-                        <button
-                          type="button"
-                          className="chip-remove"
-                          onClick={() => handleRemoveAllergy(a)}
-                          title="Remove allergy"
-                        >
-                          ×
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Section 4: Emergency Next of Kin Contact */}
-              <div className="settings-section">
-                <div className="settings-section-heading">
-                  <Phone size={15} className="text-emerald" />
-                  <span>4. Emergency Next-of-Kin Contact</span>
-                </div>
-
-                <div className="form-row-2">
-                  <div className="form-group-item">
-                    <label>Kin / Contact Name & Relationship</label>
-                    <input
-                      type="text"
-                      value={editForm.emergencyContactName || ''}
-                      onChange={(e) => setEditForm({ ...editForm, emergencyContactName: e.target.value })}
-                      placeholder="e.g. Anita Sharma (Spouse) or Rahul (Brother)"
-                    />
-                  </div>
-                  <div className="form-group-item">
-                    <label>Kin Telephone Number</label>
-                    <input
-                      type="tel"
-                      value={editForm.emergencyContactPhone || ''}
-                      onChange={(e) => setEditForm({ ...editForm, emergencyContactPhone: e.target.value })}
-                      placeholder="e.g. +91 98765 00000"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="modal-footer pt-3">
-                <button
-                  type="button"
-                  className="btn btn-outline"
-                  onClick={() => setIsEditProfileOpen(false)}
-                >
-                  Cancel
-                </button>
-                <button type="submit" className="btn btn-primary flex items-center gap-2">
-                  <Save size={15} />
-                  <span>Save Medical Profile & Settings</span>
-                </button>
-              </div>
-            </form>
+            <Field
+              label="Email address (optional)"
+              type="email"
+              value={editForm.email || ''}
+              onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+            />
           </div>
-        </div>
-      )}
+
+          {/* Medical Conditions Selector */}
+          <div>
+            <div style={{ fontSize: '12px', fontWeight: 500, color: 'var(--md-sys-color-text-secondary)', marginBottom: '8px' }}>
+              Chronic diseases & medical conditions
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+              {PRESET_DISEASES.map((d) => {
+                const isSelected = editForm.diseases.includes(d);
+                return (
+                  <StatusChip
+                    key={d}
+                    label={d}
+                    tone={isSelected ? 'info' : 'neutral'}
+                    onClick={() => handleToggleDisease(d)}
+                    size="small"
+                  />
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Known Allergies Selector */}
+          <div>
+            <div style={{ fontSize: '12px', fontWeight: 500, color: 'var(--md-sys-color-text-secondary)', marginBottom: '8px' }}>
+              Known drug & food allergies
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+              {PRESET_ALLERGIES.map((a) => {
+                const isSelected = editForm.allergies.includes(a);
+                return (
+                  <StatusChip
+                    key={a}
+                    label={a}
+                    tone={isSelected ? 'info' : 'neutral'}
+                    onClick={() => handleToggleAllergy(a)}
+                    size="small"
+                  />
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Next of Kin */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <Field
+              label="Emergency contact name"
+              value={editForm.emergencyContactName || ''}
+              onChange={(e) => setEditForm({ ...editForm, emergencyContactName: e.target.value })}
+            />
+            <Field
+              label="Emergency contact phone"
+              type="tel"
+              value={editForm.emergencyContactPhone || ''}
+              onChange={(e) => setEditForm({ ...editForm, emergencyContactPhone: e.target.value })}
+            />
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
+            <Button variant="outlined" type="button" onClick={() => setIsEditProfileOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="filled" type="submit">
+              Save changes
+            </Button>
+          </div>
+        </form>
+      </Dialog>
     </div>
   );
 };

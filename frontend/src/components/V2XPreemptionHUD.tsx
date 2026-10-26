@@ -83,7 +83,7 @@ export const V2XPreemptionHUD: React.FC<V2XPreemptionHUDProps> = ({
         {/* Green Wave Corridor Status Card */}
         <div
           style={{
-            background: 'linear-gradient(90deg, rgba(16, 185, 129, 0.12), rgba(6, 95, 70, 0.2))',
+            background: 'var(--md-sys-color-success-container)',
             border: '1px solid rgba(16, 185, 129, 0.3)',
             borderRadius: '12px',
             padding: '16px 20px',

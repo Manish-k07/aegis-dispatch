@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { AlertCircle, Clock, MapPin, Users, Send, Phone, AlertTriangle, Zap, CheckCircle2, History } from 'lucide-react';
 import { Emergency } from '../types';
+import { Card } from './common/Card';
+import { Button } from './common/Button';
+import { Icon } from './common/Icon';
+import { StatusChip } from './common/StatusChip';
+import { EmptyState } from './common/EmptyState';
 
 interface EmergencyQueueProps {
   emergencies: Emergency[];
@@ -12,50 +16,23 @@ interface EmergencyQueueProps {
   onResetData?: () => void;
 }
 
+type FilterType = 'ALL' | 'CRITICAL' | 'HIGH' | 'MEDIUM';
+
 export const EmergencyQueue: React.FC<EmergencyQueueProps> = ({
   emergencies,
   selectedEmergency,
   searchQuery = '',
   onSelectEmergency,
   onAutoAssign,
-  onAutoAssignNext,
-  onResetData,
 }) => {
-  const [filter, setFilter] = useState<'ACTIVE' | 'CRITICAL' | 'HIGH' | 'PENDING' | 'SHIFT_LOG'>('ACTIVE');
+  const [filter, setFilter] = useState<FilterType>('ALL');
 
-  // Auto-tick every 15s so relative elapsed time badges refresh continuously without page reloads
+  // Relative elapsed time auto-refresh
   const [, setTick] = useState(0);
   useEffect(() => {
     const timer = setInterval(() => setTick((t) => t + 1), 15000);
     return () => clearInterval(timer);
   }, []);
-
-  // Filter out completed & cancelled from primary active queues to prevent cognitive overload & SLA confusion
-  const filtered = emergencies.filter((e) => {
-    // Search query filter
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      const match =
-        e.type.toLowerCase().includes(q) ||
-        e.address.toLowerCase().includes(q) ||
-        (e.callerName && e.callerName.toLowerCase().includes(q)) ||
-        (e.description && e.description.toLowerCase().includes(q));
-      if (!match) return false;
-    }
-
-    const isClosed = ['COMPLETED', 'CANCELLED'].includes(e.status);
-
-    if (filter === 'ACTIVE') return !isClosed;
-    if (filter === 'CRITICAL') return !isClosed && e.priority === 'CRITICAL';
-    if (filter === 'HIGH') return !isClosed && e.priority === 'HIGH';
-    if (filter === 'PENDING') return !isClosed && (e.status === 'PENDING_DISPATCH' || e.status === 'CREATED');
-    if (filter === 'SHIFT_LOG') return isClosed;
-
-    return !isClosed;
-  });
-
-  const activeEmergencies = emergencies.filter((e) => !['COMPLETED', 'CANCELLED'].includes(e.status));
-  const closedCount = emergencies.filter((e) => ['COMPLETED', 'CANCELLED'].includes(e.status)).length;
 
   const formatElapsed = (dateStr?: string) => {
     if (!dateStr) return '';
@@ -73,187 +50,253 @@ export const EmergencyQueue: React.FC<EmergencyQueueProps> = ({
     }
   };
 
-  const isOverdue = (dateStr?: string, status?: string) => {
-    if (!dateStr || !status || ['COMPLETED', 'CANCELLED'].includes(status)) return false;
-    try {
-      const d = new Date(dateStr);
-      if (isNaN(d.getTime())) return false;
-      const ms = Date.now() - d.getTime();
-      return ms > 15 * 60 * 1000; // 15 mins SLA threshold
-    } catch {
-      return false;
-    }
+  const toSentenceCase = (text: string) => {
+    if (!text) return '';
+    const clean = text.replace(/_/g, ' ').toLowerCase();
+    return clean.charAt(0).toUpperCase() + clean.slice(1);
   };
 
+  const filtered = emergencies.filter((e) => {
+    const isClosed = ['COMPLETED', 'CANCELLED'].includes(e.status);
+    if (isClosed) return false;
+
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      const match =
+        e.type.toLowerCase().includes(q) ||
+        e.address.toLowerCase().includes(q) ||
+        (e.callerName && e.callerName.toLowerCase().includes(q)) ||
+        (e.description && e.description.toLowerCase().includes(q)) ||
+        e.id.toLowerCase().includes(q);
+      if (!match) return false;
+    }
+
+    if (filter === 'CRITICAL') return e.priority === 'CRITICAL';
+    if (filter === 'HIGH') return e.priority === 'HIGH';
+    if (filter === 'MEDIUM') return e.priority === 'MEDIUM' || e.priority === 'LOW';
+
+    return true;
+  });
+
+  const filterChips: { id: FilterType; label: string }[] = [
+    { id: 'ALL', label: 'All' },
+    { id: 'CRITICAL', label: 'P1-Critical' },
+    { id: 'HIGH', label: 'P2-High' },
+    { id: 'MEDIUM', label: 'P3-Medium' },
+  ];
+
   return (
-    <div className="sidebar-section">
-      <div className="section-header">
-        <div className="flex items-center gap-2">
-          <AlertCircle size={16} className="text-red" />
-          <h2>Emergency Incident Queue</h2>
-        </div>
-        <div className="flex items-center gap-2">
-          {onAutoAssignNext && activeEmergencies.some((e) => e.status === 'PENDING_DISPATCH' || e.status === 'CREATED') && (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '12px' }}>
+      {/* Filter chips: All, P1-Critical, P2-High, P3-Medium */}
+      <div
+        style={{
+          display: 'flex',
+          gap: '8px',
+          padding: '8px 16px 0',
+          flexWrap: 'wrap',
+          flexShrink: 0,
+        }}
+      >
+        {filterChips.map((chip) => {
+          const isActive = filter === chip.id;
+          return (
             <button
-              className="btn btn-xs btn-primary btn-auto-head"
-              onClick={onAutoAssignNext}
-              title="Automatically dispatch nearest ambulance to highest priority incident"
+              key={chip.id}
+              type="button"
+              onClick={() => setFilter(chip.id)}
+              style={{
+                height: '32px',
+                padding: '0 12px',
+                borderRadius: '8px',
+                border: '1px solid',
+                borderColor: isActive ? 'var(--md-sys-color-primary)' : 'var(--md-sys-color-outline)',
+                backgroundColor: isActive
+                  ? 'var(--md-sys-color-primary-container)'
+                  : 'var(--md-sys-color-surface)',
+                color: isActive
+                  ? 'var(--md-sys-color-on-primary-container)'
+                  : 'var(--md-sys-color-text)',
+                fontSize: '12px',
+                fontWeight: 500,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                transition: 'background-color 150ms ease, border-color 150ms ease',
+              }}
             >
-              <Zap size={11} />
-              <span>Auto-Dispatch Next</span>
+              {chip.label}
             </button>
-          )}
-          <span className="badge-count text-red">{activeEmergencies.length} Active</span>
-        </div>
+          );
+        })}
       </div>
 
-      {/* Segmented Queue Filter Navigation */}
-      <div className="filter-tabs">
-        <button
-          className={`tab-btn ${filter === 'ACTIVE' ? 'active' : ''}`}
-          onClick={() => setFilter('ACTIVE')}
-          title="Active incoming and en-route emergency calls"
-        >
-          Active ({activeEmergencies.length})
-        </button>
-        <button
-          className={`tab-btn ${filter === 'CRITICAL' ? 'active' : ''}`}
-          onClick={() => setFilter('CRITICAL')}
-        >
-          Critical
-        </button>
-        <button
-          className={`tab-btn ${filter === 'HIGH' ? 'active' : ''}`}
-          onClick={() => setFilter('HIGH')}
-        >
-          High
-        </button>
-        <button
-          className={`tab-btn ${filter === 'PENDING' ? 'active' : ''}`}
-          onClick={() => setFilter('PENDING')}
-        >
-          Pending
-        </button>
-        <button
-          className={`tab-btn ${filter === 'SHIFT_LOG' ? 'active' : ''}`}
-          onClick={() => setFilter('SHIFT_LOG')}
-          title="Historical closed incidents in current shift"
-        >
-          Shift Log ({closedCount})
-        </button>
-      </div>
-
-      <div className="queue-list">
+      {/* Incident List */}
+      <div
+        style={{
+          flex: 1,
+          overflowY: 'auto',
+          padding: '0 16px 16px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '12px',
+        }}
+      >
         {filtered.length === 0 ? (
-          <div className="empty-state" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', padding: '24px 12px' }}>
-            <p style={{ margin: 0, color: '#94a3b8' }}>
-              {filter === 'SHIFT_LOG'
-                ? 'No closed incidents in current shift log.'
-                : 'Zero active incidents matching current filters.'}
-            </p>
-            {filter !== 'SHIFT_LOG' && onResetData && (
-              <button
-                className="btn btn-sm btn-primary"
-                onClick={onResetData}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '6px' }}
-                title="Seed 3 active high-acuity emergency calls into the dispatch queue"
-              >
-                <Zap size={13} />
-                <span>Seed Emergency Calls</span>
-              </button>
-            )}
-          </div>
+          <EmptyState
+            icon="inbox"
+            title="No active incidents"
+            description="No incidents match the active filter criteria."
+          />
         ) : (
           filtered.map((em) => {
             const isSelected = selectedEmergency?.id === em.id;
             const isPending = em.status === 'PENDING_DISPATCH' || em.status === 'CREATED';
-            const isCritical = em.priority === 'CRITICAL';
-            const isClosed = ['COMPLETED', 'CANCELLED'].includes(em.status);
-            const slaBreach = isOverdue(em.createdAt, em.status);
+            const shortId = em.id.startsWith('em-') ? em.id : `INC-${em.id.slice(0, 6)}`;
 
             return (
-              <div
+              <Card
                 key={em.id}
-                className={`incident-card ${em.priority.toLowerCase()} ${isSelected ? 'selected' : ''} ${isClosed ? 'opacity-70' : ''}`}
+                padding={16}
+                interactive
                 onClick={() => onSelectEmergency(em)}
-                style={isClosed ? { borderLeftColor: '#64748b' } : undefined}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '12px',
+                  borderColor: isSelected ? 'var(--md-sys-color-primary)' : 'var(--md-sys-color-outline)',
+                  boxShadow: isSelected ? '0 0 0 1px var(--md-sys-color-primary)' : 'none',
+                }}
               >
-                <div className="incident-header">
-                  <div className="incident-title-row">
-                    <span className={`priority-tag ${em.priority.toLowerCase()}`}>
-                      {em.priority}
+                {/* 1. Header: Priority chip + incident ID in mono + time ago in Roboto */}
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <StatusChip
+                      tone={
+                        em.priority === 'CRITICAL'
+                          ? 'critical'
+                          : em.priority === 'HIGH'
+                          ? 'high'
+                          : em.priority === 'MEDIUM'
+                          ? 'medium'
+                          : 'low'
+                      }
+                      label={em.priority === 'CRITICAL' ? 'Critical' : em.priority === 'HIGH' ? 'High' : 'Medium'}
+                      icon={em.priority === 'CRITICAL' ? 'warning' : 'report'}
+                    />
+                    <span
+                      className="mono"
+                      style={{
+                        fontSize: '12px',
+                        color: 'var(--md-sys-color-text-secondary)',
+                      }}
+                    >
+                      {shortId}
                     </span>
-                    <strong className="incident-type">{em.type}</strong>
-                    {isCritical && !isClosed && <span className="incident-critical-badge">IMMEDIATE</span>}
-                    {slaBreach && (
-                      <span className="chip" style={{ background: '#7f1d1d', color: '#fca5a5', fontSize: '9px', padding: '1px 5px' }}>
-                        SLA 15m+
-                      </span>
-                    )}
-                    {isClosed && (
-                      <span className="chip" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#34d399', fontSize: '10px' }}>
-                        CLOSED
-                      </span>
-                    )}
                   </div>
-                  <span className="time-ticker text-muted text-xs">{formatElapsed(em.createdAt)}</span>
+                  {/* Time ago (Roboto, NOT mono) */}
+                  <span
+                    style={{
+                      fontSize: '12px',
+                      color: 'var(--md-sys-color-text-secondary)',
+                      fontFamily: 'Roboto, sans-serif',
+                    }}
+                  >
+                    {formatElapsed(em.createdAt)}
+                  </span>
                 </div>
 
-                <div className="incident-details">
-                  <div className="detail-item">
-                    <MapPin size={13} className="text-secondary flex-shrink-0" />
-                    <span className="text-primary font-medium">{em.address}</span>
-                  </div>
+                {/* 2. Type in sentence case (16px medium) */}
+                <div
+                  style={{
+                    fontSize: '16px',
+                    fontWeight: 500,
+                    lineHeight: '24px',
+                    color: 'var(--md-sys-color-text)',
+                  }}
+                >
+                  {toSentenceCase(em.type)}
+                </div>
 
-                  <div className="detail-row">
-                    <div className="detail-item">
-                      <Phone size={12} className="text-secondary" />
-                      <span>{em.callerName} ({em.phone})</span>
-                    </div>
-                    <div className="detail-item">
-                      <Users size={12} className="text-secondary" />
-                      <span>{em.patientCount} Patient(s)</span>
-                    </div>
-                  </div>
+                {/* 3. Address with 20px 'place' icon */}
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '8px',
+                    fontSize: '14px',
+                    color: 'var(--md-sys-color-text-secondary)',
+                    lineHeight: '20px',
+                  }}
+                >
+                  <Icon name="place" size={20} style={{ flexShrink: 0, marginTop: '1px' }} />
+                  <span>{em.address}</span>
+                </div>
 
-                  {em.description && (
-                    <div className="incident-notes text-secondary text-xs mt-1">
-                      "{em.description}"
-                    </div>
+                {/* 4. Assigned unit or "Unassigned" chip */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {isPending ? (
+                    <StatusChip tone="warning" label="Unassigned" icon="schedule" />
+                  ) : (
+                    <StatusChip tone="success" label="Unit assigned" icon="check_circle" />
+                  )}
+                  {em.patientCount && em.patientCount > 1 && (
+                    <span style={{ fontSize: '12px', color: 'var(--md-sys-color-text-secondary)' }}>
+                      · {em.patientCount} patients
+                    </span>
                   )}
                 </div>
 
-                <div className="incident-footer-row mt-2">
-                  <span className="status-pill">{em.status.replace(/_/g, ' ')}</span>
-                  {isPending && (
-                    <div className="flex items-center gap-1">
-                      {onAutoAssign && (
-                        <button
-                          className="btn btn-xs btn-outline-sky"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onAutoAssign(em.id);
-                          }}
-                          title="Instant auto-assign closest ambulance & matching hospital"
-                        >
-                          <Zap size={11} className="text-amber" />
-                          <span>Auto-Assign</span>
-                        </button>
-                      )}
-                      <button
-                        className="btn btn-xs btn-dispatch"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onSelectEmergency(em);
-                        }}
-                      >
-                        <Send size={11} />
-                        <span>Review</span>
-                      </button>
-                    </div>
+                {/* 5. Divider */}
+                <div
+                  style={{
+                    height: '1px',
+                    backgroundColor: 'var(--md-sys-color-outline)',
+                    width: '100%',
+                  }}
+                />
+
+                {/* 6. Actions row: right-aligned, 8px gap: outlined "Auto-assign" + filled "Review" (40px tall) */}
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'flex-end',
+                    gap: '8px',
+                  }}
+                >
+                  {isPending && onAutoAssign && (
+                    <Button
+                      variant="outlined"
+                      size="standard"
+                      icon="bolt"
+                      style={{ height: '40px' }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onAutoAssign(em.id);
+                      }}
+                    >
+                      Auto-assign
+                    </Button>
                   )}
+                  <Button
+                    variant="filled"
+                    size="standard"
+                    style={{ height: '40px' }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSelectEmergency(em);
+                    }}
+                  >
+                    Review
+                  </Button>
                 </div>
-              </div>
+              </Card>
             );
           })
         )}

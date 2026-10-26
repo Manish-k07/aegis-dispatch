@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { Building2, Bed, Heart, Activity, Phone, MapPin, ExternalLink, ShieldCheck, AlertTriangle } from 'lucide-react';
 import { Hospital } from '../types';
+import { Icon } from './common/Icon';
+import { Chip } from './common/Chip';
+import { Button } from './common/Button';
 
 interface HospitalListProps {
   hospitals: Hospital[];
@@ -36,43 +38,37 @@ export const HospitalList: React.FC<HospitalListProps> = ({
   return (
     <div className="sidebar-section">
       <div className="section-header">
-        <div className="flex items-center gap-2">
-          <Building2 size={16} className="text-sky" />
-          <h2>Emergency Departments & Trauma Centers</h2>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Icon name="local_hospital" size={18} style={{ color: 'var(--md-sys-color-primary)' }} />
+          <h2 style={{ fontSize: '15px', fontWeight: 600, margin: 0, color: 'var(--md-sys-color-on-surface)' }}>
+            Hospital receiving centers
+          </h2>
         </div>
-        <span className="badge-count text-sky">{hospitals.length} Centers</span>
+        <Chip label={`${hospitals.length} centers`} size="small" />
       </div>
 
-      <div className="filter-tabs">
-        <button
-          className={`tab-btn ${filter === 'ALL' ? 'active' : ''}`}
-          onClick={() => setFilter('ALL')}
-        >
-          All ({hospitals.length})
-        </button>
-        <button
-          className={`tab-btn ${filter === 'AVAILABLE' ? 'active' : ''}`}
-          onClick={() => setFilter('AVAILABLE')}
-        >
-          Available
-        </button>
-        <button
-          className={`tab-btn ${filter === 'ICU_READY' ? 'active' : ''}`}
-          onClick={() => setFilter('ICU_READY')}
-        >
-          ICU Ready
-        </button>
-        <button
-          className={`tab-btn ${filter === 'DIVERSION' ? 'active' : ''}`}
-          onClick={() => setFilter('DIVERSION')}
-        >
-          Diversion
-        </button>
+      <div style={{ display: 'flex', gap: '6px', marginBottom: '12px', flexWrap: 'wrap' }}>
+        {[
+          { id: 'ALL', label: `All (${hospitals.length})` },
+          { id: 'AVAILABLE', label: 'Available' },
+          { id: 'ICU_READY', label: 'ICU ready' },
+          { id: 'DIVERSION', label: 'Diversion' },
+        ].map((tab) => (
+          <Chip
+            key={tab.id}
+            label={tab.label}
+            selected={filter === tab.id}
+            onClick={() => setFilter(tab.id as any)}
+            size="small"
+          />
+        ))}
       </div>
 
       <div className="fleet-list">
         {filtered.length === 0 ? (
-          <div className="empty-state">No receiving facilities match the active filter.</div>
+          <div className="empty-state" style={{ padding: '24px', textAlign: 'center', color: 'var(--md-sys-color-on-surface-variant)', fontSize: '13px' }}>
+            No receiving facilities match the active filter.
+          </div>
         ) : (
           filtered.map((hosp) => {
             const isAvailable = hosp.status === 'AVAILABLE';
@@ -84,35 +80,52 @@ export const HospitalList: React.FC<HospitalListProps> = ({
             return (
               <div
                 key={hosp.id}
-                className="fleet-card"
-                style={{
-                  borderLeft: `4px solid ${isDiversion ? '#ef4444' : isAvailable ? '#10b981' : '#f59e0b'}`,
-                  cursor: 'pointer',
-                }}
                 onClick={() => onSelectHospital(hosp)}
+                style={{
+                  padding: '14px',
+                  borderRadius: '12px',
+                  border: '1px solid var(--md-sys-color-outline)',
+                  backgroundColor: 'var(--md-sys-color-surface)',
+                  marginBottom: '10px',
+                  cursor: 'pointer',
+                  transition: 'background-color 0.15s ease, border-color 0.15s ease',
+                }}
               >
-                <div className="fleet-card-header">
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '6px' }}>
                   <div>
-                    <strong style={{ fontSize: '14px', color: '#f8fafc' }}>{hosp.name}</strong>
-                    <div className="flex items-center gap-1 text-xs text-secondary mt-1">
-                      <MapPin size={11} />
+                    <strong style={{ fontSize: '14px', color: 'var(--md-sys-color-on-surface)' }}>
+                      {hosp.name}
+                    </strong>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: 'var(--md-sys-color-on-surface-variant)', marginTop: '2px' }}>
+                      <Icon name="location_on" size={14} style={{ flexShrink: 0 }} />
                       <span>{hosp.address}</span>
                     </div>
                   </div>
                   <span
-                    className={`status-pill ${
-                      isDiversion ? 'status-busy' : isAvailable ? 'status-available' : 'status-hospital'
-                    }`}
+                    style={{
+                      fontSize: '11px',
+                      padding: '2px 8px',
+                      borderRadius: '6px',
+                      backgroundColor: isDiversion
+                        ? 'var(--md-sys-color-error-container)'
+                        : isAvailable
+                        ? 'var(--md-sys-color-success-container)'
+                        : 'var(--md-sys-color-surface-container-high)',
+                      color: isDiversion
+                        ? 'var(--md-sys-color-error)'
+                        : isAvailable
+                        ? 'var(--md-sys-color-success)'
+                        : 'var(--md-sys-color-on-surface-variant)',
+                      fontWeight: 600,
+                      textTransform: 'capitalize',
+                    }}
                   >
-                    {hosp.status.replace(/_/g, ' ')}
+                    {hosp.status.toLowerCase().replace(/_/g, ' ')}
                   </span>
                 </div>
 
-                <div className="fleet-crew text-secondary text-xs flex items-center justify-between mt-1">
-                  <span>ED Phone: <strong>{hosp.phone}</strong></span>
-                  {hosp.designatedEdPhone && (
-                    <span>SMS Carrier: <strong style={{ color: '#38bdf8' }}>{hosp.designatedEdPhone}</strong></span>
-                  )}
+                <div style={{ fontSize: '12px', color: 'var(--md-sys-color-on-surface-variant)', marginBottom: '8px' }}>
+                  <span>Phone: <strong style={{ fontFamily: 'Roboto Mono, monospace' }}>{hosp.phone}</strong></span>
                 </div>
 
                 {/* Live Capacity Indicators */}
@@ -122,61 +135,70 @@ export const HospitalList: React.FC<HospitalListProps> = ({
                     gridTemplateColumns: 'repeat(3, 1fr)',
                     gap: '6px',
                     margin: '8px 0',
-                    background: 'rgba(0, 0, 0, 0.25)',
-                    padding: '6px 8px',
-                    borderRadius: '6px',
+                    backgroundColor: 'var(--md-sys-color-surface-container-low)',
+                    padding: '8px',
+                    borderRadius: '8px',
+                    border: '1px solid var(--md-sys-color-outline-variant)',
                   }}
                 >
-                  <div className="text-center">
-                    <div className="text-xs text-muted">ER Beds</div>
-                    <strong style={{ color: '#f8fafc', fontSize: '13px' }}>
-                      {bedsAvail} <span style={{ fontSize: '10px', color: '#64748b' }}>/ {hosp.totalBeds ?? 120}</span>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '11px', color: 'var(--md-sys-color-on-surface-variant)' }}>ER beds</div>
+                    <strong style={{ fontSize: '13px', color: 'var(--md-sys-color-on-surface)', fontFamily: 'Roboto Mono, monospace' }}>
+                      {bedsAvail} <span style={{ fontSize: '10px', color: 'var(--md-sys-color-on-surface-variant)' }}>/ {hosp.totalBeds ?? 120}</span>
                     </strong>
                   </div>
-                  <div className="text-center">
-                    <div className="text-xs text-muted">ICU Bays</div>
-                    <strong style={{ color: icuAvail <= 2 ? '#fb7185' : '#38bdf8', fontSize: '13px' }}>
-                      {icuAvail} <span style={{ fontSize: '10px', color: '#64748b' }}>/ {hosp.icuBedsTotal ?? 20}</span>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '11px', color: 'var(--md-sys-color-on-surface-variant)' }}>ICU bays</div>
+                    <strong style={{ fontSize: '13px', color: icuAvail <= 2 ? 'var(--md-sys-color-error)' : 'var(--md-sys-color-primary)', fontFamily: 'Roboto Mono, monospace' }}>
+                      {icuAvail} <span style={{ fontSize: '10px', color: 'var(--md-sys-color-on-surface-variant)' }}>/ {hosp.icuBedsTotal ?? 20}</span>
                     </strong>
                   </div>
-                  <div className="text-center">
-                    <div className="text-xs text-muted">Trauma Bays</div>
-                    <strong style={{ color: '#34d399', fontSize: '13px' }}>
-                      {traumaAvail} <span style={{ fontSize: '10px', color: '#64748b' }}>/ {hosp.traumaBaysTotal ?? 8}</span>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '11px', color: 'var(--md-sys-color-on-surface-variant)' }}>Trauma bays</div>
+                    <strong style={{ fontSize: '13px', color: 'var(--md-sys-color-success)', fontFamily: 'Roboto Mono, monospace' }}>
+                      {traumaAvail} <span style={{ fontSize: '10px', color: 'var(--md-sys-color-on-surface-variant)' }}>/ {hosp.traumaBaysTotal ?? 8}</span>
                     </strong>
                   </div>
                 </div>
 
-                {/* Action button to open full Hospital Dashboard */}
-                <div className="flex items-center justify-between mt-2 pt-2 border-t border-border-light">
-                  <span className="text-xs text-secondary flex items-center gap-1">
-                    {hosp.cathLabOperational ? (
-                      <span className="chip chip-als" style={{ padding: '2px 6px', fontSize: '9px' }}>
-                        CATH LAB 24/7
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginTop: '8px',
+                    paddingTop: '8px',
+                    borderTop: '1px solid var(--md-sys-color-outline-variant)',
+                  }}
+                >
+                  <div>
+                    {hosp.cathLabOperational && (
+                      <span
+                        style={{
+                          fontSize: '11px',
+                          padding: '2px 6px',
+                          borderRadius: '4px',
+                          backgroundColor: 'var(--md-sys-color-surface-container-high)',
+                          color: 'var(--md-sys-color-on-surface-variant)',
+                        }}
+                      >
+                        Cath lab 24/7
                       </span>
-                    ) : null}
-                  </span>
+                    )}
+                  </div>
 
                   {onOpenHospitalDashboard && (
-                    <button
-                      className="btn btn-xs btn-outline"
+                    <Button
+                      variant="text"
+                      size="small"
                       onClick={(e) => {
                         e.stopPropagation();
                         onOpenHospitalDashboard(hosp);
                       }}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '5px',
-                        color: '#10b981',
-                        borderColor: 'rgba(16, 185, 129, 0.4)',
-                        background: 'rgba(16, 185, 129, 0.08)',
-                      }}
-                      title="Launch full Hospital Emergency Reception Console"
+                      endIcon={<Icon name="open_in_new" size={14} />}
                     >
-                      <span>Open Hospital Dashboard</span>
-                      <ExternalLink size={11} />
-                    </button>
+                      Open ED
+                    </Button>
                   )}
                 </div>
               </div>

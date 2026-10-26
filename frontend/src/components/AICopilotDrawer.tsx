@@ -208,7 +208,7 @@ export const AICopilotDrawer: React.FC<AICopilotDrawerProps> = ({
           </div>
           <div>
             <h2 className="copilot-title">CAD Dispatch Assistant</h2>
-            <span className="copilot-subtitle">112 ERSS Operations & Fleet Telemetry</span>
+            <span className="copilot-subtitle">CAD Operations & Fleet Telemetry</span>
           </div>
         </div>
         <button className="btn-close" onClick={onClose}>

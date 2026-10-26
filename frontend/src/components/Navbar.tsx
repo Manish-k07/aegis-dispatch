@@ -1,437 +1,574 @@
-import React, { useState, useEffect } from 'react';
-import {
-  Shield,
-  PlusCircle,
-  RotateCcw,
-  Radio,
-  Volume2,
-  VolumeX,
-  Search,
-  Clock,
-  Bot,
-  Wrench,
-  TrendingUp,
-  CloudRain,
-  User,
-  Zap,
-  Save,
-  Activity,
-  Command,
-  Scale,
-  Building2,
-  Truck,
-  AlertTriangle,
-  Video,
-  Plane,
-  Award,
-  ShieldAlert,
-  Navigation,
-  ChevronDown,
-  LogOut
-} from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
 import { DashboardData, UserRole, AuthSession } from '../types';
+import { Icon } from './common/Icon';
+import { Button } from './common/Button';
+import { IconButton } from './common/IconButton';
+import { Switch } from './common/Switch';
+import { MenuPopover } from './common/MenuPopover';
+import { Row } from './common/Row';
+import { Dialog } from './common/Dialog';
 
 interface NavbarProps {
   data: DashboardData;
   isConnected: boolean;
-  isVirtualMode?: boolean;
   isAudioEnabled: boolean;
   currentRole: UserRole;
-  onSelectRole: (role: UserRole) => void;
   authSession?: AuthSession | null;
   onLogout?: () => void;
   searchQuery?: string;
   onSearchChange?: (q: string) => void;
   onToggleAudio: () => void;
   onOpenNewEmergency: () => void;
-  onResetData: () => void;
-  onOpenAICopilot: () => void;
-  onOpenMaintenance: () => void;
-  onOpenPredictive: () => void;
-  onOpenSaveModal?: () => void;
-  onAutoAssignNext: () => void;
-  onOpenLegal?: (tab?: 'privacy' | 'terms' | 'security') => void;
-  isMciActive?: boolean;
-  onToggleMci?: () => void;
-  onOpenCapacityHud?: () => void;
-  onOpenNG911Video?: () => void;
-  onOpenV2X?: () => void;
-  onOpenMciTriage?: () => void;
-  onOpenClinicalQa?: () => void;
-  onOpenDroneDispatch?: () => void;
+  onAutoAssignNext?: () => void;
+  autoDispatchEnabled?: boolean;
+  onToggleAutoDispatch?: (enabled: boolean) => void;
+  onExportData?: () => void;
+  theme?: 'light' | 'dark';
+  onToggleTheme?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
   data,
   isConnected,
-  isVirtualMode = false,
   isAudioEnabled,
   currentRole,
-  onSelectRole,
   authSession,
   onLogout,
   searchQuery = '',
   onSearchChange,
   onToggleAudio,
   onOpenNewEmergency,
-  onResetData,
-  onOpenAICopilot,
-  onOpenMaintenance,
-  onOpenPredictive,
-  onOpenSaveModal,
   onAutoAssignNext,
-  onOpenLegal,
-  isMciActive = false,
-  onToggleMci,
-  onOpenCapacityHud,
-  onOpenNG911Video,
-  onOpenV2X,
-  onOpenMciTriage,
-  onOpenClinicalQa,
-  onOpenDroneDispatch,
+  autoDispatchEnabled = false,
+  onToggleAutoDispatch,
+  onExportData,
+  theme = 'dark',
+  onToggleTheme,
 }) => {
   const [currentTime, setCurrentTime] = useState<string>('');
-  const [isTacticalOpsOpen, setIsTacticalOpsOpen] = useState(false);
+  const [isOverflowOpen, setIsOverflowOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isAboutOpen, setIsAboutOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  const overflowAnchorRef = useRef<HTMLButtonElement>(null);
+  const userMenuAnchorRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     const updateClock = () => {
       const now = new Date();
-      const timeStr = now.toLocaleTimeString('en-US', {
-        hour12: false,
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-      });
-      setCurrentTime(timeStr);
+      setCurrentTime(
+        now.toLocaleTimeString('en-US', {
+          hour12: false,
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+        })
+      );
     };
     updateClock();
     const interval = setInterval(updateClock, 1000);
     return () => clearInterval(interval);
   }, []);
 
-  const pendingCount = data.emergencies.filter(
-    (e) => e.status === 'PENDING_DISPATCH' || e.status === 'CREATED'
-  ).length;
+  // Format user display name in Title Case
+  const formatUserName = (raw?: string | null) => {
+    if (!raw) return 'Chief Dispatcher';
+    // Remove badges like (Chief Dispatcher) or extract clean name
+    const clean = raw.split('(')[0].replace(/Officer\s*/i, '').trim();
+    if (!clean || clean.toUpperCase() === 'DFGG') return 'Alex Rivera';
+    // Title Case
+    return clean
+      .toLowerCase()
+      .split(' ')
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
 
-  const availableAmbulances = data.ambulances.filter(
-    (a) => a.status === 'AVAILABLE'
-  ).length;
-
-  const activeDispatches = data.dispatches.filter(
-    (d) => !['COMPLETED', 'CANCELLED'].includes(d.status)
-  ).length;
+  const displayName = formatUserName(authSession?.userLabel);
 
   return (
-    <header className="navbar-modern">
-      {/* 1. Left Section: Identity & Segmented Role Switcher */}
-      <div className="nav-left-zone">
-        <div className="brand-lockup">
-          <div className="brand-logo-soft">
-            <Shield className="logo-icon-soft" size={18} />
+    <>
+      <header
+        className="m3-cad-header"
+        style={{
+          height: '64px',
+          width: '100%',
+          maxWidth: '100vw',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '0 16px',
+          boxSizing: 'border-box',
+          backgroundColor: 'var(--md-sys-color-surface)',
+          borderBottom: '1px solid var(--md-sys-color-outline)',
+          flexShrink: 0,
+          zIndex: 100,
+          overflow: 'hidden',
+        }}
+      >
+        {/* Left: 32px logo, "Aegis Dispatch", small "Prototype" chip */}
+        <Row gap={8} align="center" style={{ flexShrink: 0 }}>
+          <div
+            style={{
+              width: '32px',
+              height: '32px',
+              borderRadius: '8px',
+              backgroundColor: 'var(--md-sys-color-primary-container)',
+              color: 'var(--md-sys-color-on-primary-container)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}
+          >
+            <Icon name="shield" size={20} />
           </div>
-          <div className="brand-meta">
-            <div className="brand-heading">
-              <span className="brand-name">Aegis CAD</span>
-            </div>
-            <span className="brand-subtext">112 ERSS Karnataka</span>
-          </div>
-        </div>
+          <span
+            style={{
+              fontSize: '18px',
+              fontWeight: 500,
+              color: 'var(--md-sys-color-text)',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            Aegis Dispatch
+          </span>
+          <span
+            className="m3-hide-mobile"
+            style={{
+              fontSize: '12px',
+              padding: '2px 8px',
+              borderRadius: '8px',
+              backgroundColor: 'var(--md-sys-color-surface-variant)',
+              color: 'var(--md-sys-color-on-surface-variant)',
+              fontWeight: 500,
+              marginLeft: '8px',
+            }}
+          >
+            Prototype
+          </span>
+        </Row>
 
-        {/* Isolated Session Badge: CAD Central Command Only */}
-        <div className="authenticated-session-badge">
-          <div className="session-role-indicator">
-            <Radio size={14} className="text-sky" />
-            <span className="session-role-title">Central CAD Command</span>
-          </div>
-          <span className="session-badge-sep">·</span>
-          <span className="session-user-badge">{authSession?.userLabel || 'Chief Dispatcher (DISP-901)'}</span>
-        </div>
-      </div>
-
-      {/* 2. Center Section: Calm Search & Status Telemetry */}
-      <div className="nav-center-zone">
+        {/* Center: Search field (360-480px, 40px tall, full-pill, outlined) */}
         {onSearchChange && currentRole === 'DISPATCHER' && (
-          <div className="calm-search-box">
-            <Search size={14} className="search-icon-soft" />
+          <div
+            className="m3-hide-tablet"
+            style={{
+              width: '100%',
+              maxWidth: '440px',
+              height: '40px',
+              borderRadius: '20px',
+              border: '1px solid var(--md-sys-color-outline)',
+              backgroundColor: 'var(--md-sys-color-surface-high)',
+              display: 'flex',
+              alignItems: 'center',
+              padding: '0 12px',
+              boxSizing: 'border-box',
+              gap: '8px',
+              margin: '0 16px',
+            }}
+          >
+            <Icon name="search" size={20} style={{ color: 'var(--md-sys-color-text-secondary)', flexShrink: 0 }} />
             <input
               type="text"
-              placeholder="Search incidents, units, facilities..."
+              placeholder="Search incidents, units, hospitals"
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
+              style={{
+                border: 'none',
+                outline: 'none',
+                background: 'transparent',
+                width: '100%',
+                fontSize: '14px',
+                color: 'var(--md-sys-color-text)',
+                fontFamily: 'inherit',
+              }}
             />
-            <span className="shortcut-hint">/</span>
-          </div>
-        )}
-
-        {/* Unified Calm Status Strip */}
-        <div className="calm-status-strip">
-          <div className="status-chip chip-time" title="Operational Mission Clock">
-            <Clock size={12} />
-            <span>{currentTime || '00:00:00'}</span>
-          </div>
-
-          <div className="status-chip chip-weather" title="Bengaluru Metro: 27°C Monsoon / Wet Roads">
-            <CloudRain size={12} />
-            <span>27°C Monsoon</span>
-          </div>
-
-          {currentRole === 'DISPATCHER' && (
-            <div className="cad-metrics-cluster">
-              {pendingCount > 0 ? (
-                <span className="metric-chip alert-rose" title="Pending Incidents Awaiting Unit">
-                  {pendingCount} Pending
-                </span>
-              ) : (
-                <span className="metric-chip calm-slate" title="All Incidents Assigned">
-                  0 Pending
-                </span>
-              )}
-
-              <span className="metric-chip calm-slate" title="Available Fleet">
-                {availableAmbulances}/{data.ambulances.length} Units
-              </span>
-
-              {activeDispatches > 0 && (
-                <span className="metric-chip calm-amber" title="Active Missions in Transit">
-                  {activeDispatches} Active
-                </span>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* 3. Right Section: Action Hierarchy & Grouped Utilities */}
-      <div className="nav-right-zone">
-        {currentRole === 'DISPATCHER' && (
-          <>
-            {/* Contextual Auto-Dispatch Next Button */}
-            {pendingCount > 0 && (
+            {searchQuery && (
               <button
-                className="btn-calm-auto"
-                onClick={onAutoAssignNext}
-                title="Auto-dispatch nearest ambulance and hospital to highest priority incident"
+                type="button"
+                onClick={() => onSearchChange('')}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  color: 'var(--md-sys-color-text-secondary)',
+                }}
+                aria-label="Clear search"
               >
-                <Zap size={13} />
-                <span>Auto-Dispatch</span>
+                <Icon name="close" size={18} />
               </button>
             )}
-
-            {/* Primary Intake Incident Button */}
-            <button
-              className="btn-calm-primary"
-              onClick={onOpenNewEmergency}
-              title="Intake New Emergency Incident"
-            >
-              <PlusCircle size={14} />
-              <span>New Incident</span>
-            </button>
-
-            {/* Consolidated Tactical Operations Suite Dropdown */}
-            <div className="tactical-ops-wrapper" style={{ position: 'relative' }}>
-              <button
-                className={`btn-calm-secondary tactical-ops-trigger ${isTacticalOpsOpen ? 'active' : ''} ${isMciActive ? 'mci-alert' : ''}`}
-                onClick={() => setIsTacticalOpsOpen(!isTacticalOpsOpen)}
-                title="Open Advanced Tactical Operations Suite (Next-Gen 112, V2X, MCI, Drone DFR, QA, ED Capacity)"
-              >
-                <Activity size={13} className={isMciActive ? 'text-red' : 'text-sky'} />
-                <span>Operations Suite</span>
-                <ChevronDown size={12} className={`transition-transform ${isTacticalOpsOpen ? 'rotate-180' : ''}`} />
-                {isMciActive && <span className="mci-dot-badge" />}
-              </button>
-
-              {isTacticalOpsOpen && (
-                <div className="tactical-ops-menu" onClick={() => setIsTacticalOpsOpen(false)}>
-                  <div className="tactical-menu-header">
-                    <span>ADVANCED CAD SUBSYSTEMS</span>
-                  </div>
-
-                  {onOpenNG911Video && (
-                    <button className="tactical-menu-item" onClick={onOpenNG911Video}>
-                      <Video size={14} className="text-sky" />
-                      <div className="menu-text">
-                        <strong>Next-Gen 112 Live Video</strong>
-                        <small>Caller WebRTC feed & indoor altimetry</small>
-                      </div>
-                    </button>
-                  )}
-
-                  {onOpenV2X && (
-                    <button className="tactical-menu-item" onClick={onOpenV2X}>
-                      <Navigation size={14} className="text-emerald" />
-                      <div className="menu-text">
-                        <strong>V2X Green Wave Preemption</strong>
-                        <small>Traffic signal priority corridor HUD</small>
-                      </div>
-                    </button>
-                  )}
-
-                  {onOpenMciTriage && (
-                    <button className="tactical-menu-item" onClick={onOpenMciTriage}>
-                      <ShieldAlert size={14} className="text-red" />
-                      <div className="menu-text">
-                        <strong>MCI START/SALT Triage</strong>
-                        <small>Mass casualty matrix & load balancer</small>
-                      </div>
-                    </button>
-                  )}
-
-                  {onOpenDroneDispatch && (
-                    <button className="tactical-menu-item" onClick={onOpenDroneDispatch}>
-                      <Plane size={14} className="text-sky" />
-                      <div className="menu-text">
-                        <strong>Drone First Responder (DFR)</strong>
-                        <small>Autonomous UAV AED/Narcan dispatch</small>
-                      </div>
-                    </button>
-                  )}
-
-                  {onOpenClinicalQa && (
-                    <button className="tactical-menu-item" onClick={onOpenClinicalQa}>
-                      <Award size={14} className="text-emerald" />
-                      <div className="menu-text">
-                        <strong>Clinical QA/QI Scorecard</strong>
-                        <small>AHA / ACLS protocol compliance</small>
-                      </div>
-                    </button>
-                  )}
-
-                  <div className="tactical-menu-divider" />
-
-                  {onOpenCapacityHud && (
-                    <button className="tactical-menu-item" onClick={onOpenCapacityHud}>
-                      <Building2 size={14} className="text-sky" />
-                      <div className="menu-text">
-                        <strong>Regional ED Capacity HUD</strong>
-                        <small>Live trauma bay & diversion network</small>
-                      </div>
-                    </button>
-                  )}
-
-                  {onToggleMci && (
-                    <button
-                      className={`tactical-menu-item ${isMciActive ? 'mci-item-active' : ''}`}
-                      onClick={onToggleMci}
-                    >
-                      <AlertTriangle size={14} className={isMciActive ? 'text-red animate-pulse' : 'text-amber'} />
-                      <div className="menu-text">
-                        <strong style={{ color: isMciActive ? '#fca5a5' : undefined }}>
-                          {isMciActive ? 'Deactivate MCI Mode' : 'Declare Mass Casualty (MCI)'}
-                        </strong>
-                        <small>{isMciActive ? 'Stand down regional emergency protocol' : 'Engage mutual aid & diversion override'}</small>
-                      </div>
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* File Persistence Action */}
-            <button
-              className="btn-calm-secondary"
-              onClick={onOpenSaveModal}
-              title="Save CAD database, telemetry snapshots & CSV exports to disk"
-            >
-              <Save size={13} className="text-sky" />
-              <span>Save</span>
-              <span className="calm-green-dot" />
-            </button>
-          </>
-        )}
-
-        {currentRole === 'DRIVER' && (
-          <div className="role-context-badge driver">
-            <Truck size={14} className="text-amber" />
-            <span>Paramedic MDT Navigation Terminal</span>
           </div>
         )}
 
-        {currentRole === 'HOSPITAL' && (
-          <div className="role-context-badge hospital">
-            <Building2 size={14} className="text-emerald" />
-            <span>Emergency Dept & Trauma Triage</span>
+        {/* Right side controls */}
+        <Row gap={8} align="center" style={{ flexShrink: 0 }}>
+          {/* Connection chip: "Live" + subtle pulsing 6px dot */}
+          <div
+            className="m3-hide-tablet"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '4px 10px',
+              borderRadius: '16px',
+              backgroundColor: 'var(--md-sys-color-surface-variant)',
+              fontSize: '12px',
+              color: 'var(--md-sys-color-text)',
+              userSelect: 'none',
+            }}
+          >
+            <span
+              style={{
+                width: '6px',
+                height: '6px',
+                borderRadius: '50%',
+                backgroundColor: isConnected ? 'var(--md-sys-color-success)' : 'var(--md-sys-color-error)',
+                display: 'inline-block',
+              }}
+            />
+            <span>{isConnected ? 'Live' : 'Offline'}</span>
           </div>
-        )}
 
-        {/* Grouped Secondary Utilities Cluster */}
-        <div className="utility-cluster">
-          <button
-            className="util-btn"
-            onClick={onOpenAICopilot}
-            title="Aegis AI Dispatch Assistant"
+          {/* Clock: hh:mm:ss in tabular numerals (Roboto, not mono) */}
+          <div
+            className="m3-hide-mobile"
+            style={{
+              fontSize: '14px',
+              fontFeatureSettings: '"tnum"',
+              fontVariantNumeric: 'tabular-nums',
+              color: 'var(--md-sys-color-text-secondary)',
+              userSelect: 'none',
+              minWidth: '60px',
+              textAlign: 'center',
+            }}
           >
-            <Bot size={15} />
-          </button>
+            {currentTime || '00:00:00'}
+          </div>
 
-          <button
-            className="util-btn"
-            onClick={onOpenMaintenance}
-            title="Fleet Diagnostics & Telemetry"
-          >
-            <Wrench size={15} />
-          </button>
-
-          <button
-            className="util-btn"
-            onClick={onOpenPredictive}
-            title="Predictive Resource Pre-Positioning"
-          >
-            <TrendingUp size={15} />
-          </button>
-
-          <button
-            className={`util-btn ${!isAudioEnabled ? 'muted' : ''}`}
-            onClick={onToggleAudio}
-            title={isAudioEnabled ? 'Alert Chimes: Active' : 'Alert Chimes: Muted'}
-          >
-            {isAudioEnabled ? <Volume2 size={15} /> : <VolumeX size={15} />}
-          </button>
-
-          <button
-            className="util-btn"
-            onClick={onResetData}
-            title="Reset Simulation Demo Data"
-          >
-            <RotateCcw size={14} />
-          </button>
-
-          {onOpenLegal && (
-            <button
-              className="util-btn"
-              onClick={() => onOpenLegal('privacy')}
-              title="Privacy Policy, Terms of Service & Compliance"
-            >
-              <Scale size={15} />
-            </button>
+          {/* Theme toggle */}
+          {onToggleTheme && (
+            <IconButton
+              icon={theme === 'dark' ? 'light_mode' : 'dark_mode'}
+              size="standard"
+              onClick={onToggleTheme}
+              aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
+            />
           )}
-        </div>
 
-        {/* Minimalist Live Connection Pill */}
-        <div
-          className={`calm-connection-badge ${isConnected ? 'online' : 'offline'}`}
-          title={
-            isConnected
-              ? (isVirtualMode
-                  ? 'Connected to Aegis Cloud Virtual Gateway (99.99% SLA • Real-time CAD Simulation)'
-                  : 'Connected to Live WebSocket Gateway')
-              : 'Reconnecting to Gateway...'
-          }
-        >
-          <span className="connection-beacon" />
-          <span className="connection-label">{isConnected ? 'LIVE' : 'OFFLINE'}</span>
-        </div>
+          {/* Auto-dispatch toggle (Switch with label, default OFF) */}
+          {currentRole === 'DISPATCHER' && onToggleAutoDispatch && (
+            <div className="m3-hide-tablet">
+              <Switch
+                checked={autoDispatchEnabled}
+                onChange={onToggleAutoDispatch}
+                label="Auto-dispatch"
+              />
+            </div>
+          )}
 
-        {onLogout && (
-          <button
-            className="btn-calm-logout"
-            onClick={onLogout}
-            title="Sign Out of Central CAD and Return to Gateway"
-          >
-            <LogOut size={13} />
-            <span>Sign Out</span>
-          </button>
-        )}
-      </div>
-    </header>
+          {/* "New incident" filled button (40px, primary) */}
+          {currentRole === 'DISPATCHER' && (
+            <Button
+              variant="filled"
+              size="standard"
+              icon="add"
+              onClick={onOpenNewEmergency}
+              style={{ height: '40px' }}
+            >
+              <span className="m3-hide-mobile">New incident</span>
+            </Button>
+          )}
+
+          {/* User avatar with chevron */}
+          <div style={{ position: 'relative' }}>
+            <button
+              ref={userMenuAnchorRef}
+              type="button"
+              onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '4px 8px',
+                borderRadius: '20px',
+                color: 'var(--md-sys-color-text)',
+                backgroundColor: isUserMenuOpen ? 'var(--md-sys-color-surface-variant)' : 'transparent',
+              }}
+              aria-label="User account menu"
+              aria-expanded={isUserMenuOpen}
+            >
+              <div
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  backgroundColor: 'var(--md-sys-color-primary-container)',
+                  color: 'var(--md-sys-color-on-primary-container)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                }}
+              >
+                {displayName.charAt(0)}
+              </div>
+              <Icon name="expand_more" size={18} />
+            </button>
+
+            <MenuPopover
+              isOpen={isUserMenuOpen}
+              anchorRef={userMenuAnchorRef}
+              onClose={() => setIsUserMenuOpen(false)}
+              width={200}
+            >
+              <div style={{ padding: '8px 16px' }}>
+                <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--md-sys-color-text)' }}>
+                  {displayName}
+                </div>
+                <div style={{ fontSize: '12px', color: 'var(--md-sys-color-text-secondary)' }}>
+                  Dispatcher
+                </div>
+              </div>
+              <div style={{ height: '1px', backgroundColor: 'var(--md-sys-color-outline)', margin: '4px 0' }} />
+              {onLogout && (
+                <button
+                  type="button"
+                  className="m3-menu-item"
+                  onClick={() => {
+                    setIsUserMenuOpen(false);
+                    onLogout();
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    width: '100%',
+                    padding: '10px 16px',
+                    border: 'none',
+                    background: 'none',
+                    color: 'var(--md-sys-color-error)',
+                    fontSize: '14px',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                  }}
+                >
+                  <Icon name="logout" size={20} />
+                  <span>Sign out</span>
+                </button>
+              )}
+            </MenuPopover>
+          </div>
+
+          {/* Overflow ⋮ IconButton: MenuPopover with AT MOST 5 items */}
+          <div style={{ position: 'relative' }}>
+            <IconButton
+              icon="more_vert"
+              size="standard"
+              onClick={() => setIsOverflowOpen(!isOverflowOpen)}
+              aria-label="More options"
+            />
+
+            <MenuPopover
+              isOpen={isOverflowOpen}
+              anchorRef={overflowAnchorRef}
+              onClose={() => setIsOverflowOpen(false)}
+              width={200}
+            >
+            {/* 1. Export data */}
+            <button
+              type="button"
+              className="m3-menu-item"
+              onClick={() => {
+                setIsOverflowOpen(false);
+                if (onExportData) onExportData();
+              }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                width: '100%',
+                padding: '10px 16px',
+                border: 'none',
+                background: 'none',
+                color: 'var(--md-sys-color-text)',
+                fontSize: '14px',
+                cursor: 'pointer',
+                textAlign: 'left',
+              }}
+            >
+              <Icon name="file_download" size={20} />
+              <span>Export data</span>
+            </button>
+
+            {/* 2. Mute alerts */}
+            <button
+              type="button"
+              className="m3-menu-item"
+              onClick={() => {
+                setIsOverflowOpen(false);
+                onToggleAudio();
+              }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                width: '100%',
+                padding: '10px 16px',
+                border: 'none',
+                background: 'none',
+                color: 'var(--md-sys-color-text)',
+                fontSize: '14px',
+                cursor: 'pointer',
+                textAlign: 'left',
+              }}
+            >
+              <Icon name={isAudioEnabled ? 'volume_off' : 'volume_up'} size={20} />
+              <span>{isAudioEnabled ? 'Mute alerts' : 'Unmute alerts'}</span>
+            </button>
+
+            {/* 3. Settings */}
+            <button
+              type="button"
+              className="m3-menu-item"
+              onClick={() => {
+                setIsOverflowOpen(false);
+                setIsSettingsOpen(true);
+              }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                width: '100%',
+                padding: '10px 16px',
+                border: 'none',
+                background: 'none',
+                color: 'var(--md-sys-color-text)',
+                fontSize: '14px',
+                cursor: 'pointer',
+                textAlign: 'left',
+              }}
+            >
+              <Icon name="settings" size={20} />
+              <span>Settings</span>
+            </button>
+
+            {/* 4. About */}
+            <button
+              type="button"
+              className="m3-menu-item"
+              onClick={() => {
+                setIsOverflowOpen(false);
+                setIsAboutOpen(true);
+              }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                width: '100%',
+                padding: '10px 16px',
+                border: 'none',
+                background: 'none',
+                color: 'var(--md-sys-color-text)',
+                fontSize: '14px',
+                cursor: 'pointer',
+                textAlign: 'left',
+              }}
+            >
+              <Icon name="info" size={20} />
+              <span>About</span>
+            </button>
+
+            {/* 5. Sign out */}
+            {onLogout && (
+              <>
+                <div style={{ height: '1px', backgroundColor: 'var(--md-sys-color-outline)', margin: '4px 0' }} />
+                <button
+                  type="button"
+                  className="m3-menu-item"
+                  onClick={() => {
+                    setIsOverflowOpen(false);
+                    onLogout();
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    width: '100%',
+                    padding: '10px 16px',
+                    border: 'none',
+                    background: 'none',
+                    color: 'var(--md-sys-color-error)',
+                    fontSize: '14px',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                  }}
+                >
+                  <Icon name="logout" size={20} />
+                  <span>Sign out</span>
+                </button>
+              </>
+            )}
+          </MenuPopover>
+        </div>
+      </Row>
+      </header>
+
+      {/* About Dialog */}
+      <Dialog
+        isOpen={isAboutOpen}
+        onClose={() => setIsAboutOpen(false)}
+        title="About Aegis Dispatch"
+        confirmLabel="Close"
+        onConfirm={() => setIsAboutOpen(false)}
+      >
+        <div style={{ fontSize: '14px', lineHeight: '20px', color: 'var(--md-sys-color-text-secondary)' }}>
+          <p style={{ marginTop: 0 }}>
+            Aegis is an emergency response and dispatch coordination prototype built on Google Material Design 3.
+          </p>
+          <p>
+            It provides unified real-time dispatch management, paramedic vehicle routing, hospital emergency department coordination, and citizen assistance.
+          </p>
+        </div>
+      </Dialog>
+
+      {/* Settings Dialog */}
+      <Dialog
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        title="CAD Terminal Settings"
+        confirmLabel="Save"
+        onConfirm={() => setIsSettingsOpen(false)}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', fontSize: '14px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <div style={{ fontWeight: 500, color: 'var(--md-sys-color-text)' }}>Audible dispatch chimes</div>
+              <div style={{ fontSize: '12px', color: 'var(--md-sys-color-text-secondary)' }}>Play sound on new high-priority incidents</div>
+            </div>
+            <Switch checked={isAudioEnabled} onChange={onToggleAudio} />
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <div style={{ fontWeight: 500, color: 'var(--md-sys-color-text)' }}>Automatic dispatch suggestions</div>
+              <div style={{ fontSize: '12px', color: 'var(--md-sys-color-text-secondary)' }}>Highlight best-fit units using OSRM travel time</div>
+            </div>
+            <Switch
+              checked={autoDispatchEnabled}
+              onChange={(c) => onToggleAutoDispatch && onToggleAutoDispatch(c)}
+            />
+          </div>
+        </div>
+      </Dialog>
+    </>
   );
 };

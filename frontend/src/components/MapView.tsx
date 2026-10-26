@@ -24,6 +24,8 @@ import {
 import { Ambulance, Emergency, Hospital, Dispatch } from '../types';
 import { getAmbulanceIcon, getEmergencyIcon, getHospitalIcon } from '../utils/mapIcons';
 import { MissionHUD } from './MissionHUD';
+import { Chip } from './common/Chip';
+import { Icon } from './common/Icon';
 
 export type MapTileLayer = 'OSM_CLEAN' | 'SATELLITE' | 'TERRAIN';
 
@@ -264,172 +266,90 @@ export const MapView: React.FC<MapViewProps> = ({
 
   return (
     <div className="map-wrapper">
-      {/* Tactical Map Floating Command Toolbar with Min 38px Ergonomics */}
-      <div className="map-command-toolbar">
-        {/* Fit Bounds / Recenter Fleet */}
+      {/* M3 Map Layer & Entity Filter Chips (Top-Left) */}
+      <div className="m3-map-layer-chips">
+        <Chip
+          label={`Incidents [${activeEmergencies.length}]`}
+          icon="report_problem"
+          selected={showIncidents}
+          variant="filter"
+          onClick={() => setShowIncidents(!showIncidents)}
+        />
+        <Chip
+          label={`Units [${ambulances.length}]`}
+          icon="ambulance"
+          selected={showFleet}
+          variant="filter"
+          onClick={() => setShowFleet(!showFleet)}
+        />
+        <Chip
+          label={`Hospitals [${hospitals.length}]`}
+          icon="local_hospital"
+          selected={showHospitals}
+          variant="filter"
+          onClick={() => setShowHospitals(!showHospitals)}
+        />
+        <Chip
+          label="Traffic"
+          icon="traffic"
+          selected={showTraffic}
+          variant="filter"
+          onClick={() => setShowTraffic(!showTraffic)}
+        />
+
+        {/* Fit Extents */}
         <button
-          className="map-tool-btn"
+          type="button"
+          className="m3-map-chip-btn"
           onClick={() => setFitTrigger((prev) => prev + 1)}
-          title="Fit bounds around all active vehicles and emergency scenes"
+          title="Fit view to all active units and scenes"
         >
-          <Crosshair size={14} className="text-sky" />
-          <span>Fit Extents</span>
+          <Icon name="crop_free" size={18} />
+          <span>Fit</span>
         </button>
 
-        {/* Entity Filters */}
-        <div className="entity-filters">
+        {/* Basemap Switcher */}
+        <div className="m3-map-basemap-container">
           <button
-            className={`filter-pill ${showIncidents ? 'active-red' : ''}`}
-            onClick={() => setShowIncidents(!showIncidents)}
-            title="Toggle Emergency Incident Markers"
-          >
-            <MapPin size={12} />
-            <span>Incidents ({activeEmergencies.length})</span>
-          </button>
-
-          <button
-            className={`filter-pill ${showFleet ? 'active-emerald' : ''}`}
-            onClick={() => setShowFleet(!showFleet)}
-            title="Toggle Fleet Ambulance Markers"
-          >
-            <Shield size={12} />
-            <span>Fleet ({ambulances.length})</span>
-          </button>
-
-          <button
-            className={`filter-pill ${showHospitals ? 'active-sky' : ''}`}
-            onClick={() => setShowHospitals(!showHospitals)}
-            title="Toggle Regional Hospital Markers"
-          >
-            <Building2 size={12} />
-            <span>Hospitals ({hospitals.length})</span>
-          </button>
-
-          <button
-            className={`filter-pill ${showTraffic ? 'active-amber' : ''}`}
-            onClick={() => setShowTraffic(!showTraffic)}
-            title="Toggle Real-Time Traffic Arterial Overlays"
-          >
-            <Activity size={12} />
-            <span>Traffic Flow</span>
-          </button>
-
-          {/* Predictive Fleet Staging Toggle */}
-          <button
-            className={`filter-pill ${showStaging ? 'active-red' : ''}`}
-            onClick={() => setShowStaging(!showStaging)}
-            title="Toggle Predictive Demand Heatmaps & Staging Zones"
-            style={showStaging ? { background: 'rgba(239, 68, 68, 0.2)', borderColor: '#ef4444' } : undefined}
-          >
-            <Flame size={12} className={showStaging ? 'text-red' : ''} />
-            <span>Staging ({stagingHeatZones.length})</span>
-          </button>
-        </div>
-
-        {/* Map Layer Switcher (Clean OpenStreetMap & Satellite) */}
-        <div className="map-layer-dropdown-container">
-          <button
-            className="map-tool-btn layer-btn"
+            type="button"
+            className="m3-map-chip-btn"
             onClick={() => setShowLayerMenu(!showLayerMenu)}
-            title="Switch Map Basemap Style"
+            title="Switch map style"
           >
-            <Layers size={14} />
-            <span>{mapLayer === 'OSM_CLEAN' ? 'OpenStreetMap' : mapLayer === 'SATELLITE' ? 'Satellite' : 'Terrain'}</span>
+            <Icon name="layers" size={18} />
+            <span>{mapLayer === 'OSM_CLEAN' ? 'Map' : mapLayer === 'SATELLITE' ? 'Satellite' : 'Terrain'}</span>
           </button>
 
           {showLayerMenu && (
-            <div className="layer-dropdown">
+            <div className="m3-layer-dropdown">
               <button
-                className={`layer-option ${mapLayer === 'OSM_CLEAN' ? 'active' : ''}`}
+                type="button"
+                className={`m3-menu-item ${mapLayer === 'OSM_CLEAN' ? 'is-active' : ''}`}
                 onClick={() => { setMapLayer('OSM_CLEAN'); setShowLayerMenu(false); }}
               >
-                <strong>OpenStreetMap</strong>
-                <small>Live cartography — roads, names, POIs</small>
+                <Icon name="map" size={18} />
+                <span>OpenStreetMap</span>
               </button>
               <button
-                className={`layer-option ${mapLayer === 'SATELLITE' ? 'active' : ''}`}
+                type="button"
+                className={`m3-menu-item ${mapLayer === 'SATELLITE' ? 'is-active' : ''}`}
                 onClick={() => { setMapLayer('SATELLITE'); setShowLayerMenu(false); }}
               >
-                <strong>Satellite Imagery</strong>
-                <small>Photorealistic aerial photography (Esri)</small>
+                <Icon name="satellite_alt" size={18} />
+                <span>Satellite imagery</span>
               </button>
               <button
-                className={`layer-option ${mapLayer === 'TERRAIN' ? 'active' : ''}`}
+                type="button"
+                className={`m3-menu-item ${mapLayer === 'TERRAIN' ? 'is-active' : ''}`}
                 onClick={() => { setMapLayer('TERRAIN'); setShowLayerMenu(false); }}
               >
-                <strong>Topographic Terrain</strong>
-                <small>Elevation contours for hilly rescue routes</small>
+                <Icon name="terrain" size={18} />
+                <span>Topographic terrain</span>
               </button>
             </div>
           )}
         </div>
       </div>
-
-      {/* Map Reticle Watermark */}
-      <div className="map-hud-watermark">
-        <span>SECTOR 4 · BENGALURU METRO · 12.9716°N 77.5946°E · LIVE CAD TELEMETRY</span>
-      </div>
-
-      {/* Dynamic Tri-Color Traffic & Transit Rerouting HUD Banner */}
-      {showTraffic && (
-        <div
-          className="traffic-reroute-banner"
-          style={{
-            borderColor:
-              trafficSeverity === 'CRITICAL' ? '#f28b82' : trafficSeverity === 'MODERATE' ? '#8ab4f8' : '#81c995',
-            background:
-              trafficSeverity === 'CRITICAL'
-                ? 'rgba(242, 139, 130, 0.15)'
-                : trafficSeverity === 'MODERATE'
-                ? 'rgba(138, 180, 248, 0.15)'
-                : 'rgba(129, 201, 149, 0.15)',
-          }}
-        >
-          <div className="flex items-center gap-2">
-            {trafficSeverity === 'CRITICAL' ? (
-              <span className="live-dot-red"></span>
-            ) : trafficSeverity === 'MODERATE' ? (
-              <span className="live-dot-blue"></span>
-            ) : (
-              <span className="live-dot-green"></span>
-            )}
-
-            <strong style={{ color: trafficSeverity === 'CRITICAL' ? '#f28b82' : trafficSeverity === 'MODERATE' ? '#8ab4f8' : '#81c995' }}>
-              {trafficSeverity === 'CRITICAL'
-                ? 'CRITICAL ARTERIAL CONGESTION:'
-                : trafficSeverity === 'MODERATE'
-                ? 'MODERATE TRANSIT DELAY:'
-                : 'CLEAR EMERGENCY CORRIDOR:'}
-            </strong>
-
-            <span style={{ color: '#e8eaed', fontSize: '12px' }}>
-              {rerouteActive
-                ? 'Corridor cleared via Cubbon Transit Loop diversion (-4.2m ETA saved).'
-                : trafficSeverity === 'CRITICAL'
-                ? 'Severe gridlock on MG Road Corridor (+8.5m delay). Preemption active.'
-                : trafficSeverity === 'MODERATE'
-                ? 'Heavy flow on Richmond Road (+2.4m delay).'
-                : 'Nominal traffic flow across all primary hospital reception corridors.'}
-            </span>
-
-            {trafficSeverity === 'CRITICAL' && !rerouteActive && (
-              <button
-                className="btn btn-xs btn-primary"
-                onClick={handleApplyReroute}
-                style={{ marginLeft: '10px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                title="Bypass heavy traffic via Cubbon Transit Loop"
-              >
-                <Zap size={11} />
-                <span>Reroute via Cubbon Loop</span>
-              </button>
-            )}
-          </div>
-
-          <div className="weather-hud-pill">
-            <span>27°C MONSOON · ROAD: WET</span>
-          </div>
-        </div>
-      )}
 
       <MapContainer
         center={
@@ -671,7 +591,7 @@ export const MapView: React.FC<MapViewProps> = ({
             >
               <Popup className="custom-popup">
                 <div className="popup-card">
-                  <div className="popup-badge bg-red">112 EMERGENCY (ERSS)</div>
+                  <div className="popup-badge bg-red">EMERGENCY INCIDENT</div>
                   <h3>{em.type}</h3>
                   <p className="popup-address">{em.address}</p>
                   <p className="popup-caller">
@@ -782,7 +702,7 @@ export const MapView: React.FC<MapViewProps> = ({
               style={{
                 position: 'relative',
                 height: '240px',
-                background: 'linear-gradient(180deg, #090d16 0%, #111827 100%)',
+                background: 'var(--md-sys-color-surface)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -794,7 +714,7 @@ export const MapView: React.FC<MapViewProps> = ({
                 style={{
                   position: 'absolute',
                   inset: 0,
-                  background: 'repeating-linear-gradient(0deg, rgba(0,0,0,0.15), rgba(0,0,0,0.15) 1px, transparent 1px, transparent 2px)',
+                  background: 'transparent',
                   pointerEvents: 'none',
                 }}
               />
