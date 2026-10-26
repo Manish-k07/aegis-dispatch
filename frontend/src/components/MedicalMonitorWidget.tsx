@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Activity, Heart, AlertTriangle, ShieldCheck, Zap, Radio, Bell } from 'lucide-react';
 import { PatientVitals } from '../types';
+import { Icon } from './common/Icon';
+import { StatusChip } from './common/StatusChip';
+import { Button } from './common/Button';
 
 interface MedicalMonitorWidgetProps {
   vitals?: PatientVitals;
@@ -49,46 +51,34 @@ export const MedicalMonitorWidget: React.FC<MedicalMonitorWidgetProps> = ({
     const width = clientWidth;
     const baseline = height / 2;
 
-    // Simulated P-QRS-T complex buffer
     const points: number[] = [];
     const stepSize = 2;
-
-    // Dynamically calculate cycle length based on HR (60s / HR * speed)
     const cycleLengthPx = Math.max(50, Math.min(240, Math.round((60 / Math.max(40, hr)) * 140)));
 
     const render = () => {
-      // Clear a small leading eraser bar for medical monitor sweep effect
       ctx.fillStyle = 'rgba(6, 11, 20, 0.25)';
       ctx.fillRect(x, 0, 16, height);
 
-      // Grid background dots
       ctx.strokeStyle = 'rgba(56, 189, 248, 0.05)';
       ctx.lineWidth = 0.5;
 
-      // Generate ECG Y coordinate based on phase of heartbeat
       const cyclePos = (x % cycleLengthPx) / cycleLengthPx;
       let y = baseline;
 
       if (cyclePos > 0.15 && cyclePos < 0.22) {
-        // P wave
         y = baseline - Math.sin(((cyclePos - 0.15) / 0.07) * Math.PI) * 7;
       } else if (cyclePos >= 0.26 && cyclePos < 0.28) {
-        // Q dip
         y = baseline + 6;
       } else if (cyclePos >= 0.28 && cyclePos < 0.33) {
-        // R spike (tall systolic depolarization)
         const rFrac = (cyclePos - 0.28) / 0.05;
         y = baseline - (1 - Math.abs(rFrac - 0.5) * 2) * (height * 0.42);
       } else if (cyclePos >= 0.33 && cyclePos < 0.36) {
-        // S dip
         y = baseline + 10;
       } else if (cyclePos > 0.45 && cyclePos < 0.62) {
-        // T wave (with slight elevation for critical patients)
         const stElevation = isStemiAlertActive ? 12 : 0;
         y = baseline - Math.sin(((cyclePos - 0.45) / 0.17) * Math.PI) * (10 + stElevation);
       }
 
-      // Draw glowing ECG sweep trace
       ctx.beginPath();
       const prevX = (x - stepSize + width) % width;
       const prevY = points[Math.floor(prevX / stepSize)] || baseline;
@@ -101,8 +91,8 @@ export const MedicalMonitorWidget: React.FC<MedicalMonitorWidgetProps> = ({
       ctx.stroke();
 
       points[Math.floor(x / stepSize)] = y;
-
       x = (x + stepSize) % width;
+
       animationId = requestAnimationFrame(render);
     };
 
@@ -111,18 +101,20 @@ export const MedicalMonitorWidget: React.FC<MedicalMonitorWidgetProps> = ({
     return () => {
       cancelAnimationFrame(animationId);
     };
-  }, [isStemiAlertActive, hr, compact]);
+  }, [hr, compact, isStemiAlertActive]);
 
   const handleTriggerCathLab = () => {
     setCathLabActivated(true);
-    if (onActivateCathLab) onActivateCathLab();
+    if (onActivateCathLab) {
+      onActivateCathLab();
+    }
   };
 
   return (
     <div
       className="medical-monitor-card"
       style={{
-        background: 'var(--md-sys-color-surface-high)',
+        background: 'var(--md-sys-color-surface-container-high)',
         border: isStemiAlertActive
           ? '1px solid var(--md-sys-color-error)'
           : '1px solid var(--md-sys-color-outline)',
@@ -135,7 +127,11 @@ export const MedicalMonitorWidget: React.FC<MedicalMonitorWidgetProps> = ({
       {/* Header bar */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Activity size={18} style={{ color: isStemiAlertActive ? 'var(--md-sys-color-error)' : 'var(--md-sys-color-primary)' }} />
+          <Icon
+            name="ecg_heart"
+            size={20}
+            style={{ color: isStemiAlertActive ? 'var(--md-sys-color-error)' : 'var(--md-sys-color-primary)' }}
+          />
           <strong style={{ fontSize: '14px', color: 'var(--md-sys-color-text)', fontWeight: 500 }}>
             ECG Monitor · Lead II Continuous
           </strong>
@@ -146,35 +142,28 @@ export const MedicalMonitorWidget: React.FC<MedicalMonitorWidgetProps> = ({
             style={{
               background: isStemiAlertActive ? 'var(--md-sys-color-error-container)' : 'transparent',
               border: `1px solid ${isStemiAlertActive ? 'var(--md-sys-color-error)' : 'var(--md-sys-color-outline)'}`,
-              color: isStemiAlertActive ? 'var(--md-sys-color-error)' : 'var(--md-sys-color-text-secondary)',
-              fontSize: '11px',
-              padding: '4px 8px',
+              color: isStemiAlertActive ? 'var(--md-sys-color-on-error-container)' : 'var(--md-sys-color-text-secondary)',
+              fontSize: '12px',
+              padding: '4px 12px',
               borderRadius: '9999px',
               fontWeight: 500,
               cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+              transition: 'background-color 150ms ease, border-color 150ms ease',
             }}
           >
             {isStemiAlertActive ? (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                <AlertTriangle size={12} />
-                STEMI simulated
-              </span>
+              <>
+                <Icon name="warning" size={16} />
+                <span>STEMI simulated</span>
+              </>
             ) : (
               'Simulate ST-elevation'
             )}
           </button>
-          <span
-            style={{
-              fontSize: '11px',
-              padding: '2px 8px',
-              borderRadius: '8px',
-              background: 'var(--md-sys-color-surface-variant)',
-              color: 'var(--md-sys-color-text-secondary)',
-              fontWeight: 500,
-            }}
-          >
-            Simulated
-          </span>
+          <StatusChip label="Simulated" tone="warning" size="small" />
         </div>
       </div>
 
@@ -183,7 +172,7 @@ export const MedicalMonitorWidget: React.FC<MedicalMonitorWidgetProps> = ({
         style={{
           position: 'relative',
           background: '#040711',
-          borderRadius: '10px',
+          borderRadius: '8px',
           border: '1px solid rgba(255, 255, 255, 0.08)',
           marginBottom: '16px',
           height: compact ? '80px' : '110px',
@@ -202,17 +191,17 @@ export const MedicalMonitorWidget: React.FC<MedicalMonitorWidgetProps> = ({
             top: '8px',
             left: '10px',
             fontSize: '11px',
-            color: isStemiAlertActive ? '#ef4444' : '#10b981',
-            fontWeight: 800,
-            letterSpacing: '1px',
-            fontFamily: 'monospace',
+            color: isStemiAlertActive ? 'var(--md-sys-color-error)' : 'var(--md-sys-color-success)',
+            fontWeight: 600,
+            letterSpacing: '0.5px',
+            fontFamily: 'var(--font-mono, "Roboto Mono", monospace)',
           }}
         >
           {isStemiAlertActive ? 'ST-ELEVATION DETECTED: +2.4mm V2-V4' : 'NSR · HR: ' + hr + ' BPM'}
         </div>
       </div>
 
-      {/* Vital Metrics Grid with Generous Whitespace */}
+      {/* Vital Metrics Grid */}
       <div
         style={{
           display: 'grid',
@@ -224,54 +213,61 @@ export const MedicalMonitorWidget: React.FC<MedicalMonitorWidgetProps> = ({
         {/* Heart Rate */}
         <div
           style={{
-            background: 'rgba(255, 255, 255, 0.03)',
-            border: '1px solid rgba(255, 255, 255, 0.06)',
-            borderRadius: '10px',
+            background: 'var(--md-sys-color-surface)',
+            border: '1px solid var(--md-sys-color-outline)',
+            borderRadius: '8px',
             padding: '12px',
             textAlign: 'center',
           }}
         >
-          <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600, marginBottom: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
-            <Heart size={12} className="text-red" />
+          <div style={{ fontSize: '11px', color: 'var(--md-sys-color-text-secondary)', fontWeight: 500, marginBottom: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+            <Icon name="favorite" size={14} style={{ color: 'var(--md-sys-color-error)' }} />
             <span>PULSE (HR)</span>
           </div>
-          <div style={{ fontSize: '20px', fontWeight: 800, color: '#f8fafc', letterSpacing: '0.5px' }}>
-            {hr} <span style={{ fontSize: '10px', color: '#64748b' }}>BPM</span>
+          <div className="mono" style={{ fontSize: '18px', fontWeight: 600, color: 'var(--md-sys-color-text)' }}>
+            {hr} <span style={{ fontSize: '11px', color: 'var(--md-sys-color-text-secondary)', fontWeight: 400 }}>BPM</span>
           </div>
         </div>
 
         {/* NIBP */}
         <div
           style={{
-            background: 'rgba(255, 255, 255, 0.03)',
-            border: '1px solid rgba(255, 255, 255, 0.06)',
-            borderRadius: '10px',
+            background: 'var(--md-sys-color-surface)',
+            border: '1px solid var(--md-sys-color-outline)',
+            borderRadius: '8px',
             padding: '12px',
             textAlign: 'center',
           }}
         >
-          <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600, marginBottom: '4px' }}>
+          <div style={{ fontSize: '11px', color: 'var(--md-sys-color-text-secondary)', fontWeight: 500, marginBottom: '4px' }}>
             NIBP
           </div>
-          <div style={{ fontSize: '20px', fontWeight: 800, color: '#f8fafc', letterSpacing: '0.5px' }}>
-            {sys}/{dia} <span style={{ fontSize: '10px', color: '#64748b' }}>mmHg</span>
+          <div className="mono" style={{ fontSize: '18px', fontWeight: 600, color: 'var(--md-sys-color-text)' }}>
+            {sys}/{dia} <span style={{ fontSize: '11px', color: 'var(--md-sys-color-text-secondary)', fontWeight: 400 }}>mmHg</span>
           </div>
         </div>
 
         {/* SpO2 */}
         <div
           style={{
-            background: 'rgba(255, 255, 255, 0.03)',
-            border: '1px solid rgba(255, 255, 255, 0.06)',
-            borderRadius: '10px',
+            background: 'var(--md-sys-color-surface)',
+            border: '1px solid var(--md-sys-color-outline)',
+            borderRadius: '8px',
             padding: '12px',
             textAlign: 'center',
           }}
         >
-          <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600, marginBottom: '4px' }}>
+          <div style={{ fontSize: '11px', color: 'var(--md-sys-color-text-secondary)', fontWeight: 500, marginBottom: '4px' }}>
             SpO₂ (O2)
           </div>
-          <div style={{ fontSize: '20px', fontWeight: 800, color: spo2 < 94 ? '#ef4444' : '#38bdf8', letterSpacing: '0.5px' }}>
+          <div
+            className="mono"
+            style={{
+              fontSize: '18px',
+              fontWeight: 600,
+              color: spo2 < 94 ? 'var(--md-sys-color-error)' : 'var(--md-sys-color-primary)',
+            }}
+          >
             {spo2}%
           </div>
         </div>
@@ -279,18 +275,18 @@ export const MedicalMonitorWidget: React.FC<MedicalMonitorWidgetProps> = ({
         {/* EtCO2 */}
         <div
           style={{
-            background: 'rgba(255, 255, 255, 0.03)',
-            border: '1px solid rgba(255, 255, 255, 0.06)',
-            borderRadius: '10px',
+            background: 'var(--md-sys-color-surface)',
+            border: '1px solid var(--md-sys-color-outline)',
+            borderRadius: '8px',
             padding: '12px',
             textAlign: 'center',
           }}
         >
-          <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600, marginBottom: '4px' }}>
+          <div style={{ fontSize: '11px', color: 'var(--md-sys-color-text-secondary)', fontWeight: 500, marginBottom: '4px' }}>
             EtCO₂ / RESP
           </div>
-          <div style={{ fontSize: '20px', fontWeight: 800, color: '#f8fafc', letterSpacing: '0.5px' }}>
-            {etco2} <span style={{ fontSize: '10px', color: '#64748b' }}>/{resp}</span>
+          <div className="mono" style={{ fontSize: '18px', fontWeight: 600, color: 'var(--md-sys-color-text)' }}>
+            {etco2} <span style={{ fontSize: '11px', color: 'var(--md-sys-color-text-secondary)', fontWeight: 400 }}>/{resp}</span>
           </div>
         </div>
       </div>
@@ -300,8 +296,8 @@ export const MedicalMonitorWidget: React.FC<MedicalMonitorWidgetProps> = ({
         <div
           style={{
             background: 'var(--md-sys-color-error-container)',
-            border: '1px solid #ef4444',
-            borderRadius: '10px',
+            border: '1px solid var(--md-sys-color-error)',
+            borderRadius: '8px',
             padding: '12px 16px',
             display: 'flex',
             alignItems: 'center',
@@ -310,46 +306,30 @@ export const MedicalMonitorWidget: React.FC<MedicalMonitorWidgetProps> = ({
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <AlertTriangle className="text-red animate-bounce" size={20} />
+            <Icon name="warning" size={24} style={{ color: 'var(--md-sys-color-error)' }} />
             <div>
-              <strong style={{ fontSize: '12px', color: '#fef2f2' }}>ACUTE STEMI PROTOCOL ACTIVATED</strong>
-              <div style={{ fontSize: '11px', color: '#fca5a5' }}>
+              <strong style={{ fontSize: '13px', color: 'var(--md-sys-color-on-error-container)', display: 'block' }}>
+                Acute STEMI protocol activated
+              </strong>
+              <div style={{ fontSize: '12px', color: 'var(--md-sys-color-on-error-container)', opacity: 0.85 }}>
                 ST elevation in Leads V2-V4 · Prepare receiving Hospital Cardiac Cath Lab
               </div>
             </div>
           </div>
 
-          <button
+          <Button
+            variant="filled"
             onClick={handleTriggerCathLab}
             disabled={cathLabActivated}
+            icon={cathLabActivated ? 'verified' : 'bolt'}
             style={{
-              background: cathLabActivated ? '#10b981' : '#dc2626',
-              color: '#ffffff',
-              border: 'none',
-              borderRadius: '8px',
-              padding: '8px 14px',
-              fontSize: '11px',
-              fontWeight: 800,
-              cursor: cathLabActivated ? 'default' : 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              boxShadow: '0 4px 12px rgba(220, 38, 38, 0.4)',
-              letterSpacing: '0.5px',
+              height: '40px',
+              backgroundColor: cathLabActivated ? 'var(--md-sys-color-success)' : 'var(--md-sys-color-emergency)',
+              color: '#FFFFFF',
             }}
           >
-            {cathLabActivated ? (
-              <>
-                <ShieldCheck size={14} />
-                <span>CATH LAB PRE-ACTIVATED</span>
-              </>
-            ) : (
-              <>
-                <Zap size={14} />
-                <span>PRE-ALERT CATH LAB</span>
-              </>
-            )}
-          </button>
+            {cathLabActivated ? 'Cath lab pre-activated' : 'Pre-alert Cath Lab'}
+          </Button>
         </div>
       )}
     </div>

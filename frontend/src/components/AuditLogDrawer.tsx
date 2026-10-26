@@ -22,7 +22,11 @@ export const AuditLogDrawer: React.FC<AuditLogDrawerProps> = ({ logs, liveEvents
           </span>
         </div>
 
-        <button className="btn-collapse">
+        <button
+          className="btn-collapse"
+          aria-label={isOpen ? 'Collapse event log drawer' : 'Expand event log drawer'}
+          title={isOpen ? 'Collapse event log drawer' : 'Expand event log drawer'}
+        >
           {isOpen ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
         </button>
       </div>

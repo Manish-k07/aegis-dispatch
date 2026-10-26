@@ -1,8 +1,13 @@
 import React, { useState } from 'react';
 import { Hospital } from '../types';
 import { Icon } from './common/Icon';
-import { Chip } from './common/Chip';
 import { Button } from './common/Button';
+import { StatusChip } from './common/StatusChip';
+import { FilterChip } from './common/FilterChip';
+import { CountBadge } from './common/CountBadge';
+import { ProgressBar } from './common/ProgressBar';
+import { PhoneLink } from './common/PhoneLink';
+import { ScrollPanel } from './common/ScrollPanel';
 
 interface HospitalListProps {
   hospitals: Hospital[];
@@ -15,9 +20,15 @@ export const HospitalList: React.FC<HospitalListProps> = ({
   hospitals,
   searchQuery = '',
   onSelectHospital,
-  onOpenHospitalDashboard,
 }) => {
   const [filter, setFilter] = useState<'ALL' | 'AVAILABLE' | 'DIVERSION' | 'ICU_READY'>('ALL');
+
+  const counts = {
+    all: hospitals.length,
+    available: hospitals.filter((h) => h.status === 'AVAILABLE').length,
+    icuReady: hospitals.filter((h) => (h.icuBedsAvailable ?? 0) > 0).length,
+    diversion: hospitals.filter((h) => h.status === 'DIVERSION').length,
+  };
 
   const filtered = hospitals.filter((h) => {
     if (searchQuery) {
@@ -36,176 +47,166 @@ export const HospitalList: React.FC<HospitalListProps> = ({
   });
 
   return (
-    <div className="sidebar-section">
-      <div className="section-header">
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', boxSizing: 'border-box' }}>
+      {/* Section Header Row */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '12px 16px 8px 16px',
+        }}
+      >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Icon name="local_hospital" size={18} style={{ color: 'var(--md-sys-color-primary)' }} />
-          <h2 style={{ fontSize: '15px', fontWeight: 600, margin: 0, color: 'var(--md-sys-color-on-surface)' }}>
+          <Icon name="local_hospital" size={20} style={{ color: 'var(--md-sys-color-primary)' }} />
+          <h2 style={{ fontSize: '16px', lineHeight: '24px', fontWeight: 500, margin: 0, color: 'var(--md-sys-color-text)' }}>
             Hospital receiving centers
           </h2>
         </div>
-        <Chip label={`${hospitals.length} centers`} size="small" />
+        <CountBadge count={hospitals.length} tone="neutral" />
       </div>
 
-      <div style={{ display: 'flex', gap: '6px', marginBottom: '12px', flexWrap: 'wrap' }}>
-        {[
-          { id: 'ALL', label: `All (${hospitals.length})` },
-          { id: 'AVAILABLE', label: 'Available' },
-          { id: 'ICU_READY', label: 'ICU ready' },
-          { id: 'DIVERSION', label: 'Diversion' },
-        ].map((tab) => (
-          <Chip
-            key={tab.id}
-            label={tab.label}
-            selected={filter === tab.id}
-            onClick={() => setFilter(tab.id as any)}
-            size="small"
-          />
-        ))}
+      {/* Filter Chips: Every chip shows a count */}
+      <div style={{ display: 'flex', gap: '8px', padding: '0 16px 12px 16px', flexWrap: 'wrap' }}>
+        <FilterChip
+          label="All"
+          count={counts.all}
+          selected={filter === 'ALL'}
+          onClick={() => setFilter('ALL')}
+        />
+        <FilterChip
+          label="Available"
+          count={counts.available}
+          selected={filter === 'AVAILABLE'}
+          onClick={() => setFilter('AVAILABLE')}
+        />
+        <FilterChip
+          label="ICU ready"
+          count={counts.icuReady}
+          selected={filter === 'ICU_READY'}
+          onClick={() => setFilter('ICU_READY')}
+        />
+        <FilterChip
+          label="Diversion"
+          count={counts.diversion}
+          selected={filter === 'DIVERSION'}
+          onClick={() => setFilter('DIVERSION')}
+        />
       </div>
 
-      <div className="fleet-list">
+      {/* Scrollable Hospital Cards List */}
+      <ScrollPanel style={{ flex: 1 }}>
         {filtered.length === 0 ? (
-          <div className="empty-state" style={{ padding: '24px', textAlign: 'center', color: 'var(--md-sys-color-on-surface-variant)', fontSize: '13px' }}>
+          <div style={{ padding: '32px 16px', textAlign: 'center', color: 'var(--md-sys-color-text-secondary)', fontSize: '13px' }}>
             No receiving facilities match the active filter.
           </div>
         ) : (
-          filtered.map((hosp) => {
-            const isAvailable = hosp.status === 'AVAILABLE';
-            const isDiversion = hosp.status === 'DIVERSION';
-            const icuAvail = hosp.icuBedsAvailable ?? 5;
-            const traumaAvail = hosp.traumaBaysAvailable ?? 3;
-            const bedsAvail = hosp.availableBeds ?? 30;
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {filtered.map((hosp) => {
+              const isAvailable = hosp.status === 'AVAILABLE';
+              const isDiversion = hosp.status === 'DIVERSION';
+              const icuAvail = hosp.icuBedsAvailable ?? 5;
+              const traumaAvail = hosp.traumaBaysAvailable ?? 3;
+              const erAvail = hosp.availableBeds ?? 48;
+              const totalEr = 250;
+              const totalIcu = 30;
+              const totalTrauma = 10;
 
-            return (
-              <div
-                key={hosp.id}
-                onClick={() => onSelectHospital(hosp)}
-                style={{
-                  padding: '14px',
-                  borderRadius: '12px',
-                  border: '1px solid var(--md-sys-color-outline)',
-                  backgroundColor: 'var(--md-sys-color-surface)',
-                  marginBottom: '10px',
-                  cursor: 'pointer',
-                  transition: 'background-color 0.15s ease, border-color 0.15s ease',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '6px' }}>
-                  <div>
-                    <strong style={{ fontSize: '14px', color: 'var(--md-sys-color-on-surface)' }}>
-                      {hosp.name}
-                    </strong>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: 'var(--md-sys-color-on-surface-variant)', marginTop: '2px' }}>
-                      <Icon name="location_on" size={14} style={{ flexShrink: 0 }} />
-                      <span>{hosp.address}</span>
-                    </div>
-                  </div>
-                  <span
-                    style={{
-                      fontSize: '11px',
-                      padding: '2px 8px',
-                      borderRadius: '6px',
-                      backgroundColor: isDiversion
-                        ? 'var(--md-sys-color-error-container)'
-                        : isAvailable
-                        ? 'var(--md-sys-color-success-container)'
-                        : 'var(--md-sys-color-surface-container-high)',
-                      color: isDiversion
-                        ? 'var(--md-sys-color-error)'
-                        : isAvailable
-                        ? 'var(--md-sys-color-success)'
-                        : 'var(--md-sys-color-on-surface-variant)',
-                      fontWeight: 600,
-                      textTransform: 'capitalize',
-                    }}
-                  >
-                    {hosp.status.toLowerCase().replace(/_/g, ' ')}
-                  </span>
-                </div>
-
-                <div style={{ fontSize: '12px', color: 'var(--md-sys-color-on-surface-variant)', marginBottom: '8px' }}>
-                  <span>Phone: <strong style={{ fontFamily: 'Roboto Mono, monospace' }}>{hosp.phone}</strong></span>
-                </div>
-
-                {/* Live Capacity Indicators */}
+              return (
                 <div
+                  key={hosp.id}
                   style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(3, 1fr)',
-                    gap: '6px',
-                    margin: '8px 0',
-                    backgroundColor: 'var(--md-sys-color-surface-container-low)',
-                    padding: '8px',
-                    borderRadius: '8px',
-                    border: '1px solid var(--md-sys-color-outline-variant)',
-                  }}
-                >
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: '11px', color: 'var(--md-sys-color-on-surface-variant)' }}>ER beds</div>
-                    <strong style={{ fontSize: '13px', color: 'var(--md-sys-color-on-surface)', fontFamily: 'Roboto Mono, monospace' }}>
-                      {bedsAvail} <span style={{ fontSize: '10px', color: 'var(--md-sys-color-on-surface-variant)' }}>/ {hosp.totalBeds ?? 120}</span>
-                    </strong>
-                  </div>
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: '11px', color: 'var(--md-sys-color-on-surface-variant)' }}>ICU bays</div>
-                    <strong style={{ fontSize: '13px', color: icuAvail <= 2 ? 'var(--md-sys-color-error)' : 'var(--md-sys-color-primary)', fontFamily: 'Roboto Mono, monospace' }}>
-                      {icuAvail} <span style={{ fontSize: '10px', color: 'var(--md-sys-color-on-surface-variant)' }}>/ {hosp.icuBedsTotal ?? 20}</span>
-                    </strong>
-                  </div>
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: '11px', color: 'var(--md-sys-color-on-surface-variant)' }}>Trauma bays</div>
-                    <strong style={{ fontSize: '13px', color: 'var(--md-sys-color-success)', fontFamily: 'Roboto Mono, monospace' }}>
-                      {traumaAvail} <span style={{ fontSize: '10px', color: 'var(--md-sys-color-on-surface-variant)' }}>/ {hosp.traumaBaysTotal ?? 8}</span>
-                    </strong>
-                  </div>
-                </div>
-
-                <div
-                  style={{
+                    padding: '16px',
+                    borderRadius: 'var(--radius-card)',
+                    border: '1px solid var(--md-sys-color-outline)',
+                    backgroundColor: 'var(--md-sys-color-surface)',
+                    boxShadow: 'var(--elevation-1)',
                     display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    marginTop: '8px',
-                    paddingTop: '8px',
-                    borderTop: '1px solid var(--md-sys-color-outline-variant)',
+                    flexDirection: 'column',
+                    gap: '12px',
+                    transition: 'border-color 150ms ease, box-shadow 150ms ease',
                   }}
                 >
-                  <div>
-                    {hosp.cathLabOperational && (
-                      <span
-                        style={{
-                          fontSize: '11px',
-                          padding: '2px 6px',
-                          borderRadius: '4px',
-                          backgroundColor: 'var(--md-sys-color-surface-container-high)',
-                          color: 'var(--md-sys-color-on-surface-variant)',
-                        }}
-                      >
-                        Cath lab 24/7
-                      </span>
-                    )}
+                  {/* Top row: Hospital Name + StatusChip */}
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }}>
+                    <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--md-sys-color-text)' }}>
+                      {hosp.name}
+                    </div>
+                    <StatusChip
+                      label={isDiversion ? 'Diversion' : isAvailable ? 'Available' : 'Limited'}
+                      tone={isDiversion ? 'error' : isAvailable ? 'success' : 'warning'}
+                      size="small"
+                    />
                   </div>
 
-                  {onOpenHospitalDashboard && (
-                    <Button
-                      variant="text"
-                      size="small"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onOpenHospitalDashboard(hosp);
-                      }}
-                      endIcon={<Icon name="open_in_new" size={14} />}
-                    >
-                      Open ED
-                    </Button>
+                  {/* Address with location icon */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: 'var(--md-sys-color-text-secondary)' }}>
+                    <Icon name="location_on" size={16} style={{ flexShrink: 0 }} />
+                    <span>{hosp.address}</span>
+                  </div>
+
+                  {/* PhoneLink */}
+                  {hosp.phone && (
+                    <div>
+                      <PhoneLink phone={hosp.phone} />
+                    </div>
                   )}
+
+                  {/* 3 Capacity rows with ProgressBars */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '10px 12px', backgroundColor: 'var(--md-sys-color-surface-container)', borderRadius: '8px' }}>
+                    <ProgressBar label="ER beds" current={erAvail} total={totalEr} />
+                    <ProgressBar label="ICU beds" current={icuAvail} total={totalIcu} />
+                    <ProgressBar label="Trauma bays" current={traumaAvail} total={totalTrauma} />
+                  </div>
+
+                  {/* Specialties as small chips */}
+                  {(() => {
+                    const specs = [
+                      hosp.cardiacServices && 'Cardiac',
+                      hosp.pediatricServices && 'Pediatrics',
+                      hosp.maternityServices && 'Maternity',
+                      hosp.icuAvailable && 'ICU',
+                    ].filter(Boolean) as string[];
+
+                    if (specs.length === 0) return null;
+
+                    return (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                        {specs.map((spec) => (
+                          <span
+                            key={spec}
+                            style={{
+                              fontSize: '11px',
+                              padding: '2px 8px',
+                              borderRadius: '4px',
+                              backgroundColor: 'var(--md-sys-color-surface-container-high)',
+                              color: 'var(--md-sys-color-text-secondary)',
+                              fontWeight: 500,
+                            }}
+                          >
+                            {spec}
+                          </span>
+                        ))}
+                      </div>
+                    );
+                  })()}
+
+                  {/* Action button */}
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '4px' }}>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={() => onSelectHospital(hosp)}
+                    >
+                      Select as destination
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            );
-          })
+              );
+            })}
+          </div>
         )}
-      </div>
+      </ScrollPanel>
     </div>
   );
 };

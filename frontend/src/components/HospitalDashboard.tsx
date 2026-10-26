@@ -12,6 +12,7 @@ import {
   Button,
   Card,
   SectionHeader,
+  ProgressBar,
   StatusChip,
   EmptyState,
   Snackbar,

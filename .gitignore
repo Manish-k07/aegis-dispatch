@@ -35,3 +35,6 @@ Desktop.ini
 # Local tooling & QA screenshots
 .tools/
 frontend/screenshots/
+
+test-results/
+playwright-report/

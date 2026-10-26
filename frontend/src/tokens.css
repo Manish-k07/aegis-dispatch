@@ -36,6 +36,10 @@
   --md-sys-color-text-secondary: #5F6368;
   --md-sys-color-text-muted: #80868B;
 
+  --md-sys-color-surface-high: var(--md-sys-color-surface-container-high);
+  --md-sys-color-surface-variant: var(--md-sys-color-surface-container);
+  --md-sys-color-on-surface-variant: var(--md-sys-color-text-secondary);
+
   /* Universal Emergency Button (Solid #D93025 with white text in BOTH themes) */
   --md-sys-color-emergency: #D93025;
   --md-sys-color-on-emergency: #FFFFFF;
@@ -69,6 +73,20 @@
   --emerald-container: var(--md-sys-color-success-container);
   --emerald-bg: var(--md-sys-color-success-container);
   --sky: var(--md-sys-color-primary);
+
+  /* Elevations, Radii, Heights and Gaps */
+  --elevation-0: none;
+  --elevation-1: 0 1px 2px rgba(60, 64, 67, 0.30), 0 1px 3px 1px rgba(60, 64, 67, 0.15);
+  --elevation-2: 0 1px 3px 0 rgba(60, 64, 67, 0.30), 0 4px 8px 3px rgba(60, 64, 67, 0.15);
+  --radius-card: 12px;
+  --radius-chip: 8px;
+  --control-height-sm: 32px;
+  --control-height-md: 40px;
+  --control-height-lg: 48px;
+  --gap-1: 4px;
+  --gap-2: 8px;
+  --gap-3: 12px;
+  --gap-4: 16px;
 
   color-scheme: light;
 }
@@ -106,6 +124,10 @@
   --md-sys-color-text-secondary: #9AA0A6;
   --md-sys-color-text-muted: #80868B;
 
+  --md-sys-color-surface-high: var(--md-sys-color-surface-container-high);
+  --md-sys-color-surface-variant: var(--md-sys-color-surface-container);
+  --md-sys-color-on-surface-variant: var(--md-sys-color-text-secondary);
+
   /* Universal Emergency Button (Solid #D93025 with white text in BOTH themes) */
   --md-sys-color-emergency: #D93025;
   --md-sys-color-on-emergency: #FFFFFF;
@@ -140,7 +162,55 @@
   --emerald-bg: rgba(129, 201, 149, 0.14);
   --sky: var(--md-sys-color-primary);
 
+  /* Elevations, Radii, Heights and Gaps */
+  --elevation-0: none;
+  --elevation-1: none;
+  --elevation-2: none;
+  --radius-card: 12px;
+  --radius-chip: 8px;
+  --control-height-sm: 32px;
+  --control-height-md: 40px;
+  --control-height-lg: 48px;
+  --gap-1: 4px;
+  --gap-2: 8px;
+  --gap-3: 12px;
+  --gap-4: 16px;
+
   color-scheme: dark;
+}
+
+/* ==========================================================================
+   THEME-AWARE LEAFLET GIS TILE SYSTEM
+   ========================================================================== */
+.leaflet-tile-pane {
+  transition: filter 200ms ease;
+}
+
+[data-theme="dark"] .leaflet-tile-pane {
+  filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.9) saturate(0.6);
+}
+
+.leaflet-control-attribution {
+  background-color: var(--md-sys-color-surface) !important;
+  color: var(--md-sys-color-text-secondary) !important;
+  opacity: 0.85;
+  border-radius: 4px;
+  font-size: 11px !important;
+  margin-bottom: 8px !important;
+  margin-right: 8px !important;
+  padding: 2px 6px !important;
+  box-shadow: var(--elevation-1);
+}
+
+.leaflet-control-attribution a {
+  color: var(--md-sys-color-primary) !important;
+}
+
+.leaflet-top.leaflet-left,
+.leaflet-top.leaflet-right,
+.leaflet-bottom.leaflet-left,
+.leaflet-bottom.leaflet-right {
+  padding: 12px;
 }
 
 /* ==========================================================================

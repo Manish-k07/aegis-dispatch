@@ -135,7 +135,7 @@ export const EmergencyQueue: React.FC<EmergencyQueueProps> = ({
         style={{
           flex: 1,
           overflowY: 'auto',
-          padding: '0 16px 16px',
+          padding: '0 16px 24px',
           display: 'flex',
           flexDirection: 'column',
           gap: '12px',

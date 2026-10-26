@@ -14,6 +14,7 @@ import { HospitalList } from './components/HospitalList';
 import { Footer } from './components/Footer';
 import { LoginGateway } from './components/LoginGateway';
 import { CitizenDashboard } from './components/CitizenDashboard';
+import { Tabs } from './components/common';
 import { Icon } from './components/common/Icon';
 import {
   DashboardData,
@@ -1648,32 +1649,16 @@ export const App: React.FC = () => {
 
           {/* Tactical CAD Sidebar */}
           <aside className="sidebar-section-container">
-            <div className="sidebar-nav">
-              <button
-                className={`nav-tab ${activeTab === 'QUEUE' ? 'active' : ''}`}
-                onClick={() => setActiveTab('QUEUE')}
-              >
-                Incidents ({data.emergencies.length})
-              </button>
-              <button
-                className={`nav-tab ${activeTab === 'MISSIONS' ? 'active' : ''}`}
-                onClick={() => setActiveTab('MISSIONS')}
-              >
-                Missions ({activeDispatchesCount})
-              </button>
-              <button
-                className={`nav-tab ${activeTab === 'FLEET' ? 'active' : ''}`}
-                onClick={() => setActiveTab('FLEET')}
-              >
-                Fleet ({data.ambulances.length})
-              </button>
-              <button
-                className={`nav-tab ${activeTab === 'HOSPITALS' ? 'active' : ''}`}
-                onClick={() => setActiveTab('HOSPITALS')}
-              >
-                Hospitals ({data.hospitals.length})
-              </button>
-            </div>
+            <Tabs
+              tabs={[
+                { id: 'QUEUE', label: 'Incidents', badge: data.emergencies.length },
+                { id: 'MISSIONS', label: 'Missions', badge: activeDispatchesCount },
+                { id: 'FLEET', label: 'Fleet', badge: data.ambulances.length },
+                { id: 'HOSPITALS', label: 'Hospitals', badge: data.hospitals.length },
+              ]}
+              activeTab={activeTab}
+              onChange={(tabId) => setActiveTab(tabId as any)}
+            />
 
             <div className="sidebar-body">
               {activeTab === 'QUEUE' && (
@@ -1774,6 +1759,7 @@ export const App: React.FC = () => {
       <Footer
         isConnected={isConnected}
         isVirtualMode={isVirtualMode}
+        latestEvent={liveEvents[0] || 'System initialized. Live monitoring active.'}
       />
 
       {/* System Audit Drawer */}

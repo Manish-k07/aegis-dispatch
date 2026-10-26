@@ -2,9 +2,9 @@ name: Production Build Verification
 
 on:
   push:
-    branches: [main, production/cloud-run-hardening]
+    branches: [main, production/cloud-run-hardening, ui/dashboard-polish]
   pull_request:
-    branches: [main]
+    branches: [main, ui/dashboard-polish]
 
 permissions:
   contents: read
@@ -23,6 +23,7 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
+      - run: npm run lint:m3
       - run: npm run build
 
   backend:

@@ -5,8 +5,9 @@ import { Button } from './common/Button';
 import { IconButton } from './common/IconButton';
 import { Switch } from './common/Switch';
 import { MenuPopover } from './common/MenuPopover';
-import { Row } from './common/Row';
 import { Dialog } from './common/Dialog';
+import { Tooltip } from './common/Tooltip';
+import { formatTime } from '../utils/time';
 
 interface NavbarProps {
   data: DashboardData;
@@ -45,26 +46,15 @@ export const Navbar: React.FC<NavbarProps> = ({
   theme = 'dark',
   onToggleTheme,
 }) => {
-  const [currentTime, setCurrentTime] = useState<string>('');
-  const [isOverflowOpen, setIsOverflowOpen] = useState(false);
+  const [currentTime, setCurrentTime] = useState<string>(() => formatTime(new Date()));
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isAboutOpen, setIsAboutOpen] = useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
-  const overflowAnchorRef = useRef<HTMLButtonElement>(null);
   const userMenuAnchorRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     const updateClock = () => {
-      const now = new Date();
-      setCurrentTime(
-        now.toLocaleTimeString('en-US', {
-          hour12: false,
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
-        })
-      );
+      setCurrentTime(formatTime(new Date()));
     };
     updateClock();
     const interval = setInterval(updateClock, 1000);
@@ -74,10 +64,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   // Format user display name in Title Case
   const formatUserName = (raw?: string | null) => {
     if (!raw) return 'Chief Dispatcher';
-    // Remove badges like (Chief Dispatcher) or extract clean name
     const clean = raw.split('(')[0].replace(/Officer\s*/i, '').trim();
     if (!clean || clean.toUpperCase() === 'DFGG') return 'Alex Rivera';
-    // Title Case
     return clean
       .toLowerCase()
       .split(' ')
@@ -95,9 +83,9 @@ export const Navbar: React.FC<NavbarProps> = ({
           height: '64px',
           width: '100%',
           maxWidth: '100vw',
-          display: 'flex',
+          display: 'grid',
+          gridTemplateColumns: 'auto minmax(240px, 1fr) auto',
           alignItems: 'center',
-          justifyContent: 'space-between',
           padding: '0 16px',
           boxSizing: 'border-box',
           backgroundColor: 'var(--md-sys-color-surface)',
@@ -107,8 +95,8 @@ export const Navbar: React.FC<NavbarProps> = ({
           overflow: 'hidden',
         }}
       >
-        {/* Left: 32px logo, "Aegis Dispatch", small "Prototype" chip */}
-        <Row gap={8} align="center" style={{ flexShrink: 0 }}>
+        {/* Left: 32px logo + "Aegis Dispatch" + small "Prototype" chip (8px gap) */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
           <div
             style={{
               width: '32px',
@@ -137,133 +125,130 @@ export const Navbar: React.FC<NavbarProps> = ({
           <span
             className="m3-hide-mobile"
             style={{
-              fontSize: '12px',
+              fontSize: '11px',
+              lineHeight: '14px',
               padding: '2px 8px',
-              borderRadius: '8px',
-              backgroundColor: 'var(--md-sys-color-surface-variant)',
-              color: 'var(--md-sys-color-on-surface-variant)',
+              borderRadius: '12px',
+              backgroundColor: 'var(--md-sys-color-surface-container)',
+              border: '1px solid var(--md-sys-color-outline)',
+              color: 'var(--md-sys-color-text-secondary)',
               fontWeight: 500,
               marginLeft: '8px',
             }}
           >
             Prototype
           </span>
-        </Row>
+        </div>
 
-        {/* Center: Search field (360-480px, 40px tall, full-pill, outlined) */}
-        {onSearchChange && currentRole === 'DISPATCHER' && (
+        {/* Center: Search field (360-560px, 40px tall, full-pill, centered in column) */}
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '0 16px', width: '100%', boxSizing: 'border-box' }}>
+          {onSearchChange && currentRole === 'DISPATCHER' && (
+            <div
+              className="m3-hide-tablet"
+              style={{
+                width: '100%',
+                maxWidth: '560px',
+                height: '40px',
+                borderRadius: '20px',
+                border: '1px solid var(--md-sys-color-outline)',
+                backgroundColor: 'var(--md-sys-color-surface-container-high)',
+                display: 'flex',
+                alignItems: 'center',
+                padding: '0 12px',
+                boxSizing: 'border-box',
+                gap: '8px',
+              }}
+            >
+              <Icon name="search" size={20} style={{ color: 'var(--md-sys-color-text-secondary)', flexShrink: 0 }} />
+              <input
+                type="text"
+                placeholder="Search incidents, units, hospitals"
+                value={searchQuery}
+                onChange={(e) => onSearchChange(e.target.value)}
+                style={{
+                  border: 'none',
+                  outline: 'none',
+                  background: 'transparent',
+                  width: '100%',
+                  fontSize: '14px',
+                  color: 'var(--md-sys-color-text)',
+                  fontFamily: 'inherit',
+                }}
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => onSearchChange('')}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    color: 'var(--md-sys-color-text-secondary)',
+                  }}
+                  aria-label="Clear search"
+                >
+                  <Icon name="close" size={18} />
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Right cluster: 12px gaps, ALL controls 40px tall, vertically centered on midline */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', justifyContent: 'flex-end', flexShrink: 0 }}>
+          {/* Status chip: dot + "Live" + clock as ONE unified chip with a divider */}
           <div
             className="m3-hide-tablet"
             style={{
-              width: '100%',
-              maxWidth: '440px',
               height: '40px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '0 12px',
               borderRadius: '20px',
               border: '1px solid var(--md-sys-color-outline)',
-              backgroundColor: 'var(--md-sys-color-surface-high)',
-              display: 'flex',
-              alignItems: 'center',
-              padding: '0 12px',
-              boxSizing: 'border-box',
-              gap: '8px',
-              margin: '0 16px',
-            }}
-          >
-            <Icon name="search" size={20} style={{ color: 'var(--md-sys-color-text-secondary)', flexShrink: 0 }} />
-            <input
-              type="text"
-              placeholder="Search incidents, units, hospitals"
-              value={searchQuery}
-              onChange={(e) => onSearchChange(e.target.value)}
-              style={{
-                border: 'none',
-                outline: 'none',
-                background: 'transparent',
-                width: '100%',
-                fontSize: '14px',
-                color: 'var(--md-sys-color-text)',
-                fontFamily: 'inherit',
-              }}
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => onSearchChange('')}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  padding: 0,
-                  display: 'flex',
-                  alignItems: 'center',
-                  color: 'var(--md-sys-color-text-secondary)',
-                }}
-                aria-label="Clear search"
-              >
-                <Icon name="close" size={18} />
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* Right side controls */}
-        <Row gap={8} align="center" style={{ flexShrink: 0 }}>
-          {/* Connection chip: "Live" + subtle pulsing 6px dot */}
-          <div
-            className="m3-hide-tablet"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '4px 10px',
-              borderRadius: '16px',
-              backgroundColor: 'var(--md-sys-color-surface-variant)',
-              fontSize: '12px',
+              backgroundColor: 'var(--md-sys-color-surface-container)',
+              fontSize: '13px',
               color: 'var(--md-sys-color-text)',
               userSelect: 'none',
+              boxSizing: 'border-box',
             }}
           >
             <span
               style={{
-                width: '6px',
-                height: '6px',
+                width: '8px',
+                height: '8px',
                 borderRadius: '50%',
                 backgroundColor: isConnected ? 'var(--md-sys-color-success)' : 'var(--md-sys-color-error)',
                 display: 'inline-block',
+                flexShrink: 0,
               }}
             />
-            <span>{isConnected ? 'Live' : 'Offline'}</span>
+            <span style={{ fontWeight: 600 }}>{isConnected ? 'Live' : 'Offline'}</span>
+            <div style={{ width: '1px', height: '16px', backgroundColor: 'var(--md-sys-color-outline)' }} />
+            <span style={{ fontVariantNumeric: 'tabular-nums', color: 'var(--md-sys-color-text-secondary)' }}>
+              {currentTime}
+            </span>
           </div>
 
-          {/* Clock: hh:mm:ss in tabular numerals (Roboto, not mono) */}
-          <div
-            className="m3-hide-mobile"
-            style={{
-              fontSize: '14px',
-              fontFeatureSettings: '"tnum"',
-              fontVariantNumeric: 'tabular-nums',
-              color: 'var(--md-sys-color-text-secondary)',
-              userSelect: 'none',
-              minWidth: '60px',
-              textAlign: 'center',
-            }}
-          >
-            {currentTime || '00:00:00'}
-          </div>
-
-          {/* Theme toggle */}
-          {onToggleTheme && (
-            <IconButton
-              icon={theme === 'dark' ? 'light_mode' : 'dark_mode'}
-              size="standard"
-              onClick={onToggleTheme}
-              aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
-            />
-          )}
-
-          {/* Auto-dispatch toggle (Switch with label, default OFF) */}
+          {/* Auto-dispatch: switch with label inside one 40px tonal container */}
           {currentRole === 'DISPATCHER' && onToggleAutoDispatch && (
-            <div className="m3-hide-tablet">
+            <div
+              className="m3-hide-tablet"
+              style={{
+                height: '40px',
+                display: 'flex',
+                alignItems: 'center',
+                padding: '0 12px',
+                borderRadius: '20px',
+                border: '1px solid var(--md-sys-color-outline)',
+                backgroundColor: 'var(--md-sys-color-surface-container)',
+                boxSizing: 'border-box',
+              }}
+            >
               <Switch
                 checked={autoDispatchEnabled}
                 onChange={onToggleAutoDispatch}
@@ -272,7 +257,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
           )}
 
-          {/* "New incident" filled button (40px, primary) */}
+          {/* "New incident" filled button (40px, solid primary) */}
           {currentRole === 'DISPATCHER' && (
             <Button
               variant="filled"
@@ -285,23 +270,38 @@ export const Navbar: React.FC<NavbarProps> = ({
             </Button>
           )}
 
-          {/* User avatar with chevron */}
+          {/* Theme icon button 40x40 with tooltip */}
+          {onToggleTheme && (
+            <Tooltip content={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}>
+              <IconButton
+                icon={theme === 'dark' ? 'light_mode' : 'dark_mode'}
+                size="standard"
+                onClick={onToggleTheme}
+                aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+                style={{ width: '40px', height: '40px' }}
+              />
+            </Tooltip>
+          )}
+
+          {/* User avatar menu: avatar + chevron, 40px tall (merges overflow items) */}
           <div style={{ position: 'relative' }}>
             <button
               ref={userMenuAnchorRef}
               type="button"
               onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
               style={{
+                height: '40px',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '4px',
+                gap: '6px',
                 background: 'none',
-                border: 'none',
+                border: '1px solid var(--md-sys-color-outline)',
                 cursor: 'pointer',
-                padding: '4px 8px',
+                padding: '0 10px 0 4px',
                 borderRadius: '20px',
                 color: 'var(--md-sys-color-text)',
-                backgroundColor: isUserMenuOpen ? 'var(--md-sys-color-surface-variant)' : 'transparent',
+                backgroundColor: isUserMenuOpen ? 'var(--md-sys-color-surface-container)' : 'transparent',
+                boxSizing: 'border-box',
               }}
               aria-label="User account menu"
               aria-expanded={isUserMenuOpen}
@@ -316,8 +316,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: '14px',
+                  fontSize: '13px',
                   fontWeight: 600,
+                  flexShrink: 0,
                 }}
               >
                 {displayName.charAt(0)}
@@ -329,175 +330,135 @@ export const Navbar: React.FC<NavbarProps> = ({
               isOpen={isUserMenuOpen}
               anchorRef={userMenuAnchorRef}
               onClose={() => setIsUserMenuOpen(false)}
-              width={200}
+              width={220}
             >
-              <div style={{ padding: '8px 16px' }}>
-                <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--md-sys-color-text)' }}>
+              {/* Header: User initials / display name + role */}
+              <div style={{ padding: '12px 16px' }}>
+                <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--md-sys-color-text)' }}>
                   {displayName}
                 </div>
                 <div style={{ fontSize: '12px', color: 'var(--md-sys-color-text-secondary)' }}>
-                  Dispatcher
+                  Chief Dispatcher · CAD
                 </div>
               </div>
-              <div style={{ height: '1px', backgroundColor: 'var(--md-sys-color-outline)', margin: '4px 0' }} />
-              {onLogout && (
+              <div style={{ height: '1px', backgroundColor: 'var(--md-sys-color-outline-variant)', margin: '4px 0' }} />
+
+              {/* 1. Export analytics (CSV) */}
+              {onExportData && (
                 <button
                   type="button"
                   className="m3-menu-item"
                   onClick={() => {
                     setIsUserMenuOpen(false);
-                    onLogout();
+                    onExportData();
                   }}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '8px',
+                    gap: '10px',
                     width: '100%',
                     padding: '10px 16px',
                     border: 'none',
                     background: 'none',
-                    color: 'var(--md-sys-color-error)',
+                    color: 'var(--md-sys-color-text)',
                     fontSize: '14px',
                     cursor: 'pointer',
                     textAlign: 'left',
                   }}
                 >
-                  <Icon name="logout" size={20} />
-                  <span>Sign out</span>
+                  <Icon name="file_download" size={20} />
+                  <span>Export analytics (CSV)</span>
                 </button>
+              )}
+
+              {/* 2. Mute / Unmute alerts */}
+              <button
+                type="button"
+                className="m3-menu-item"
+                onClick={() => {
+                  setIsUserMenuOpen(false);
+                  onToggleAudio();
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  width: '100%',
+                  padding: '10px 16px',
+                  border: 'none',
+                  background: 'none',
+                  color: 'var(--md-sys-color-text)',
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                }}
+              >
+                <Icon name={isAudioEnabled ? 'volume_off' : 'volume_up'} size={20} />
+                <span>{isAudioEnabled ? 'Mute alerts' : 'Unmute alerts'}</span>
+              </button>
+
+              {/* 3. About / Prototype */}
+              <button
+                type="button"
+                className="m3-menu-item"
+                onClick={() => {
+                  setIsUserMenuOpen(false);
+                  setIsAboutOpen(true);
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  width: '100%',
+                  padding: '10px 16px',
+                  border: 'none',
+                  background: 'none',
+                  color: 'var(--md-sys-color-text)',
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                }}
+              >
+                <Icon name="info" size={20} />
+                <span>About / Prototype</span>
+              </button>
+
+              {/* 4. Sign out */}
+              {onLogout && (
+                <>
+                  <div style={{ height: '1px', backgroundColor: 'var(--md-sys-color-outline-variant)', margin: '4px 0' }} />
+                  <button
+                    type="button"
+                    className="m3-menu-item"
+                    onClick={() => {
+                      setIsUserMenuOpen(false);
+                      onLogout();
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      width: '100%',
+                      padding: '10px 16px',
+                      border: 'none',
+                      background: 'none',
+                      color: 'var(--md-sys-color-error)',
+                      fontSize: '14px',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                    }}
+                  >
+                    <Icon name="logout" size={20} />
+                    <span>Sign out</span>
+                  </button>
+                </>
               )}
             </MenuPopover>
           </div>
-
-          {/* Overflow ⋮ IconButton: MenuPopover with AT MOST 5 items */}
-          <div style={{ position: 'relative' }}>
-            <IconButton
-              icon="more_vert"
-              size="standard"
-              onClick={() => setIsOverflowOpen(!isOverflowOpen)}
-              aria-label="More options"
-            />
-
-            <MenuPopover
-              isOpen={isOverflowOpen}
-              anchorRef={overflowAnchorRef}
-              onClose={() => setIsOverflowOpen(false)}
-              width={200}
-            >
-            {/* 1. Export analytics (CSV) */}
-            <button
-              type="button"
-              className="m3-menu-item"
-              onClick={() => {
-                setIsOverflowOpen(false);
-                if (onExportData) onExportData();
-              }}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                width: '100%',
-                padding: '10px 16px',
-                border: 'none',
-                background: 'none',
-                color: 'var(--md-sys-color-text)',
-                fontSize: '14px',
-                cursor: 'pointer',
-                textAlign: 'left',
-              }}
-            >
-              <Icon name="file_download" size={20} />
-              <span>Export analytics (CSV)</span>
-            </button>
-
-            {/* 2. Mute alerts */}
-            <button
-              type="button"
-              className="m3-menu-item"
-              onClick={() => {
-                setIsOverflowOpen(false);
-                onToggleAudio();
-              }}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                width: '100%',
-                padding: '10px 16px',
-                border: 'none',
-                background: 'none',
-                color: 'var(--md-sys-color-text)',
-                fontSize: '14px',
-                cursor: 'pointer',
-                textAlign: 'left',
-              }}
-            >
-              <Icon name={isAudioEnabled ? 'volume_off' : 'volume_up'} size={20} />
-              <span>{isAudioEnabled ? 'Mute alerts' : 'Unmute alerts'}</span>
-            </button>
-
-            {/* 3. About / Prototype */}
-            <button
-              type="button"
-              className="m3-menu-item"
-              onClick={() => {
-                setIsOverflowOpen(false);
-                setIsAboutOpen(true);
-              }}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                width: '100%',
-                padding: '10px 16px',
-                border: 'none',
-                background: 'none',
-                color: 'var(--md-sys-color-text)',
-                fontSize: '14px',
-                cursor: 'pointer',
-                textAlign: 'left',
-              }}
-            >
-              <Icon name="info" size={20} />
-              <span>About / Prototype</span>
-            </button>
-
-            {/* 5. Sign out */}
-            {onLogout && (
-              <>
-                <div style={{ height: '1px', backgroundColor: 'var(--md-sys-color-outline)', margin: '4px 0' }} />
-                <button
-                  type="button"
-                  className="m3-menu-item"
-                  onClick={() => {
-                    setIsOverflowOpen(false);
-                    onLogout();
-                  }}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    width: '100%',
-                    padding: '10px 16px',
-                    border: 'none',
-                    background: 'none',
-                    color: 'var(--md-sys-color-error)',
-                    fontSize: '14px',
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                  }}
-                >
-                  <Icon name="logout" size={20} />
-                  <span>Sign out</span>
-                </button>
-              </>
-            )}
-          </MenuPopover>
         </div>
-      </Row>
       </header>
 
-      {/* About Dialog */}
+      {/* About / Prototype Dialog */}
       <Dialog
         isOpen={isAboutOpen}
         onClose={() => setIsAboutOpen(false)}
@@ -507,40 +468,11 @@ export const Navbar: React.FC<NavbarProps> = ({
       >
         <div style={{ fontSize: '14px', lineHeight: '20px', color: 'var(--md-sys-color-text-secondary)' }}>
           <p style={{ marginTop: 0 }}>
-            Aegis is an emergency response and dispatch coordination prototype built on Google Material Design 3.
+            Aegis is an emergency medical response and dispatch coordination prototype built on Google Material Design 3.
           </p>
           <p>
             It provides unified real-time dispatch management, paramedic vehicle routing, hospital emergency department coordination, and citizen assistance.
           </p>
-        </div>
-      </Dialog>
-
-      {/* Settings Dialog */}
-      <Dialog
-        isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
-        title="CAD Terminal Settings"
-        confirmLabel="Save"
-        onConfirm={() => setIsSettingsOpen(false)}
-      >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', fontSize: '14px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <div style={{ fontWeight: 500, color: 'var(--md-sys-color-text)' }}>Audible dispatch chimes</div>
-              <div style={{ fontSize: '12px', color: 'var(--md-sys-color-text-secondary)' }}>Play sound on new high-priority incidents</div>
-            </div>
-            <Switch checked={isAudioEnabled} onChange={onToggleAudio} />
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <div style={{ fontWeight: 500, color: 'var(--md-sys-color-text)' }}>Automatic dispatch suggestions</div>
-              <div style={{ fontSize: '12px', color: 'var(--md-sys-color-text-secondary)' }}>Highlight best-fit units using OSRM travel time</div>
-            </div>
-            <Switch
-              checked={autoDispatchEnabled}
-              onChange={(c) => onToggleAutoDispatch && onToggleAutoDispatch(c)}
-            />
-          </div>
         </div>
       </Dialog>
     </>

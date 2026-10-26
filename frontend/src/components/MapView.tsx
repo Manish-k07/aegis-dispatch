@@ -24,8 +24,7 @@ import {
 import { Ambulance, Emergency, Hospital, Dispatch } from '../types';
 import { getAmbulanceIcon, getEmergencyIcon, getHospitalIcon } from '../utils/mapIcons';
 import { MissionHUD } from './MissionHUD';
-import { Chip } from './common/Chip';
-import { Icon } from './common/Icon';
+import { FilterChip, Tooltip as M3Tooltip, Icon } from './common';
 
 export type MapTileLayer = 'OSM_CLEAN' | 'SATELLITE' | 'TERRAIN';
 
@@ -199,6 +198,7 @@ export const MapView: React.FC<MapViewProps> = ({
   const [showRoutes, setShowRoutes] = useState(true);
   const [showTraffic, setShowTraffic] = useState(true);
   const [showStaging, setShowStaging] = useState(false);
+  const [isLegendOpen, setIsLegendOpen] = useState(false);
 
   // Live CCTV Modal state
   const [activeCctv, setActiveCctv] = useState<typeof cctvJunctions[0] | null>(null);
@@ -251,65 +251,119 @@ export const MapView: React.FC<MapViewProps> = ({
   return (
     <div className="map-wrapper">
       {/* M3 Map Layer & Entity Filter Chips (Top-Left) */}
-      <div className="m3-map-layer-chips">
-        <Chip
-          label={`Incidents [${activeEmergencies.length}]`}
-          icon="report_problem"
+      {/* Top-Left: M3 Filter Chips (12px inset) */}
+      <div
+        className="m3-map-layer-chips"
+        style={{
+          position: 'absolute',
+          top: '12px',
+          left: '12px',
+          zIndex: 1000,
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: '8px',
+          maxWidth: 'calc(100% - 140px)',
+        }}
+      >
+        <FilterChip
+          label="Incidents"
+          count={activeEmergencies.length}
           selected={showIncidents}
-          variant="filter"
           onClick={() => setShowIncidents(!showIncidents)}
+          icon="report_problem"
         />
-        <Chip
-          label={`Units [${ambulances.length}]`}
-          icon="ambulance"
+        <FilterChip
+          label="Units"
+          count={ambulances.length}
           selected={showFleet}
-          variant="filter"
           onClick={() => setShowFleet(!showFleet)}
+          icon="ambulance"
         />
-        <Chip
-          label={`Hospitals [${hospitals.length}]`}
-          icon="local_hospital"
+        <FilterChip
+          label="Hospitals"
+          count={hospitals.length}
           selected={showHospitals}
-          variant="filter"
           onClick={() => setShowHospitals(!showHospitals)}
+          icon="local_hospital"
         />
-        <Chip
+        <FilterChip
           label="Traffic"
-          icon="traffic"
           selected={showTraffic}
-          variant="filter"
           onClick={() => setShowTraffic(!showTraffic)}
+          icon="traffic"
         />
+      </div>
 
-        {/* Fit Extents */}
-        <button
-          type="button"
-          className="m3-map-chip-btn"
-          onClick={() => setFitTrigger((prev) => prev + 1)}
-          title="Fit view to all active units and scenes"
-        >
-          <Icon name="crop_free" size={18} />
-          <span>Fit</span>
-        </button>
-
-        {/* Basemap Switcher */}
-        <div className="m3-map-basemap-container">
-          <button
-            type="button"
-            className="m3-map-chip-btn"
-            onClick={() => setShowLayerMenu(!showLayerMenu)}
-            title="Switch map style"
-          >
-            <Icon name="layers" size={18} />
-            <span>{mapLayer === 'OSM_CLEAN' ? 'Map' : mapLayer === 'SATELLITE' ? 'Satellite' : 'Terrain'}</span>
-          </button>
+      {/* Top-Right Stacked Control Group: Basemap + Fit (12px inset) */}
+      <div
+        style={{
+          position: 'absolute',
+          top: '12px',
+          right: '12px',
+          zIndex: 1000,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '8px',
+        }}
+      >
+        <div style={{ position: 'relative' }}>
+          <M3Tooltip content="Change map layer">
+            <button
+              type="button"
+              onClick={() => setShowLayerMenu(!showLayerMenu)}
+              aria-label="Change map layer"
+              style={{
+                width: '40px',
+                height: '40px',
+                borderRadius: '8px',
+                backgroundColor: 'var(--md-sys-color-surface)',
+                border: '1px solid var(--md-sys-color-outline)',
+                color: 'var(--md-sys-color-text)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                boxShadow: 'var(--elevation-1)',
+              }}
+            >
+              <Icon name="layers" size={20} />
+            </button>
+          </M3Tooltip>
 
           {showLayerMenu && (
-            <div className="m3-layer-dropdown">
+            <div
+              style={{
+                position: 'absolute',
+                top: '48px',
+                right: 0,
+                backgroundColor: 'var(--md-sys-color-surface)',
+                border: '1px solid var(--md-sys-color-outline)',
+                borderRadius: '8px',
+                padding: '4px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '4px',
+                minWidth: '180px',
+                boxShadow: 'var(--elevation-2)',
+                zIndex: 1001,
+              }}
+            >
               <button
                 type="button"
                 className={`m3-menu-item ${mapLayer === 'OSM_CLEAN' ? 'is-active' : ''}`}
                 onClick={() => { setMapLayer('OSM_CLEAN'); setShowLayerMenu(false); }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '8px 12px',
+                  border: 'none',
+                  background: mapLayer === 'OSM_CLEAN' ? 'var(--md-sys-color-primary-container)' : 'transparent',
+                  color: mapLayer === 'OSM_CLEAN' ? 'var(--md-sys-color-on-primary-container)' : 'var(--md-sys-color-text)',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                }}
               >
                 <Icon name="map" size={18} />
                 <span>OpenStreetMap</span>
@@ -318,6 +372,18 @@ export const MapView: React.FC<MapViewProps> = ({
                 type="button"
                 className={`m3-menu-item ${mapLayer === 'SATELLITE' ? 'is-active' : ''}`}
                 onClick={() => { setMapLayer('SATELLITE'); setShowLayerMenu(false); }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '8px 12px',
+                  border: 'none',
+                  background: mapLayer === 'SATELLITE' ? 'var(--md-sys-color-primary-container)' : 'transparent',
+                  color: mapLayer === 'SATELLITE' ? 'var(--md-sys-color-on-primary-container)' : 'var(--md-sys-color-text)',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                }}
               >
                 <Icon name="satellite_alt" size={18} />
                 <span>Satellite imagery</span>
@@ -326,6 +392,18 @@ export const MapView: React.FC<MapViewProps> = ({
                 type="button"
                 className={`m3-menu-item ${mapLayer === 'TERRAIN' ? 'is-active' : ''}`}
                 onClick={() => { setMapLayer('TERRAIN'); setShowLayerMenu(false); }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '8px 12px',
+                  border: 'none',
+                  background: mapLayer === 'TERRAIN' ? 'var(--md-sys-color-primary-container)' : 'transparent',
+                  color: mapLayer === 'TERRAIN' ? 'var(--md-sys-color-on-primary-container)' : 'var(--md-sys-color-text)',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                }}
               >
                 <Icon name="terrain" size={18} />
                 <span>Topographic terrain</span>
@@ -333,9 +411,129 @@ export const MapView: React.FC<MapViewProps> = ({
             </div>
           )}
         </div>
+
+        <M3Tooltip content="Fit map to active markers">
+          <button
+            type="button"
+            onClick={() => setFitTrigger((prev) => prev + 1)}
+            aria-label="Fit map to active markers"
+            style={{
+              width: '40px',
+              height: '40px',
+              borderRadius: '8px',
+              backgroundColor: 'var(--md-sys-color-surface)',
+              border: '1px solid var(--md-sys-color-outline)',
+              color: 'var(--md-sys-color-text)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              boxShadow: 'var(--elevation-1)',
+            }}
+          >
+            <Icon name="crop_free" size={20} />
+          </button>
+        </M3Tooltip>
+      </div>
+
+      {/* Bottom-Left: Collapsible Legend Card (12px inset) */}
+      <div
+        style={{
+          position: 'absolute',
+          bottom: '12px',
+          left: '12px',
+          zIndex: 1000,
+        }}
+      >
+        {isLegendOpen ? (
+          <div
+            style={{
+              backgroundColor: 'var(--md-sys-color-surface)',
+              border: '1px solid var(--md-sys-color-outline)',
+              borderRadius: '12px',
+              padding: '12px',
+              boxShadow: 'var(--elevation-2)',
+              fontSize: '12px',
+              color: 'var(--md-sys-color-text)',
+              minWidth: '180px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '8px',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontWeight: 600 }}>Map Legend</span>
+              <button
+                type="button"
+                onClick={() => setIsLegendOpen(false)}
+                aria-label="Collapse map legend"
+                className="btn-collapse"
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '2px',
+                  color: 'var(--md-sys-color-text-secondary)',
+                  display: 'flex',
+                  alignItems: 'center',
+                }}
+              >
+                <Icon name="expand_more" size={16} />
+              </button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: 'var(--md-sys-color-error)' }} />
+                <span>Critical incident</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: 'var(--md-sys-color-warning)' }} />
+                <span>High priority incident</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: 'var(--md-sys-color-success)' }} />
+                <span>Available unit</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: 'var(--md-sys-color-primary)' }} />
+                <span>Active dispatch</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ width: '10px', height: '10px', borderRadius: '2px', border: '1px solid var(--md-sys-color-primary)' }} />
+                <span>Hospital facility</span>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setIsLegendOpen(true)}
+            aria-label="Open map legend"
+            className="btn-collapse"
+            style={{
+              height: '32px',
+              padding: '0 12px',
+              borderRadius: '16px',
+              backgroundColor: 'var(--md-sys-color-surface)',
+              border: '1px solid var(--md-sys-color-outline)',
+              color: 'var(--md-sys-color-text)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              cursor: 'pointer',
+              fontSize: '12px',
+              fontWeight: 500,
+              boxShadow: 'var(--elevation-1)',
+            }}
+          >
+            <Icon name="info" size={16} />
+            <span>Legend</span>
+          </button>
+        )}
       </div>
 
       <MapContainer
+        zoomControl={false}
         center={
           selectedEmergency
             ? [selectedEmergency.latitude, selectedEmergency.longitude]
