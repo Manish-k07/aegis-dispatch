@@ -1084,3 +1084,60 @@ select:focus-visible,
   box-shadow: 0 1px 4px rgba(0,0,0,0.2);
 }
 
+/* Custom Map Markers & Attribution */
+.leaflet-container .leaflet-control-attribution {
+  background: var(--md-sys-color-surface-container) !important;
+  color: var(--md-sys-color-text-secondary) !important;
+  border: 1px solid var(--md-sys-color-outline) !important;
+  border-radius: 6px 0 0 0 !important;
+  font-size: 11px !important;
+  padding: 2px 8px !important;
+}
+.leaflet-container .leaflet-control-attribution a {
+  color: var(--md-sys-color-primary) !important;
+}
+
+.m3-pin-hospital {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.m3-marker-callout {
+  position: absolute;
+  bottom: -22px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--md-sys-color-surface);
+  color: var(--md-sys-color-text);
+  border: 1px solid var(--md-sys-color-outline);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  pointer-events: none;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.m3-hospital-callout {
+  border-left: 3px solid #188038;
+}
+
+.m3-unit-callout {
+  border-left: 3px solid #1A73E8;
+  font-family: var(--md-sys-font-mono, monospace);
+}
+
+.m3-incident-callout {
+  border-left: 3px solid #D93025;
+}
+
+

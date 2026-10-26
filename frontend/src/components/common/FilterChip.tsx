@@ -22,6 +22,7 @@ export const FilterChip: React.FC<FilterChipProps> = ({
   return (
     <button
       type="button"
+      className="m3-filter-chip"
       onClick={onClick}
       style={{
         display: 'inline-flex',

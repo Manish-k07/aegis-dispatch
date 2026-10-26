@@ -28,46 +28,79 @@ import { FilterChip, Tooltip as M3Tooltip, Icon } from './common';
 
 export type MapTileLayer = 'OSM_CLEAN' | 'SATELLITE' | 'TERRAIN';
 
-const trafficCorridors: { name: string; level: 'HEAVY' | 'MODERATE' | 'CLEAR'; color: string; coords: [number, number][] }[] = [
+const trafficCorridors: { name: string; level: 'HEAVY' | 'MODERATE' | 'CLEAR'; color: string; speed: string; coords: [number, number][] }[] = [
   {
     name: 'MG Road Corridor',
     level: 'HEAVY',
-    color: '#f28b82',
+    color: '#D93025',
+    speed: '12 km/h',
     coords: [
       [12.9756, 77.6066],
-      [12.9740, 77.6010],
-      [12.9730, 77.5950],
+      [12.9745, 77.6012],
+      [12.9735, 77.5955],
       [12.9719, 77.5900],
+      [12.9710, 77.5840],
     ],
   },
   {
-    name: 'Richmond Road to Hosur Road',
+    name: 'Residency Road Corridor',
     level: 'MODERATE',
-    color: '#8ab4f8',
+    color: '#E37400',
+    speed: '28 km/h',
     coords: [
-      [12.9710, 77.6050],
-      [12.9680, 77.6020],
-      [12.9640, 77.5990],
+      [12.9715, 77.6095],
+      [12.9685, 77.6030],
+      [12.9650, 77.5980],
+      [12.9630, 77.5920],
+    ],
+  },
+  {
+    name: 'Richmond Circle to Hosur Road Arterial',
+    level: 'HEAVY',
+    color: '#D93025',
+    speed: '16 km/h',
+    coords: [
+      [12.9655, 77.6015],
+      [12.9580, 77.6045],
+      [12.9510, 77.6080],
+      [12.9420, 77.6140],
+      [12.9350, 77.6190],
+    ],
+  },
+  {
+    name: 'Brigade Road to Hosur Junction',
+    level: 'MODERATE',
+    color: '#E37400',
+    speed: '24 km/h',
+    coords: [
+      [12.9740, 77.6075],
+      [12.9700, 77.6072],
+      [12.9655, 77.6070],
+      [12.9600, 77.6085],
+    ],
+  },
+  {
+    name: 'Old Madras Road - Indiranagar Expressway',
+    level: 'CLEAR',
+    color: '#188038',
+    speed: '54 km/h',
+    coords: [
+      [12.9784, 77.6408],
+      [12.9770, 77.6320],
+      [12.9760, 77.6200],
+      [12.9756, 77.6066],
     ],
   },
   {
     name: 'Koramangala 80ft Road Corridor',
     level: 'CLEAR',
-    color: '#81c995',
+    color: '#188038',
+    speed: '46 km/h',
     coords: [
       [12.9340, 77.6180],
-      [12.9380, 77.6220],
-      [12.9450, 77.6280],
-    ],
-  },
-  {
-    name: 'Cubbon Park Transit Loop',
-    level: 'CLEAR',
-    color: '#81c995',
-    coords: [
-      [12.9760, 77.5900],
-      [12.9800, 77.5880],
-      [12.9850, 77.5850],
+      [12.9352, 77.6245],
+      [12.9410, 77.6270],
+      [12.9480, 77.6320],
     ],
   },
 ];
@@ -144,7 +177,7 @@ function FitBoundsController({
     const points: [number, number][] = [];
     ambulances.forEach((a) => points.push([a.latitude, a.longitude]));
     emergencies
-      .filter((e) => !['COMPLETED', 'CANCELLED'].includes(e.status))
+      .filter((e) => !['COMPLETED', 'CANCELLED', 'RESOLVED', 'CLOSED'].includes((e.status || '').toUpperCase()))
       .forEach((e) => points.push([e.latitude, e.longitude]));
 
     if (points.length > 0) {
@@ -210,7 +243,7 @@ export const MapView: React.FC<MapViewProps> = ({
   const defaultCenter: [number, number] = [12.9716, 77.5946];
 
   const activeEmergencies = emergencies.filter(
-    (e) => !['COMPLETED', 'CANCELLED'].includes(e.status)
+    (e) => !['COMPLETED', 'CANCELLED', 'RESOLVED', 'CLOSED'].includes((e.status || '').toUpperCase())
   );
 
   const activeDispatches = dispatches.filter(
@@ -582,20 +615,34 @@ export const MapView: React.FC<MapViewProps> = ({
         {/* Real-time Traffic Corridors */}
         {showTraffic &&
           trafficCorridors.map((corridor, idx) => (
-            <Polyline
-              key={`corridor-${idx}`}
-              positions={corridor.coords}
-              pathOptions={{
-                color: corridor.color,
-                weight: 6,
-                opacity: 0.65,
-                lineCap: 'round',
-              }}
-            >
-              <Tooltip sticky>
-                Arterial Flow: {corridor.name} ({corridor.level})
-              </Tooltip>
-            </Polyline>
+            <React.Fragment key={`corridor-group-${idx}`}>
+              {/* Outer Casing Polyline */}
+              <Polyline
+                positions={corridor.coords}
+                pathOptions={{
+                  color: '#202124',
+                  weight: 10,
+                  opacity: 0.5,
+                  lineCap: 'round',
+                  lineJoin: 'round',
+                }}
+              />
+              {/* Inner High-Contrast Traffic Flow Polyline */}
+              <Polyline
+                positions={corridor.coords}
+                pathOptions={{
+                  color: corridor.color,
+                  weight: 6,
+                  opacity: 0.95,
+                  lineCap: 'round',
+                  lineJoin: 'round',
+                }}
+              >
+                <Tooltip sticky>
+                  Traffic Corridor: {corridor.name} · Flow: {corridor.level} ({corridor.speed})
+                </Tooltip>
+              </Polyline>
+            </React.Fragment>
           ))}
 
         {/* Live CCTV Traffic Cameras on Junctions */}

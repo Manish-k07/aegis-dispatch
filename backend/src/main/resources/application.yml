@@ -1,6 +1,8 @@
 spring:
   application:
     name: aegis-dispatch
+  profiles:
+    active: demo
   datasource:
     url: ${DB_URL:jdbc:h2:file:./data/aegis_dispatch;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;AUTO_SERVER=TRUE}
     driver-class-name: ${DB_DRIVER:org.h2.Driver}

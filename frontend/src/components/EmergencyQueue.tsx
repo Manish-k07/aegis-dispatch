@@ -14,6 +14,7 @@ interface EmergencyQueueProps {
   onAutoAssign?: (emergencyId: string) => void;
   onAutoAssignNext?: () => void;
   onResetData?: () => void;
+  onClearSearch?: () => void;
 }
 
 type FilterType = 'ALL' | 'CRITICAL' | 'HIGH' | 'MEDIUM';
@@ -24,6 +25,8 @@ export const EmergencyQueue: React.FC<EmergencyQueueProps> = ({
   searchQuery = '',
   onSelectEmergency,
   onAutoAssign,
+  onResetData,
+  onClearSearch,
 }) => {
   const [filter, setFilter] = useState<FilterType>('ALL');
 
@@ -56,24 +59,30 @@ export const EmergencyQueue: React.FC<EmergencyQueueProps> = ({
     return clean.charAt(0).toUpperCase() + clean.slice(1);
   };
 
+  const isClosedStatus = (status?: string) => {
+    if (!status) return false;
+    const s = status.trim().toUpperCase();
+    return s === 'COMPLETED' || s === 'CANCELLED' || s === 'RESOLVED' || s === 'CLOSED';
+  };
+
   const filtered = emergencies.filter((e) => {
-    const isClosed = ['COMPLETED', 'CANCELLED'].includes(e.status);
-    if (isClosed) return false;
+    if (isClosedStatus(e.status)) return false;
 
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       const match =
-        e.type.toLowerCase().includes(q) ||
-        e.address.toLowerCase().includes(q) ||
+        (e.type || '').toLowerCase().includes(q) ||
+        (e.address || '').toLowerCase().includes(q) ||
         (e.callerName && e.callerName.toLowerCase().includes(q)) ||
         (e.description && e.description.toLowerCase().includes(q)) ||
-        e.id.toLowerCase().includes(q);
+        (e.id || '').toLowerCase().includes(q);
       if (!match) return false;
     }
 
-    if (filter === 'CRITICAL') return e.priority === 'CRITICAL';
-    if (filter === 'HIGH') return e.priority === 'HIGH';
-    if (filter === 'MEDIUM') return e.priority === 'MEDIUM' || e.priority === 'LOW';
+    const p = (e.priority || 'MEDIUM').toUpperCase();
+    if (filter === 'CRITICAL') return p === 'CRITICAL';
+    if (filter === 'HIGH') return p === 'HIGH';
+    if (filter === 'MEDIUM') return p === 'MEDIUM' || p === 'LOW';
 
     return true;
   });
@@ -145,7 +154,38 @@ export const EmergencyQueue: React.FC<EmergencyQueueProps> = ({
           <EmptyState
             icon="inbox"
             title="No active incidents"
-            description="No incidents match the active filter criteria."
+            description={
+              filter !== 'ALL' || Boolean(searchQuery)
+                ? 'No incidents match the active filter criteria.'
+                : 'All reported incidents have been dispatched or completed.'
+            }
+            action={
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                {(filter !== 'ALL' || Boolean(searchQuery)) && (
+                  <Button
+                    variant="filled"
+                    size="standard"
+                    icon="filter_alt_off"
+                    onClick={() => {
+                      setFilter('ALL');
+                      if (onClearSearch) onClearSearch();
+                    }}
+                  >
+                    Reset filters
+                  </Button>
+                )}
+                {onResetData && (
+                  <Button
+                    variant="outlined"
+                    size="standard"
+                    icon="refresh"
+                    onClick={onResetData}
+                  >
+                    Restore demo incidents
+                  </Button>
+                )}
+              </div>
+            }
           />
         ) : (
           filtered.map((em) => {

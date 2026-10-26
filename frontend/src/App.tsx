@@ -7,7 +7,6 @@ import { FleetList } from './components/FleetList';
 import { CandidateModal } from './components/CandidateModal';
 import { HospitalModal } from './components/HospitalModal';
 import { NewEmergencyModal } from './components/NewEmergencyModal';
-import { AuditLogDrawer } from './components/AuditLogDrawer';
 import { DriverDashboard } from './components/DriverDashboard';
 import { HospitalDashboard } from './components/HospitalDashboard';
 import { HospitalList } from './components/HospitalList';
@@ -1432,9 +1431,15 @@ export const App: React.FC = () => {
     }));
   };
 
-  const activeDispatchesCount = data.dispatches.filter(
-    (d) => !['COMPLETED', 'CANCELLED'].includes(d.status)
+  const activeDispatchesCount = (data.dispatches || []).filter(
+    (d) => !['COMPLETED', 'CANCELLED', 'RESOLVED', 'CLOSED'].includes((d.status || '').toUpperCase())
   ).length;
+
+  const activeEmergencies = useMemo(() => {
+    return (data.emergencies || []).filter(
+      (e) => !['COMPLETED', 'CANCELLED', 'RESOLVED', 'CLOSED'].includes((e.status || '').toUpperCase())
+    );
+  }, [data.emergencies]);
 
   // 1. If not authenticated, render LoginGateway exclusively
   if (!authSession || !role) {
@@ -1669,9 +1674,9 @@ export const App: React.FC = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Icon name="warning" size={18} />
             <span>
-              {data.emergencies.filter(
-                (e) => e.priority === 'CRITICAL' && (e.status === 'PENDING_DISPATCH' || e.status === 'CREATED')
-              ).length || 3}{' '}
+              {activeEmergencies.filter(
+                (e) => (e.priority || '').toUpperCase() === 'CRITICAL' && (e.status === 'PENDING_DISPATCH' || e.status === 'CREATED')
+              ).length}{' '}
               active high-priority incidents require dispatch
             </span>
           </div>
@@ -1724,7 +1729,7 @@ export const App: React.FC = () => {
           <aside className="sidebar-section-container">
             <Tabs
               tabs={[
-                { id: 'QUEUE', label: 'Incidents', badge: data.emergencies.length },
+                { id: 'QUEUE', label: 'Incidents', badge: activeEmergencies.length },
                 { id: 'MISSIONS', label: 'Missions', badge: activeDispatchesCount },
                 { id: 'FLEET', label: 'Fleet', badge: data.ambulances.length },
                 { id: 'HOSPITALS', label: 'Hospitals', badge: data.hospitals.length },
@@ -1736,6 +1741,7 @@ export const App: React.FC = () => {
             <div className="sidebar-body">
               {activeTab === 'QUEUE' && (
                 <EmergencyQueue
+                  onClearSearch={() => setSearchQuery('')}
                   emergencies={data.emergencies}
                   selectedEmergency={selectedEmergency}
                   searchQuery={searchQuery}
@@ -1828,15 +1834,14 @@ export const App: React.FC = () => {
         </div>
       )}
 
-      {/* Universal Compliance & System Footer */}
+      {/* Universal Compliance & System Footer with Integrated Event/Audit Drawer */}
       <Footer
         isConnected={isConnected}
         isVirtualMode={isVirtualMode}
         latestEvent={liveEvents[0] || 'System initialized. Live monitoring active.'}
+        logs={auditLogs}
+        liveEvents={liveEvents}
       />
-
-      {/* System Audit Drawer */}
-      <AuditLogDrawer logs={auditLogs} liveEvents={liveEvents} />
     </div>
   );
 };

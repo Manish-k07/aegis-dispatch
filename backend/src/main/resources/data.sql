@@ -22,5 +22,6 @@ INSERT INTO ambulance_capabilities VALUES
 ('20000000-0000-0000-0000-000000000003','TRAUMA'),('20000000-0000-0000-0000-000000000003','CARDIAC') ON CONFLICT DO NOTHING;
 INSERT INTO emergencies(id,caller_name,phone,type,patient_count,priority,description,latitude,longitude,address,status) VALUES
 ('30000000-0000-0000-0000-000000000001','Demo Caller','9999999999','ACCIDENT',1,'CRITICAL','Simulation accident requiring rapid response',12.9735,77.5968,'Demo Junction, Bengaluru','PENDING_DISPATCH'),
-('30000000-0000-0000-0000-000000000002','Demo Caller 2','9888888888','BREATHING',1,'HIGH','Simulation respiratory emergency',12.9655,77.6015,'Demo Market Road, Bengaluru','PENDING_DISPATCH')
+('30000000-0000-0000-0000-000000000002','Demo Caller 2','9888888888','BREATHING',1,'HIGH','Simulation respiratory emergency',12.9655,77.6015,'Demo Market Road, Bengaluru','PENDING_DISPATCH'),
+('30000000-0000-0000-0000-000000000003','Priya Sharma','9876543210','CARDIAC',1,'CRITICAL','Crushing retrosternal chest pain',12.9812,77.5877,'Cunningham Road, Bengaluru','PENDING_DISPATCH')
 ON CONFLICT DO NOTHING;

@@ -84,7 +84,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           width: '100%',
           maxWidth: '100vw',
           display: 'grid',
-          gridTemplateColumns: 'auto minmax(240px, 1fr) auto',
+          gridTemplateColumns: 'auto minmax(320px, 1fr) auto',
           alignItems: 'center',
           padding: '0 16px',
           boxSizing: 'border-box',
@@ -142,12 +142,13 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
 
         {/* Center: Search field (360-560px, 40px tall, full-pill, centered in column) */}
-        <div style={{ display: 'flex', justifyContent: 'center', padding: '0 16px', width: '100%', boxSizing: 'border-box' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '0 16px', width: '100%', minWidth: '320px', boxSizing: 'border-box' }}>
           {onSearchChange && currentRole === 'DISPATCHER' && (
             <div
               className="m3-hide-tablet"
               style={{
                 width: '100%',
+                minWidth: '320px',
                 maxWidth: '560px',
                 height: '40px',
                 borderRadius: '20px',
@@ -155,7 +156,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 backgroundColor: 'var(--md-sys-color-surface-container-high)',
                 display: 'flex',
                 alignItems: 'center',
-                padding: '0 12px',
+                padding: '0 16px',
                 boxSizing: 'border-box',
                 gap: '8px',
               }}
