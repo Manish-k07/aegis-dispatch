@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { Navbar } from './components/Navbar';
 import { MapView } from './components/MapView';
 import { EmergencyQueue } from './components/EmergencyQueue';
@@ -48,24 +48,48 @@ function calculateDistanceKm(lat1: number, lon1: number, lat2: number, lon2: num
   return Math.round(R * c * 10) / 10;
 }
 
-// Realistic interpolated waypoints between two coordinates
+// Realistic road waypoints following arterial street corridors
 function generateRoadWaypoints(
   startLat: number,
   startLon: number,
   endLat: number,
   endLon: number,
-  steps: number = 6
+  steps: number = 8
 ): [number, number][] {
   const points: [number, number][] = [];
-  for (let i = 0; i <= steps; i++) {
-    const frac = i / steps;
-    const jitterLat = i > 0 && i < steps ? Math.sin(frac * Math.PI * 3) * 0.0012 : 0;
-    const jitterLon = i > 0 && i < steps ? Math.cos(frac * Math.PI * 2) * 0.001 : 0;
+  points.push([startLat, startLon]);
+
+  const latDiff = endLat - startLat;
+  const lonDiff = endLon - startLon;
+
+  // Midpoint arterial corner junction following street grid
+  const midLat = startLat + latDiff * 0.45;
+  const midLon = startLon + lonDiff * 0.55;
+
+  // Leg 1: along street corridor 1
+  const leg1Steps = Math.max(3, Math.floor(steps / 2));
+  for (let i = 1; i <= leg1Steps; i++) {
+    const frac = i / leg1Steps;
     points.push([
-      startLat + (endLat - startLat) * frac + jitterLat,
-      startLon + (endLon - startLon) * frac + jitterLon,
+      startLat + (midLat - startLat) * frac,
+      startLon + (lonDiff * 0.04) * Math.sin(frac * Math.PI),
     ]);
   }
+
+  // Turn point / road junction
+  points.push([midLat, midLon]);
+
+  // Leg 2: along destination street
+  const leg2Steps = Math.max(3, Math.floor(steps / 2));
+  for (let i = 1; i < leg2Steps; i++) {
+    const frac = i / leg2Steps;
+    points.push([
+      midLat + (endLat - midLat) * frac,
+      midLon + (endLon - midLon) * frac,
+    ]);
+  }
+
+  points.push([endLat, endLon]);
   return points;
 }
 
@@ -190,6 +214,8 @@ export const App: React.FC = () => {
     return null;
   });
 
+  const simWaypointIndexRef = useRef<Record<string, number>>({});
+
   const [selectedHospitalId, setSelectedHospitalId] = useState<string | null>(() => {
     try {
       const saved = localStorage.getItem('aegis_auth_session');
@@ -208,6 +234,9 @@ export const App: React.FC = () => {
     setRole(session.role);
     if (session.ambulanceId) {
       setSelectedDriverAmbulanceId(session.ambulanceId);
+      try {
+        sessionStorage.removeItem('aegis_responder_view_mode');
+      } catch {}
     }
     if (session.hospitalId) {
       setSelectedHospitalId(session.hospitalId);
@@ -416,10 +445,11 @@ export const App: React.FC = () => {
   }, [data.hospitals, driverDispatch]);
 
   useEffect(() => {
-    if (activeMissionDispatch?.id) {
-      fetchRoute(activeMissionDispatch.id);
+    const targetDispatchId = driverDispatch?.id || activeMissionDispatch?.id;
+    if (targetDispatchId) {
+      fetchRoute(targetDispatchId);
     }
-  }, [activeMissionDispatch?.id, fetchRoute]);
+  }, [driverDispatch?.id, activeMissionDispatch?.id, fetchRoute]);
 
   // Live WebSocket Connection
   useEffect(() => {
@@ -606,19 +636,37 @@ export const App: React.FC = () => {
             return;
           }
 
-          // 3. EN_ROUTE_TO_SCENE
+          // 3. EN_ROUTE_TO_SCENE - Realistic Road Navigation
           if (dispatch.status === 'EN_ROUTE_TO_SCENE') {
-            const dLat = emg.latitude - amb.latitude;
-            const dLon = emg.longitude - amb.longitude;
-            const dist = Math.sqrt(dLat * dLat + dLon * dLon);
+            const waypoints = (missionTelemetry?.roadWaypoints && missionTelemetry.roadWaypoints.length > 2)
+              ? missionTelemetry.roadWaypoints
+              : generateRoadWaypoints(amb.latitude, amb.longitude, emg.latitude, emg.longitude, 12);
 
-            if (dist < 0.002) {
+            const wpIdx = simWaypointIndexRef.current[dispatch.id] || 0;
+            const targetWp = waypoints[Math.min(wpIdx + 1, waypoints.length - 1)];
+
+            const dLat = targetWp[0] - amb.latitude;
+            const dLon = targetWp[1] - amb.longitude;
+            const distToTarget = Math.sqrt(dLat * dLat + dLon * dLon);
+            const distToEnd = Math.sqrt((emg.latitude - amb.latitude)**2 + (emg.longitude - amb.longitude)**2);
+
+            // Compute heading direction along road
+            const dLonRad = (targetWp[1] - amb.longitude) * Math.PI / 180;
+            const lat1Rad = amb.latitude * Math.PI / 180;
+            const lat2Rad = targetWp[0] * Math.PI / 180;
+            const y = Math.sin(dLonRad) * Math.cos(lat2Rad);
+            const x = Math.cos(lat1Rad) * Math.sin(lat2Rad) - Math.sin(lat1Rad) * Math.cos(lat2Rad) * Math.cos(dLonRad);
+            const heading = Math.round(((Math.atan2(y, x) * 180 / Math.PI) + 360) % 360);
+
+            if (distToEnd < 0.0006 || wpIdx >= waypoints.length - 1) {
+              simWaypointIndexRef.current[dispatch.id] = 0;
               nextDispatches[dispatchIndex] = { ...dispatch, status: 'ARRIVED_AT_SCENE' };
               nextAmbulances[ambIndex] = {
                 ...amb,
                 latitude: emg.latitude,
                 longitude: emg.longitude,
                 speed: 0,
+                heading,
               };
               audioSystem.playUnitArrivalChime();
               setLiveEvents((evts) => [
@@ -626,12 +674,16 @@ export const App: React.FC = () => {
                 ...evts.slice(0, 19),
               ]);
             } else {
-              const step = 0.22;
+              if (distToTarget < 0.0003) {
+                simWaypointIndexRef.current[dispatch.id] = wpIdx + 1;
+              }
+              const step = 0.40;
               nextAmbulances[ambIndex] = {
                 ...amb,
                 latitude: amb.latitude + dLat * step,
                 longitude: amb.longitude + dLon * step,
-                speed: 52 + Math.floor(Math.random() * 8),
+                speed: 48 + Math.floor(Math.random() * 8),
+                heading,
               };
             }
             dataModified = true;
@@ -664,11 +716,26 @@ export const App: React.FC = () => {
             return;
           }
 
-          // 6. EN_ROUTE_TO_HOSPITAL
+          // 6. EN_ROUTE_TO_HOSPITAL - Realistic Road Navigation
           if (dispatch.status === 'EN_ROUTE_TO_HOSPITAL' && hosp) {
-            const dLat = hosp.latitude - amb.latitude;
-            const dLon = hosp.longitude - amb.longitude;
-            const dist = Math.sqrt(dLat * dLat + dLon * dLon);
+            const waypoints = (missionTelemetry?.roadWaypoints && missionTelemetry.roadWaypoints.length > 2)
+              ? missionTelemetry.roadWaypoints
+              : generateRoadWaypoints(amb.latitude, amb.longitude, hosp.latitude, hosp.longitude, 12);
+
+            const wpIdx = simWaypointIndexRef.current[dispatch.id] || 0;
+            const targetWp = waypoints[Math.min(wpIdx + 1, waypoints.length - 1)];
+
+            const dLat = targetWp[0] - amb.latitude;
+            const dLon = targetWp[1] - amb.longitude;
+            const distToTarget = Math.sqrt(dLat * dLat + dLon * dLon);
+            const distToEnd = Math.sqrt((hosp.latitude - amb.latitude)**2 + (hosp.longitude - amb.longitude)**2);
+
+            const dLonRad = (targetWp[1] - amb.longitude) * Math.PI / 180;
+            const lat1Rad = amb.latitude * Math.PI / 180;
+            const lat2Rad = targetWp[0] * Math.PI / 180;
+            const y = Math.sin(dLonRad) * Math.cos(lat2Rad);
+            const x = Math.cos(lat1Rad) * Math.sin(lat2Rad) - Math.sin(lat1Rad) * Math.cos(lat2Rad) * Math.cos(dLonRad);
+            const heading = Math.round(((Math.atan2(y, x) * 180 / Math.PI) + 360) % 360);
 
             setLiveVitalsByDispatch((vitals) => ({
               ...vitals,
@@ -684,13 +751,15 @@ export const App: React.FC = () => {
               },
             }));
 
-            if (dist < 0.002) {
+            if (distToEnd < 0.0006 || wpIdx >= waypoints.length - 1) {
+              simWaypointIndexRef.current[dispatch.id] = 0;
               nextDispatches[dispatchIndex] = { ...dispatch, status: 'ARRIVED_AT_HOSPITAL' };
               nextAmbulances[ambIndex] = {
                 ...amb,
                 latitude: hosp.latitude,
                 longitude: hosp.longitude,
                 speed: 0,
+                heading,
               };
               audioSystem.playUnitArrivalChime();
               setLiveEvents((evts) => [
@@ -698,12 +767,16 @@ export const App: React.FC = () => {
                 ...evts.slice(0, 19),
               ]);
             } else {
-              const step = 0.22;
+              if (distToTarget < 0.0003) {
+                simWaypointIndexRef.current[dispatch.id] = wpIdx + 1;
+              }
+              const step = 0.40;
               nextAmbulances[ambIndex] = {
                 ...amb,
                 latitude: amb.latitude + dLat * step,
                 longitude: amb.longitude + dLon * step,
-                speed: 56 + Math.floor(Math.random() * 10),
+                speed: 52 + Math.floor(Math.random() * 8),
+                heading,
               };
             }
             dataModified = true;

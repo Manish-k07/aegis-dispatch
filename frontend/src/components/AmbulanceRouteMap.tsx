@@ -36,6 +36,7 @@ interface AmbulanceRouteMapProps {
     etaRemaining?: number;
     roadWaypoints?: [number, number][];
   };
+  fullHeight?: boolean;
 }
 
 // Controller component to handle map centering and auto-following
@@ -64,7 +65,7 @@ const MapCameraController: React.FC<{
   return null;
 };
 
-// Generate realistic road waypoints
+// Generate realistic road waypoints following street corridors
 function generateRoadWaypoints(
   startLat: number,
   startLon: number,
@@ -73,15 +74,39 @@ function generateRoadWaypoints(
   steps: number = 8
 ): [number, number][] {
   const points: [number, number][] = [];
-  for (let i = 0; i <= steps; i++) {
-    const frac = i / steps;
-    const jitterLat = i > 0 && i < steps ? Math.sin(frac * Math.PI * 2) * 0.0018 : 0;
-    const jitterLon = i > 0 && i < steps ? Math.cos(frac * Math.PI * 3) * 0.0015 : 0;
+  points.push([startLat, startLon]);
+
+  const latDiff = endLat - startLat;
+  const lonDiff = endLon - startLon;
+
+  // Arterial road corner junction following street grid
+  const midLat = startLat + latDiff * 0.45;
+  const midLon = startLon + lonDiff * 0.55;
+
+  // Leg 1: along street corridor
+  const leg1Steps = Math.max(3, Math.floor(steps / 2));
+  for (let i = 1; i <= leg1Steps; i++) {
+    const frac = i / leg1Steps;
     points.push([
-      startLat + (endLat - startLat) * frac + jitterLat,
-      startLon + (endLon - startLon) * frac + jitterLon,
+      startLat + (midLat - startLat) * frac,
+      startLon + (lonDiff * 0.04) * Math.sin(frac * Math.PI),
     ]);
   }
+
+  // Turn point / road junction
+  points.push([midLat, midLon]);
+
+  // Leg 2: along destination street
+  const leg2Steps = Math.max(3, Math.floor(steps / 2));
+  for (let i = 1; i < leg2Steps; i++) {
+    const frac = i / leg2Steps;
+    points.push([
+      midLat + (endLat - midLat) * frac,
+      midLon + (endLon - midLon) * frac,
+    ]);
+  }
+
+  points.push([endLat, endLon]);
   return points;
 }
 
@@ -93,6 +118,7 @@ export const AmbulanceRouteMap: React.FC<AmbulanceRouteMapProps> = ({
   isSimulating,
   onToggleSimulation,
   missionTelemetry,
+  fullHeight = false,
 }) => {
   const [mapStyle, setMapStyle] = useState<'DARK' | 'STREETS' | 'SATELLITE'>('DARK');
   const [followUnit, setFollowUnit] = useState<boolean>(true);
@@ -176,7 +202,7 @@ export const AmbulanceRouteMap: React.FC<AmbulanceRouteMapProps> = ({
   }, [missionTelemetry?.maneuver]);
 
   return (
-    <div className="ambulance-route-map-wrapper">
+    <div className={`ambulance-route-map-wrapper ${fullHeight ? 'full-height' : ''}`}>
       {/* Turn-by-Turn Navigation HUD Overlay */}
       <div className="amb-nav-hud-overlay">
         <div className="nav-hud-left">
@@ -299,6 +325,7 @@ export const AmbulanceRouteMap: React.FC<AmbulanceRouteMapProps> = ({
       <MapContainer
         center={ambCoords}
         zoom={15}
+        zoomControl={false}
         scrollWheelZoom={true}
         className="amb-leaflet-container"
       >

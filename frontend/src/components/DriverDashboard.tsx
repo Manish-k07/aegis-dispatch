@@ -20,7 +20,10 @@ import {
   Snackbar,
   Row,
   Stack,
+  Dialog,
 } from './common';
+
+export type ResponderViewMode = 'DRIVER' | 'OPERATOR';
 
 interface DriverDashboardProps {
   ambulance: Ambulance;
@@ -72,6 +75,23 @@ export const DriverDashboard: React.FC<DriverDashboardProps> = ({
     gcs: 15,
     conditionSummary: 'Patient conscious, alert, baseline vitals stable',
   });
+
+  const [viewMode, setViewMode] = useState<ResponderViewMode>(() => {
+    const saved = typeof sessionStorage !== 'undefined' ? (sessionStorage.getItem('aegis_responder_view_mode') as ResponderViewMode | null) : null;
+    return saved || 'DRIVER';
+  });
+
+  const [showModeModal, setShowModeModal] = useState<boolean>(() => {
+    return typeof sessionStorage !== 'undefined' ? !sessionStorage.getItem('aegis_responder_view_mode') : false;
+  });
+
+  const handleSwitchMode = (mode: ResponderViewMode) => {
+    setViewMode(mode);
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.setItem('aegis_responder_view_mode', mode);
+    }
+    setShowModeModal(false);
+  };
 
   const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
 
@@ -277,6 +297,28 @@ export const DriverDashboard: React.FC<DriverDashboardProps> = ({
         </Row>
 
         <Row gap={12} align="center">
+          {/* M3 Segmented Switcher for Driver vs Operator view */}
+          <div className="m3-segmented-control" role="group" aria-label="Console View Mode">
+            <button
+              type="button"
+              className={`m3-segmented-item ${viewMode === 'DRIVER' ? 'active' : ''}`}
+              onClick={() => handleSwitchMode('DRIVER')}
+              title="Driver navigation view: Full map and road guidance"
+            >
+              <Icon name="navigation" size={18} />
+              <span>Driver (Map)</span>
+            </button>
+            <button
+              type="button"
+              className={`m3-segmented-item ${viewMode === 'OPERATOR' ? 'active' : ''}`}
+              onClick={() => handleSwitchMode('OPERATOR')}
+              title="Operator clinical console: Telemetry, vitals, ECG"
+            >
+              <Icon name="monitor_heart" size={18} />
+              <span>Operator (Full)</span>
+            </button>
+          </div>
+
           <div className="m3-hide-mobile" style={{ fontSize: '14px', color: 'var(--md-sys-color-text-secondary)' }}>
             Crew: <strong>{ambulance.driverName || 'Arun Kumar'}</strong> &amp; <strong>{ambulance.emtName || 'Meena R'}</strong>
           </div>
@@ -285,7 +327,10 @@ export const DriverDashboard: React.FC<DriverDashboardProps> = ({
               variant="outlined"
               size="standard"
               icon="logout"
-              onClick={onLogout}
+              onClick={() => {
+                if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem('aegis_responder_view_mode');
+                if (onLogout) onLogout();
+              }}
             >
               Log out
             </Button>
@@ -293,9 +338,292 @@ export const DriverDashboard: React.FC<DriverDashboardProps> = ({
         </Row>
       </header>
 
-      {/* 2. Main 2-Column MDT Grid (Responsive 1-Column on Mobile via .driver-mdt-grid) */}
-      <div
-        className="driver-mdt-grid"
+      {/* Mode Selection Modal Dialog */}
+      <Dialog
+        isOpen={showModeModal}
+        onClose={() => {
+          if (typeof sessionStorage !== 'undefined' && !sessionStorage.getItem('aegis_responder_view_mode')) {
+            handleSwitchMode('DRIVER');
+          } else {
+            setShowModeModal(false);
+          }
+        }}
+        title="Select Console Mode"
+        icon="terminal"
+        maxWidth="640px"
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ fontSize: '14px', color: 'var(--md-sys-color-text-secondary)', lineHeight: '20px' }}>
+            Choose the active interface configuration for Unit <strong>{ambulance.registrationNumber}</strong>. You can switch modes at any time using the toggle in the top bar.
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px' }}>
+            {/* Driver View Option */}
+            <div
+              onClick={() => handleSwitchMode('DRIVER')}
+              style={{
+                border: '2px solid var(--md-sys-color-primary)',
+                borderRadius: '12px',
+                padding: '16px',
+                backgroundColor: 'var(--md-sys-color-surface-container)',
+                cursor: 'pointer',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px',
+                transition: 'all 150ms ease',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div
+                  style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '10px',
+                    backgroundColor: 'var(--md-sys-color-primary)',
+                    color: 'var(--md-sys-color-on-primary)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Icon name="navigation" size={24} />
+                </div>
+                <span
+                  style={{
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    padding: '2px 8px',
+                    borderRadius: '10px',
+                    backgroundColor: 'var(--md-sys-color-primary-container)',
+                    color: 'var(--md-sys-color-on-primary-container)',
+                  }}
+                >
+                  DRIVER SIDE
+                </span>
+              </div>
+
+              <div>
+                <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--md-sys-color-text)' }}>
+                  Driver Navigation View
+                </div>
+                <div style={{ fontSize: '13px', color: 'var(--md-sys-color-text-secondary)', marginTop: '4px', lineHeight: '18px' }}>
+                  Full-screen GPS road navigation, turn-by-turn guidance, live speed/ETA telemetry, and priority traffic preemption. Zero medical clutter.
+                </div>
+              </div>
+
+              <Button
+                variant="filled"
+                size="standard"
+                icon="navigation"
+                onClick={() => handleSwitchMode('DRIVER')}
+                style={{ width: '100%', marginTop: 'auto' }}
+              >
+                Launch Driver View
+              </Button>
+            </div>
+
+            {/* Operator View Option */}
+            <div
+              onClick={() => handleSwitchMode('OPERATOR')}
+              style={{
+                border: '1px solid var(--md-sys-color-outline)',
+                borderRadius: '12px',
+                padding: '16px',
+                backgroundColor: 'var(--md-sys-color-surface-container)',
+                cursor: 'pointer',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px',
+                transition: 'all 150ms ease',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div
+                  style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '10px',
+                    backgroundColor: 'var(--md-sys-color-surface-variant)',
+                    color: 'var(--md-sys-color-primary)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Icon name="monitor_heart" size={24} />
+                </div>
+                <span
+                  style={{
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    padding: '2px 8px',
+                    borderRadius: '10px',
+                    backgroundColor: 'var(--md-sys-color-surface-variant)',
+                    color: 'var(--md-sys-color-text-secondary)',
+                  }}
+                >
+                  OPERATOR SIDE
+                </span>
+              </div>
+
+              <div>
+                <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--md-sys-color-text)' }}>
+                  Operator Clinical Console
+                </div>
+                <div style={{ fontSize: '13px', color: 'var(--md-sys-color-text-secondary)', marginTop: '4px', lineHeight: '18px' }}>
+                  Dual-column clinical operations dashboard with patient vitals monitoring, 12-lead ECG telemetry, hospital broadcast, and voice control.
+                </div>
+              </div>
+
+              <Button
+                variant="outlined"
+                size="standard"
+                icon="monitor_heart"
+                onClick={() => handleSwitchMode('OPERATOR')}
+                style={{ width: '100%', marginTop: 'auto' }}
+              >
+                Launch Operator View
+              </Button>
+            </div>
+          </div>
+        </div>
+      </Dialog>
+
+      {/* Driver View (Map Only) vs Operator View (Full Dashboard) */}
+      {viewMode === 'DRIVER' ? (
+        <div
+          style={{
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            padding: '12px 16px',
+            gap: '12px',
+            boxSizing: 'border-box',
+            minHeight: 0,
+          }}
+        >
+          {/* Full Screen Road Navigation Map */}
+          <div style={{ flex: 1, minHeight: '480px', position: 'relative' }}>
+            <AmbulanceRouteMap
+              ambulance={ambulance}
+              dispatch={dispatch}
+              emergency={emergency}
+              hospital={hospital}
+              isSimulating={isSimulating}
+              onToggleSimulation={onToggleSimulation}
+              missionTelemetry={missionTelemetry}
+              fullHeight={true}
+            />
+          </div>
+
+          {/* Driver Quick Actions Bottom Bar (Zero Medical Clutter) */}
+          <Card padding={16} variant="outlined" style={{ flexShrink: 0 }}>
+            {dispatch ? (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '12px',
+                }}
+              >
+                {/* Mission Summary Pill */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div
+                    style={{
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '8px',
+                      backgroundColor: 'var(--md-sys-color-primary-container)',
+                      color: 'var(--md-sys-color-on-primary-container)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                    }}
+                  >
+                    <Icon name="navigation" size={20} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '14px', fontWeight: 600 }}>
+                      {emergency?.address || 'Incident Scene'}
+                    </div>
+                    <div style={{ fontSize: '12px', color: 'var(--md-sys-color-text-secondary)' }}>
+                      Target: {hospital?.name || 'Assigned Hospital'} · Priority: <strong>{emergency?.priority || 'URGENT'}</strong> · Status: {formatStatus(dispatch.status)}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Status Advancement & Phase Controls */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  {nextAction && (
+                    <Button
+                      variant="filled"
+                      size="large"
+                      iconTrailing="arrow_forward"
+                      onClick={() => onAdvanceStatus(dispatch, nextAction.next)}
+                      style={{ height: '48px', minWidth: '220px', fontWeight: 600 }}
+                    >
+                      Advance: {nextAction.label}
+                    </Button>
+                  )}
+
+                  {/* 48px Touch-friendly Status Buttons */}
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    {[
+                      { label: 'En route', status: 'EN_ROUTE_TO_SCENE' },
+                      { label: 'At scene', status: 'ARRIVED_AT_SCENE' },
+                      { label: 'Onboard', status: 'PATIENT_ONBOARD' },
+                      { label: 'Transporting', status: 'EN_ROUTE_TO_HOSPITAL' },
+                      { label: 'At hospital', status: 'ARRIVED_AT_HOSPITAL' },
+                      { label: 'Clear', status: 'COMPLETED' },
+                    ].map((btn) => (
+                      <button
+                        key={btn.status}
+                        type="button"
+                        onClick={() => onAdvanceStatus(dispatch, btn.status)}
+                        style={{
+                          height: '48px',
+                          padding: '0 12px',
+                          borderRadius: '8px',
+                          border: '1px solid var(--md-sys-color-outline)',
+                          backgroundColor:
+                            dispatch.status === btn.status
+                              ? 'var(--md-sys-color-primary-container)'
+                              : 'var(--md-sys-color-surface-variant)',
+                          color:
+                            dispatch.status === btn.status
+                              ? 'var(--md-sys-color-on-primary-container)'
+                              : 'var(--md-sys-color-text)',
+                          fontSize: '12px',
+                          fontWeight: 500,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {btn.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <Row justify="space-between" align="center">
+                <Row gap={8} align="center">
+                  <Icon name="check_circle" size={20} style={{ color: 'var(--md-sys-color-success)' }} />
+                  <span style={{ fontSize: '14px', fontWeight: 500 }}>
+                    Vehicle on standby · GPS telemetry broadcasting to CAD
+                  </span>
+                </Row>
+                <StatusChip tone="success" label="Available for dispatch" />
+              </Row>
+            )}
+          </Card>
+        </div>
+      ) : (
+        /* 2. Main 2-Column MDT Grid (Responsive 1-Column on Mobile via .driver-mdt-grid) */
+        <div
+          className="driver-mdt-grid"
         style={{
           flex: 1,
           padding: '16px',
@@ -730,8 +1058,9 @@ export const DriverDashboard: React.FC<DriverDashboardProps> = ({
               </Button>
             </Stack>
           </Card>
-        </Stack>
+                </Stack>
       </div>
+      )}
 
       {/* Snackbar notification on broadcast */}
       <Snackbar

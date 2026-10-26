@@ -958,3 +958,129 @@ select:focus-visible,
   background-color: var(--md-sys-color-error-container) !important;
   color: var(--md-sys-color-on-error-container) !important;
 }
+
+/* ==========================================================================
+   M3 SEGMENTED CONTROL FOR CONSOLE VIEW SWITCHING
+   ========================================================================== */
+.m3-segmented-control {
+  display: inline-flex;
+  align-items: center;
+  background-color: var(--md-sys-color-surface-container);
+  border: 1px solid var(--md-sys-color-outline);
+  border-radius: 20px;
+  padding: 3px;
+  gap: 2px;
+}
+
+.m3-segmented-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 16px;
+  background: transparent;
+  color: var(--md-sys-color-text-secondary);
+  font-family: var(--md-ref-typeface-plain);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 150ms ease;
+  white-space: nowrap;
+}
+
+.m3-segmented-item:hover {
+  color: var(--md-sys-color-text);
+  background-color: var(--md-sys-color-surface-container-high);
+}
+
+.m3-segmented-item.active {
+  background-color: var(--md-sys-color-primary-container) !important;
+  color: var(--md-sys-color-on-primary-container) !important;
+  font-weight: 600;
+}
+
+/* ==========================================================================
+   M3 MAP MARKERS & HEADING ARROW
+   ========================================================================== */
+.m3-leaflet-div-icon {
+  background: transparent !important;
+  border: none !important;
+}
+
+.m3-marker-container {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.m3-heading-arrow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  pointer-events: none;
+  transform-origin: 16px 16px;
+  transition: transform 250ms ease-out;
+  z-index: 20;
+}
+
+.m3-heading-arrow svg {
+  margin-top: -6px;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5));
+}
+
+.m3-marker-pin {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--md-sys-color-surface);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  transition: transform 150ms ease;
+}
+
+.m3-pin-circle {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background-color: var(--md-sys-color-surface);
+}
+
+.m3-pin-teardrop {
+  width: 28px;
+  height: 28px;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.m3-pin-teardrop svg {
+  transform: rotate(45deg);
+}
+
+.m3-marker-label {
+  position: absolute;
+  bottom: -18px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--md-sys-color-surface);
+  color: var(--md-sys-color-text);
+  border: 1px solid var(--md-sys-color-outline);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+}
+
