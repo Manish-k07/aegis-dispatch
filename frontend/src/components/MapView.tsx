@@ -30,16 +30,52 @@ export type MapTileLayer = 'OSM_CLEAN' | 'SATELLITE' | 'TERRAIN';
 
 const trafficCorridors: { name: string; level: 'HEAVY' | 'MODERATE' | 'CLEAR'; color: string; speed: string; coords: [number, number][] }[] = [
   {
-    name: 'MG Road Corridor',
+    name: 'Hosur Main Road (Richmond Circle to Koramangala)',
+    level: 'HEAVY',
+    color: '#D93025',
+    speed: '14 km/h',
+    coords: [
+      [12.9655, 77.6015], // Richmond Circle
+      [12.9630, 77.6012], // Shanthi Nagar
+      [12.9592, 77.6008], // Wilson Garden 7th Cross
+      [12.9555, 77.6006], // Wilson Garden 10th Cross
+      [12.9520, 77.6004], // Wilson Garden 12th Cross
+      [12.9475, 77.6005], // Lakkasandra junction
+      [12.9425, 77.6015], // NIMHANS road bend
+      [12.9392, 77.6038], // Dairy Circle underpass
+      [12.9372, 77.6080], // Adugodi curve
+      [12.9360, 77.6135], // Bosch / Adugodi Signal
+      [12.9352, 77.6185], // Forum Koramangala junction
+    ],
+  },
+  {
+    name: 'Koramangala 80ft Road & Sony World Arterial',
+    level: 'CLEAR',
+    color: '#188038',
+    speed: '44 km/h',
+    coords: [
+      [12.9352, 77.6185], // Forum Junction
+      [12.9348, 77.6240], // Koramangala 7th Block
+      [12.9350, 77.6295], // Sony World Signal
+      [12.9405, 77.6300], // 80ft Road North
+      [12.9470, 77.6320], // Intermediate Ring Road junction
+      [12.9550, 77.6350], // Domlur 100ft road bend
+      [12.9610, 77.6380], // Domlur flyover junction
+    ],
+  },
+  {
+    name: 'MG Road Metro Boulevard Corridor',
     level: 'HEAVY',
     color: '#D93025',
     speed: '12 km/h',
     coords: [
-      [12.9756, 77.6066],
-      [12.9745, 77.6012],
-      [12.9735, 77.5955],
-      [12.9719, 77.5900],
-      [12.9710, 77.5840],
+      [12.9760, 77.5925], // Cubbon Park Metro
+      [12.9755, 77.5960], // Queen's Road junction
+      [12.9750, 77.6010], // Anil Kumble Circle
+      [12.9745, 77.6050], // Mayo Hall
+      [12.9742, 77.6080], // Brigade Road Junction
+      [12.9738, 77.6150], // Webbs Ground
+      [12.9732, 77.6205], // Trinity Circle
     ],
   },
   {
@@ -48,68 +84,46 @@ const trafficCorridors: { name: string; level: 'HEAVY' | 'MODERATE' | 'CLEAR'; c
     color: '#E37400',
     speed: '28 km/h',
     coords: [
-      [12.9715, 77.6095],
-      [12.9685, 77.6030],
-      [12.9650, 77.5980],
-      [12.9630, 77.5920],
+      [12.9655, 77.6015], // Richmond Flyover
+      [12.9680, 77.6050], // Richmond Road
+      [12.9710, 77.6080], // Residency Road bend
+      [12.9725, 77.6110], // Mayo Hall south
+      [12.9705, 77.6145], // Garuda Mall junction
+      [12.9690, 77.6185], // Hosur Road entry
     ],
   },
   {
-    name: 'Richmond Circle to Hosur Road Arterial',
-    level: 'HEAVY',
-    color: '#D93025',
-    speed: '16 km/h',
-    coords: [
-      [12.9655, 77.6015],
-      [12.9580, 77.6045],
-      [12.9510, 77.6080],
-      [12.9420, 77.6140],
-      [12.9350, 77.6190],
-    ],
-  },
-  {
-    name: 'Brigade Road to Hosur Junction',
+    name: 'Brigade Road Corridor',
     level: 'MODERATE',
     color: '#E37400',
-    speed: '24 km/h',
+    speed: '22 km/h',
     coords: [
-      [12.9740, 77.6075],
-      [12.9700, 77.6072],
-      [12.9655, 77.6070],
-      [12.9600, 77.6085],
+      [12.9742, 77.6080], // MG Road Signal
+      [12.9715, 77.6078], // Rex Theatre junction
+      [12.9685, 77.6075], // Opera Junction
+      [12.9640, 77.6070], // Vellara Junction
     ],
   },
   {
-    name: 'Old Madras Road - Indiranagar Expressway',
+    name: 'Old Madras Road - Indiranagar Corridor',
     level: 'CLEAR',
     color: '#188038',
-    speed: '54 km/h',
+    speed: '52 km/h',
     coords: [
-      [12.9784, 77.6408],
-      [12.9770, 77.6320],
-      [12.9760, 77.6200],
-      [12.9756, 77.6066],
-    ],
-  },
-  {
-    name: 'Koramangala 80ft Road Corridor',
-    level: 'CLEAR',
-    color: '#188038',
-    speed: '46 km/h',
-    coords: [
-      [12.9340, 77.6180],
-      [12.9352, 77.6245],
-      [12.9410, 77.6270],
-      [12.9480, 77.6320],
+      [12.9732, 77.6205], // Trinity Circle
+      [12.9775, 77.6250], // Halasuru Lake
+      [12.9782, 77.6330], // CMH Road junction
+      [12.9785, 77.6410], // Indiranagar 100ft Road junction
+      [12.9810, 77.6490], // Binnamangala / Metro
     ],
   },
 ];
 
 const cctvJunctions = [
-  { id: 'CAM-01', name: 'Brigade Road Junction', coords: [12.9738, 77.6074] as [number, number], density: 'HEAVY', fps: 30, speedAvg: '18 km/h' },
+  { id: 'CAM-01', name: 'Brigade Road Junction', coords: [12.9742, 77.6080] as [number, number], density: 'HEAVY', fps: 30, speedAvg: '18 km/h' },
   { id: 'CAM-02', name: 'Richmond Circle Flyover', coords: [12.9655, 77.6015] as [number, number], density: 'MODERATE', fps: 28, speedAvg: '34 km/h' },
-  { id: 'CAM-03', name: 'Koramangala 80ft Junction', coords: [12.9352, 77.6245] as [number, number], density: 'FLOWING', fps: 30, speedAvg: '48 km/h' },
-  { id: 'CAM-04', name: 'Cubbon Park North Gate', coords: [12.9780, 77.5910] as [number, number], density: 'CLEAR', fps: 30, speedAvg: '52 km/h' },
+  { id: 'CAM-03', name: 'Dairy Circle Underpass', coords: [12.9392, 77.6038] as [number, number], density: 'HEAVY', fps: 30, speedAvg: '16 km/h' },
+  { id: 'CAM-04', name: 'Forum Koramangala Junction', coords: [12.9352, 77.6185] as [number, number], density: 'CLEAR', fps: 30, speedAvg: '48 km/h' },
 ];
 
 const stagingHeatZones = [
@@ -192,13 +206,24 @@ function FitBoundsController({
 function MapResizeWatcher() {
   const map = useMap();
   useEffect(() => {
+    const container = map.getContainer();
+    let observer: ResizeObserver | null = null;
+    if (container && typeof ResizeObserver !== 'undefined') {
+      observer = new ResizeObserver(() => {
+        map.invalidateSize();
+      });
+      observer.observe(container);
+    }
+
     const handleResize = () => {
       map.invalidateSize();
     };
     window.addEventListener('resize', handleResize);
-    const timer1 = setTimeout(() => map.invalidateSize(), 100);
-    const timer2 = setTimeout(() => map.invalidateSize(), 350);
+    const timer1 = setTimeout(() => map.invalidateSize(), 150);
+    const timer2 = setTimeout(() => map.invalidateSize(), 500);
+
     return () => {
+      if (observer) observer.disconnect();
       window.removeEventListener('resize', handleResize);
       clearTimeout(timer1);
       clearTimeout(timer2);
@@ -832,19 +857,20 @@ export const MapView: React.FC<MapViewProps> = ({
         />
       )}
 
-      {/* Simulated Live CCTV Traffic Camera Feed Modal */}
+            {/* M3 Live CCTV Traffic Camera Modal */}
       {activeCctv && (
-        <div className="modal-overlay" style={{ zIndex: 1100 }}>
+        <div className="modal-overlay" style={{ zIndex: 2100 }} onClick={() => setActiveCctv(null)}>
           <div
             className="modal-content"
+            onClick={(e) => e.stopPropagation()}
             style={{
               maxWidth: '560px',
               width: '92%',
-              background: 'rgba(11, 15, 25, 0.98)',
-              border: '1px solid #38bdf8',
-              borderRadius: '12px',
+              backgroundColor: 'var(--md-sys-color-surface)',
+              border: '1px solid var(--md-sys-color-outline)',
+              borderRadius: '16px',
               overflow: 'hidden',
-              boxShadow: '0 25px 50px rgba(0, 0, 0, 0.9)',
+              boxShadow: '0 16px 40px rgba(0, 0, 0, 0.24)',
             }}
           >
             <div
@@ -852,22 +878,30 @@ export const MapView: React.FC<MapViewProps> = ({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                padding: '12px 16px',
-                background: 'rgba(56, 189, 248, 0.1)',
-                borderBottom: '1px solid rgba(56, 189, 248, 0.2)',
+                padding: '14px 18px',
+                backgroundColor: 'var(--md-sys-color-surface-container)',
+                borderBottom: '1px solid var(--md-sys-color-outline-variant)',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Camera size={16} className="text-sky" />
-                <strong style={{ color: '#f8fafc', fontSize: '14px' }}>
-                  LIVE JUNCTION CCTV · {activeCctv.id}
-                </strong>
-                <span className="live-dot-red animate-pulse" style={{ width: '8px', height: '8px' }}></span>
+                <Camera size={18} style={{ color: 'var(--md-sys-color-primary)' }} />
+                <span style={{ color: 'var(--md-sys-color-text)', fontSize: '14px', fontWeight: 600 }}>
+                  Live Junction CCTV · {activeCctv.id}
+                </span>
+                <span
+                  style={{
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '50%',
+                    backgroundColor: 'var(--md-sys-color-error)',
+                    display: 'inline-block',
+                  }}
+                />
               </div>
               <button
-                className="btn-icon"
+                className="btn-close"
                 onClick={() => setActiveCctv(null)}
-                style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}
+                aria-label="Close CCTV feed"
               >
                 <X size={18} />
               </button>
@@ -878,30 +912,20 @@ export const MapView: React.FC<MapViewProps> = ({
               style={{
                 position: 'relative',
                 height: '240px',
-                background: 'var(--md-sys-color-surface)',
+                backgroundColor: 'var(--md-sys-color-surface-container-high)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 overflow: 'hidden',
               }}
             >
-              {/* Scanlines Effect */}
-              <div
-                style={{
-                  position: 'absolute',
-                  inset: 0,
-                  background: 'transparent',
-                  pointerEvents: 'none',
-                }}
-              />
-
               <div style={{ textAlign: 'center', zIndex: 2 }}>
-                <Camera size={44} style={{ color: 'rgba(56, 189, 248, 0.35)', margin: '0 auto 8px auto' }} />
-                <div style={{ color: '#38bdf8', fontSize: '13px', fontWeight: 600, letterSpacing: '1px' }}>
-                  {activeCctv.name.toUpperCase()}
+                <Camera size={44} style={{ color: 'var(--md-sys-color-primary)', opacity: 0.6, margin: '0 auto 8px auto' }} />
+                <div style={{ color: 'var(--md-sys-color-text)', fontSize: '13px', fontWeight: 600 }}>
+                  {activeCctv.name}
                 </div>
-                <div style={{ color: '#64748b', fontSize: '11px', marginTop: '4px' }}>
-                  LIVE STREAM · 1080p · {activeCctv.fps} FPS · ENCRYPTED WSS FEED
+                <div style={{ color: 'var(--md-sys-color-text-secondary)', fontSize: '11px', marginTop: '4px' }}>
+                  Live stream · 1080p · {activeCctv.fps} FPS · Encrypted feed
                 </div>
               </div>
 
@@ -911,12 +935,14 @@ export const MapView: React.FC<MapViewProps> = ({
                   position: 'absolute',
                   top: '10px',
                   left: '12px',
-                  fontFamily: 'monospace',
+                  fontFamily: 'var(--md-sys-font-mono, monospace)',
                   fontSize: '11px',
-                  color: '#34d399',
-                  background: 'rgba(0, 0, 0, 0.6)',
+                  color: 'var(--md-sys-color-success)',
+                  backgroundColor: 'var(--md-sys-color-surface)',
                   padding: '3px 8px',
                   borderRadius: '4px',
+                  border: '1px solid var(--md-sys-color-outline-variant)',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
                 }}
               >
                 REC ● {new Date().toLocaleTimeString()}
@@ -927,37 +953,50 @@ export const MapView: React.FC<MapViewProps> = ({
                   position: 'absolute',
                   bottom: '10px',
                   right: '12px',
-                  fontFamily: 'monospace',
+                  fontFamily: 'var(--md-sys-font-mono, monospace)',
                   fontSize: '11px',
-                  color: '#fbbf24',
-                  background: 'rgba(0, 0, 0, 0.6)',
+                  color: 'var(--md-sys-color-text)',
+                  backgroundColor: 'var(--md-sys-color-surface)',
                   padding: '3px 8px',
                   borderRadius: '4px',
+                  border: '1px solid var(--md-sys-color-outline-variant)',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
                 }}
               >
-                DENSITY: {activeCctv.density} · SPD: {activeCctv.speedAvg}
+                Flow: {activeCctv.density} · Speed: {activeCctv.speedAvg}
               </div>
             </div>
 
             <div
               style={{
-                padding: '12px 16px',
+                padding: '12px 18px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 fontSize: '12px',
-                color: '#94a3b8',
-                background: 'rgba(0, 0, 0, 0.3)',
+                color: 'var(--md-sys-color-text-secondary)',
+                backgroundColor: 'var(--md-sys-color-surface)',
+                borderTop: '1px solid var(--md-sys-color-outline-variant)',
               }}
             >
-              <span>Automated Scene Assessment: <strong>Corridor Clear for Inbound EMS</strong></span>
-              <button className="btn btn-xs btn-outline" onClick={() => setActiveCctv(null)}>
+              <span>Automated Scene Assessment: <strong style={{ color: 'var(--md-sys-color-text)' }}>Corridor Clear for Inbound EMS</strong></span>
+              <button
+                className="btn btn-xs btn-outline"
+                onClick={() => setActiveCctv(null)}
+                style={{
+                  padding: '4px 12px',
+                  borderRadius: '12px',
+                  border: '1px solid var(--md-sys-color-outline)',
+                  backgroundColor: 'transparent',
+                  color: 'var(--md-sys-color-text)',
+                  cursor: 'pointer',
+                }}
+              >
                 Dismiss Feed
               </button>
             </div>
           </div>
-        </div>
-      )}
+        </div>      )}
     </div>
   );
 };

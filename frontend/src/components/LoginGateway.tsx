@@ -18,6 +18,8 @@ interface LoginGatewayProps {
   ambulances: Ambulance[];
   hospitals: Hospital[];
   onLogin: (session: AuthSession) => void;
+  theme?: 'light' | 'dark';
+  onToggleTheme?: () => void;
 }
 
 interface RegisteredCitizenAccount {
@@ -30,7 +32,10 @@ export const LoginGateway: React.FC<LoginGatewayProps> = ({
   ambulances,
   hospitals,
   onLogin,
+  theme = 'light',
+  onToggleTheme,
 }) => {
+  const [showCredentialsModal, setShowCredentialsModal] = useState(false);
   const [activeTerminal, setActiveTerminal] = useState<DepartmentalTerminal>('DISPATCHER');
 
   // Input states (all start empty - NO prefilled secrets)
@@ -499,8 +504,222 @@ export const LoginGateway: React.FC<LoginGatewayProps> = ({
         backgroundColor: 'var(--md-sys-color-background)',
         padding: '16px',
         boxSizing: 'border-box',
+        position: 'relative',
       }}
     >
+      {/* Top-Right Theme Toggle & Quick Credentials */}
+      <div
+        style={{
+          position: 'absolute',
+          top: '16px',
+          right: '16px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          zIndex: 100,
+        }}
+      >
+        <button
+          type="button"
+          onClick={() => setShowCredentialsModal(true)}
+          style={{
+            height: '36px',
+            padding: '0 12px',
+            borderRadius: '18px',
+            border: '1px solid var(--md-sys-color-outline)',
+            backgroundColor: 'var(--md-sys-color-surface-container)',
+            color: 'var(--md-sys-color-primary)',
+            fontSize: '12px',
+            fontWeight: 600,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            cursor: 'pointer',
+            boxShadow: 'var(--elevation-1)',
+          }}
+        >
+          <Icon name="key" size={16} />
+          <span>Demo Credentials</span>
+        </button>
+
+        {onToggleTheme && (
+          <button
+            type="button"
+            onClick={onToggleTheme}
+            aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+            title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+            style={{
+              width: '36px',
+              height: '36px',
+              borderRadius: '18px',
+              border: '1px solid var(--md-sys-color-outline)',
+              backgroundColor: 'var(--md-sys-color-surface-container)',
+              color: 'var(--md-sys-color-text)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              boxShadow: 'var(--elevation-1)',
+            }}
+          >
+            <Icon name={theme === 'dark' ? 'light_mode' : 'dark_mode'} size={18} />
+          </button>
+        )}
+      </div>
+
+      {/* Demo Credentials Quick Reference Modal */}
+      {showCredentialsModal && (
+        <div className="modal-overlay" style={{ zIndex: 2000 }} onClick={() => setShowCredentialsModal(false)}>
+          <div
+            className="modal-dialog"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: '520px', width: '92%' }}
+          >
+            <div className="modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Icon name="key" size={20} style={{ color: 'var(--md-sys-color-primary)' }} />
+                <h2 style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: 'var(--md-sys-color-text)' }}>
+                  All Gateway Login Credentials
+                </h2>
+              </div>
+              <button
+                type="button"
+                className="btn-close"
+                onClick={() => setShowCredentialsModal(false)}
+                aria-label="Close credentials dialog"
+              >
+                <Icon name="close" size={18} />
+              </button>
+            </div>
+            <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '13px' }}>
+              <div style={{ padding: '10px 12px', borderRadius: '8px', backgroundColor: 'var(--md-sys-color-surface-container)' }}>
+                <div style={{ fontWeight: 600, color: 'var(--md-sys-color-primary)', marginBottom: '4px' }}>
+                  1. Central CAD Dispatcher
+                </div>
+                <div style={{ color: 'var(--md-sys-color-text-secondary)', marginBottom: '6px' }}>
+                  Badge ID: <code style={{ fontWeight: 600, color: 'var(--md-sys-color-text)' }}>CAD-042</code> (or <code>CAD-011</code>, <code>DISP-901</code>) &bull; PIN: <code style={{ fontWeight: 600, color: 'var(--md-sys-color-text)' }}>1120</code>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTerminal('DISPATCHER');
+                    setDispatcherBadge('CAD-042');
+                    setDispatcherPin('1120');
+                    setShowCredentialsModal(false);
+                  }}
+                  style={{
+                    padding: '3px 10px',
+                    borderRadius: '12px',
+                    border: '1px solid var(--md-sys-color-primary)',
+                    backgroundColor: 'var(--md-sys-color-primary-container)',
+                    color: 'var(--md-sys-color-on-primary-container)',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Fill Dispatcher Credentials
+                </button>
+              </div>
+
+              <div style={{ padding: '10px 12px', borderRadius: '8px', backgroundColor: 'var(--md-sys-color-surface-container)' }}>
+                <div style={{ fontWeight: 600, color: 'var(--md-sys-color-primary)', marginBottom: '4px' }}>
+                  2. Paramedic / MDT Responder
+                </div>
+                <div style={{ color: 'var(--md-sys-color-text-secondary)', marginBottom: '6px' }}>
+                  Ambulance: <code style={{ fontWeight: 600, color: 'var(--md-sys-color-text)' }}>KA-01-AE-1001</code> &bull; Badge ID: <code style={{ fontWeight: 600, color: 'var(--md-sys-color-text)' }}>MED-702</code> (or <code>PM-402</code>) &bull; PIN: <code style={{ fontWeight: 600, color: 'var(--md-sys-color-text)' }}>1001</code>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTerminal('DRIVER');
+                    setDriverCallSign(ambulances[0]?.id || 'amb-1');
+                    setDriverBadge('MED-702');
+                    setDriverPin('1001');
+                    setShowCredentialsModal(false);
+                  }}
+                  style={{
+                    padding: '3px 10px',
+                    borderRadius: '12px',
+                    border: '1px solid var(--md-sys-color-primary)',
+                    backgroundColor: 'var(--md-sys-color-primary-container)',
+                    color: 'var(--md-sys-color-on-primary-container)',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Fill Paramedic Credentials
+                </button>
+              </div>
+
+              <div style={{ padding: '10px 12px', borderRadius: '8px', backgroundColor: 'var(--md-sys-color-surface-container)' }}>
+                <div style={{ fontWeight: 600, color: 'var(--md-sys-color-primary)', marginBottom: '4px' }}>
+                  3. Hospital Emergency Department
+                </div>
+                <div style={{ color: 'var(--md-sys-color-text-secondary)', marginBottom: '6px' }}>
+                  Facility: <code style={{ fontWeight: 600, color: 'var(--md-sys-color-text)' }}>Demo City Hospital</code> &bull; Badge ID: <code style={{ fontWeight: 600, color: 'var(--md-sys-color-text)' }}>RN-402</code> (or <code>NURSE-12</code>) &bull; PIN: <code style={{ fontWeight: 600, color: 'var(--md-sys-color-text)' }}>2001</code>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTerminal('HOSPITAL');
+                    setHospitalFacilityCode(hospitals[0]?.id || 'hosp-1');
+                    setHospitalStaffBadge('RN-402');
+                    setHospitalPin('2001');
+                    setShowCredentialsModal(false);
+                  }}
+                  style={{
+                    padding: '3px 10px',
+                    borderRadius: '12px',
+                    border: '1px solid var(--md-sys-color-primary)',
+                    backgroundColor: 'var(--md-sys-color-primary-container)',
+                    color: 'var(--md-sys-color-on-primary-container)',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Fill Hospital Credentials
+                </button>
+              </div>
+
+              <div style={{ padding: '10px 12px', borderRadius: '8px', backgroundColor: 'var(--md-sys-color-surface-container)' }}>
+                <div style={{ fontWeight: 600, color: 'var(--md-sys-color-primary)', marginBottom: '4px' }}>
+                  4. Citizen SOS Portal
+                </div>
+                <div style={{ color: 'var(--md-sys-color-text-secondary)', marginBottom: '6px' }}>
+                  Mobile Number: <code style={{ fontWeight: 600, color: 'var(--md-sys-color-text)' }}>9845012345</code> &bull; Password: <code style={{ fontWeight: 600, color: 'var(--md-sys-color-text)' }}>password123</code>
+                  <br />
+                  <span style={{ fontSize: '11px', opacity: 0.8 }}>(Or click Register to sign up with any phone number instantly)</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTerminal('CITIZEN');
+                    setCitizenMode('LOGIN');
+                    setCitizenLoginId('9845012345');
+                    setCitizenPassword('password123');
+                    setShowCredentialsModal(false);
+                  }}
+                  style={{
+                    padding: '3px 10px',
+                    borderRadius: '12px',
+                    border: '1px solid var(--md-sys-color-primary)',
+                    backgroundColor: 'var(--md-sys-color-primary-container)',
+                    color: 'var(--md-sys-color-on-primary-container)',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Fill Citizen Credentials
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       <PageContainer maxWidth={440} padding={0}>
         <Stack gap={24} fullWidth align="center">
           {/* Header */}

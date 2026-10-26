@@ -254,30 +254,45 @@ export const NewEmergencyModal: React.FC<NewEmergencyModalProps> = ({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              marginBottom: '12px',
-              padding: '8px 12px',
-              background: 'rgba(56, 189, 248, 0.05)',
+              marginBottom: '14px',
+              padding: '10px 14px',
+              backgroundColor: 'var(--md-sys-color-surface-container)',
               borderRadius: '8px',
-              border: '1px solid rgba(56, 189, 248, 0.2)',
+              border: '1px solid var(--md-sys-color-outline-variant)',
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <button
                 type="button"
-                className={`btn btn-xs ${isListening ? 'btn-dispatch' : 'btn-outline-sky'}`}
+                className={`btn btn-xs ${isListening ? 'btn-dispatch' : 'btn-outline'}`}
                 onClick={toggleVoiceIntake}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  height: '32px',
+                  padding: '0 12px',
+                  borderRadius: '16px',
+                  fontSize: '12px',
+                  fontWeight: 500,
+                  border: '1px solid var(--md-sys-color-outline)',
+                  backgroundColor: isListening ? 'var(--md-sys-color-error)' : 'var(--md-sys-color-surface)',
+                  color: isListening ? '#ffffff' : 'var(--md-sys-color-primary)',
+                  cursor: 'pointer',
+                }}
               >
-                {isListening ? <MicOff size={13} className="animate-pulse" /> : <Mic size={13} />}
+                {isListening ? <MicOff size={14} className="animate-pulse" /> : <Mic size={14} />}
                 <span>{isListening ? 'Listening Live... (Speak)' : 'Voice-to-Text Intake'}</span>
               </button>
               {voiceTranscript && (
-                <span style={{ fontSize: '11px', color: '#38bdf8', fontStyle: 'italic' }}>
+                <span style={{ fontSize: '12px', color: 'var(--md-sys-color-primary)', fontStyle: 'italic' }}>
                   "{voiceTranscript}"
                 </span>
               )}
             </div>
-            <span style={{ fontSize: '10px', color: '#64748b' }}>Speech clinical entity extraction</span>
+            <span style={{ fontSize: '11px', color: 'var(--md-sys-color-text-secondary)' }}>
+              Speech clinical entity extraction
+            </span>
           </div>
 
           <div className="presets-bar">
@@ -430,11 +445,41 @@ export const NewEmergencyModal: React.FC<NewEmergencyModalProps> = ({
             </div>
           )}
 
-          <div className="modal-actions mt-4">
-            <button type="button" className="btn btn-outline" onClick={onClose}>
+          <div className="modal-actions mt-4" style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+            <button
+              type="button"
+              className="btn btn-outline"
+              onClick={onClose}
+              style={{
+                height: '40px',
+                padding: '0 20px',
+                borderRadius: '20px',
+                border: '1px solid var(--md-sys-color-outline)',
+                backgroundColor: 'transparent',
+                color: 'var(--md-sys-color-text)',
+                fontSize: '13px',
+                fontWeight: 500,
+                cursor: 'pointer',
+              }}
+            >
               Cancel
             </button>
-            <button type="submit" className="btn btn-primary">
+            <button
+              type="submit"
+              className="btn btn-primary"
+              style={{
+                height: '40px',
+                padding: '0 24px',
+                borderRadius: '20px',
+                border: 'none',
+                backgroundColor: 'var(--md-sys-color-primary)',
+                color: 'var(--md-sys-color-on-primary)',
+                fontSize: '13px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                boxShadow: 'var(--elevation-1)',
+              }}
+            >
               Dispatch Request Intake
             </button>
           </div>

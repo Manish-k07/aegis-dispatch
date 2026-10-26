@@ -1450,6 +1450,8 @@ export const App: React.FC = () => {
           ambulances={data.ambulances}
           hospitals={data.hospitals}
           onLogin={handleLogin}
+          theme={effectiveTheme}
+          onToggleTheme={handleToggleTheme}
         />
         {toastMessage && (
           <div className="system-toast-banner">
