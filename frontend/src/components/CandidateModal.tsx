@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
-import { X, Truck, Clock, Navigation, CheckCircle2, Award } from 'lucide-react';
 import { Emergency, Candidate } from '../types';
+import { Dialog, Button, Icon } from './common';
 
 interface CandidateModalProps {
   emergency: Emergency;
@@ -29,118 +29,140 @@ export const CandidateModal: React.FC<CandidateModalProps> = ({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isLoading, candidates, onClose, onAssign]);
+
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-dialog candidate-dialog" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className={`priority-tag ${emergency.priority.toLowerCase()}`}>
-                {emergency.priority}
-              </span>
-              <h2>Dispatch Recommendation Engine</h2>
-            </div>
-            <p className="modal-subtitle">
-              {emergency.type} incident at {emergency.address}
-            </p>
+    <Dialog
+      isOpen={true}
+      onClose={onClose}
+      title="Dispatch Recommendation Engine"
+      icon="smart_toy"
+      maxWidth="720px"
+    >
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '8px', borderBottom: '1px solid var(--md-sys-color-outline-variant)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span
+              style={{
+                fontSize: '11px',
+                fontWeight: 700,
+                padding: '2px 8px',
+                borderRadius: '4px',
+                backgroundColor: 'var(--md-sys-color-error-container)',
+                color: 'var(--md-sys-color-on-error-container)',
+              }}
+            >
+              {emergency.priority}
+            </span>
+            <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--md-sys-color-text)' }}>
+              {emergency.type} incident
+            </span>
           </div>
-          <button className="btn-close" onClick={onClose}>
-            <X size={20} />
-          </button>
+          <span style={{ fontSize: '12px', color: 'var(--md-sys-color-text-secondary)' }}>
+            {emergency.address}
+          </span>
         </div>
 
-        <div className="modal-body">
-          {isLoading ? (
-            <div className="loading-state">
-              <div className="spinner"></div>
-              <span>Evaluating nearest available fleet & capability algorithms…</span>
+        {isLoading ? (
+          <div style={{ padding: '32px', textAlign: 'center', color: 'var(--md-sys-color-text-secondary)', fontSize: '13px' }}>
+            Evaluating nearest available fleet &amp; capability algorithms...
+          </div>
+        ) : candidates.length === 0 ? (
+          <div style={{ padding: '24px', textAlign: 'center', color: 'var(--md-sys-color-warning)', fontSize: '13px' }}>
+            <p style={{ margin: 0, fontWeight: 500 }}>No available ambulances match the current response criteria.</p>
+            <small style={{ color: 'var(--md-sys-color-text-secondary)' }}>All fleet units may currently be deployed or out of service.</small>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '8px 12px',
+                borderRadius: '8px',
+                backgroundColor: 'var(--md-sys-color-surface-container)',
+                fontSize: '12px',
+                color: 'var(--md-sys-color-text-secondary)',
+              }}
+            >
+              <Icon name="award_star" size={16} style={{ color: 'var(--md-sys-color-warning)', flexShrink: 0 }} />
+              <span>
+                Candidates ranked by weighted multi-criteria AI score (True Road ETA 35%, Clinical Capabilities 30%, Distance 15%, Availability 10%, Speed 10%).
+              </span>
             </div>
-          ) : candidates.length === 0 ? (
-            <div className="empty-state text-amber">
-              <p>No available ambulances match the current response criteria.</p>
-              <small>All fleet units may currently be deployed or out of service.</small>
-            </div>
-          ) : (
-            <div className="candidate-list">
-              <div className="ranking-notice">
-                <Award size={16} className="text-amber flex-shrink-0" />
-                <span>
-                  Candidates ranked by weighted multi-criteria AI score (True Road ETA 35%, Clinical Capabilities 30%, Distance 15%, Availability 10%, Speed 10%).
-                </span>
-              </div>
 
-              {candidates.map((cand, index) => {
-                const isBest = index === 0;
-                const matchPct = cand.score <= 1.0 ? Math.round(cand.score * 100) : Math.min(100, Math.round(cand.score));
+            {candidates.map((cand, index) => {
+              const isBest = index === 0;
+              const matchPct = cand.score <= 1.0 ? Math.round(cand.score * 100) : Math.min(100, Math.round(cand.score));
 
-                return (
-                  <div key={cand.ambulance.id} className={`candidate-card ${isBest ? 'best-match' : ''}`}>
-                    <div className="candidate-rank-badge">
-                      {isBest ? 'TOP RECOMMENDATION' : `#${index + 1}`}
-                    </div>
-
-                    <div className="candidate-main">
-                      <div className="candidate-title">
-                        <div className="match-score-badge">
-                          <span className="match-score-num">{matchPct}%</span>
-                          <span className="match-score-label">MATCH</span>
-                        </div>
-
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <strong className="text-primary text-sm">{cand.ambulance.registrationNumber}</strong>
-                            <span className="candidate-type-badge">{cand.ambulance.type} UNIT</span>
-                          </div>
-                          <div className="candidate-crew">
-                            Driver: <strong>{cand.ambulance.driverName || 'Driver'}</strong> · EMT: <strong>{cand.ambulance.emtName || 'EMT'}</strong>
-                          </div>
-                        </div>
+              return (
+                <div
+                  key={cand.ambulance.id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '12px 16px',
+                    borderRadius: '12px',
+                    backgroundColor: isBest ? 'var(--md-sys-color-primary-container)' : 'var(--md-sys-color-surface-container)',
+                    border: '1px solid',
+                    borderColor: isBest ? 'var(--md-sys-color-primary)' : 'var(--md-sys-color-outline-variant)',
+                    gap: '16px',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
+                    <div
+                      style={{
+                        padding: '6px 10px',
+                        borderRadius: '8px',
+                        backgroundColor: 'var(--md-sys-color-surface)',
+                        textAlign: 'center',
+                        border: '1px solid var(--md-sys-color-outline-variant)',
+                      }}
+                    >
+                      <div style={{ fontSize: '16px', fontWeight: 700, color: 'var(--md-sys-color-primary)', lineHeight: 1 }}>
+                        {matchPct}%
                       </div>
-
-                      {/* Tactical Metric Cards Grid */}
-                      <div className="candidate-metrics-grid mt-2">
-                        <div className="metric-box">
-                          <div className="metric-box-label">
-                            <Clock size={11} />
-                            <span>Road ETA</span>
-                          </div>
-                          <strong className="metric-box-val text-amber">{cand.etaMinutes} min</strong>
-                        </div>
-
-                        <div className="metric-box">
-                          <div className="metric-box-label">
-                            <Navigation size={11} />
-                            <span>Road Dist</span>
-                          </div>
-                          <strong className="metric-box-val">{cand.distanceKm} km</strong>
-                        </div>
-
-                        <div className="metric-box">
-                          <div className="metric-box-label">
-                            <CheckCircle2 size={11} />
-                            <span>Clinical Fit</span>
-                          </div>
-                          <strong className="metric-box-val text-emerald">{(cand.capabilityScore * 100).toFixed(0)}%</strong>
-                        </div>
+                      <div style={{ fontSize: '9px', fontWeight: 600, color: 'var(--md-sys-color-text-secondary)', marginTop: '2px' }}>
+                        MATCH
                       </div>
                     </div>
 
-                    <div className="candidate-action">
-                      <button
-                        className={`btn ${isBest ? 'btn-primary' : 'btn-outline'} btn-dispatch-candidate`}
-                        onClick={() => onAssign(cand)}
-                      >
-                        <span>Assign & Dispatch</span>
-                        <span className="key-hint">↵</span>
-                      </button>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontFamily: 'var(--md-sys-font-mono, monospace)', fontWeight: 700, fontSize: '14px', color: 'var(--md-sys-color-text)' }}>
+                          {cand.ambulance.registrationNumber}
+                        </span>
+                        <span style={{ fontSize: '11px', padding: '1px 6px', borderRadius: '4px', backgroundColor: 'var(--md-sys-color-surface)', border: '1px solid var(--md-sys-color-outline)' }}>
+                          {cand.ambulance.type}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: '12px', color: 'var(--md-sys-color-text-secondary)', marginTop: '2px' }}>
+                        Driver: {cand.ambulance.driverName || 'Paramedic'} &bull; ETA: <strong style={{ color: 'var(--md-sys-color-warning)' }}>{cand.etaMinutes} min</strong> ({cand.distanceKm} km)
+                      </div>
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          )}
+
+                  <Button
+                    variant={isBest ? 'filled' : 'outlined'}
+                    size="standard"
+                    icon="check"
+                    onClick={() => onAssign(cand)}
+                  >
+                    Assign &amp; Dispatch
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '8px' }}>
+          <Button variant="outlined" onClick={onClose}>
+            Close
+          </Button>
         </div>
       </div>
-    </div>
+    </Dialog>
   );
 };

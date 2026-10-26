@@ -1,13 +1,67 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, AlertTriangle, Sparkles, Mic, MicOff, Volume2 } from 'lucide-react';
 import { Emergency } from '../types';
 import { API_BASE } from '../config';
+import {
+  Dialog,
+  Field,
+  Select,
+  Button,
+  Icon,
+  Stack,
+  SelectOption,
+} from './common';
 
 interface NewEmergencyModalProps {
   initialCoordinates?: { lat: number; lon: number } | null;
   onClose: () => void;
   onSubmit: (emergency: Partial<Emergency>) => void;
 }
+
+const EMERGENCY_TYPES: SelectOption[] = [
+  { value: 'ACCIDENT', label: 'Accident / Collision', icon: 'car_crash' },
+  { value: 'CARDIAC', label: 'Cardiac Arrest', icon: 'favorite' },
+  { value: 'BREATHING', label: 'Respiratory Distress', icon: 'air' },
+  { value: 'TRAUMA', label: 'Major Trauma', icon: 'personal_injury' },
+  { value: 'PEDIATRIC', label: 'Pediatric Emergency', icon: 'child_care' },
+  { value: 'MATERNITY', label: 'Maternity / OB-GYN', icon: 'pregnant_woman' },
+];
+
+const PRIORITY_OPTIONS: SelectOption[] = [
+  { value: 'CRITICAL', label: 'Critical (P1)', icon: 'error' },
+  { value: 'HIGH', label: 'High (P2)', icon: 'warning' },
+  { value: 'MEDIUM', label: 'Medium (P3)', icon: 'info' },
+  { value: 'LOW', label: 'Low (P4)', icon: 'check_circle' },
+];
+
+const PRESETS = [
+  {
+    label: 'Vehicle Collision',
+    type: 'ACCIDENT',
+    priority: 'CRITICAL' as const,
+    address: 'Indiranagar 100ft Road, Bengaluru',
+    lat: 12.9784,
+    lon: 77.6408,
+    desc: 'High-speed collision with injuries',
+  },
+  {
+    label: 'Cardiac Arrest',
+    type: 'CARDIAC',
+    priority: 'CRITICAL' as const,
+    address: 'Koramangala 4th Block, Bengaluru',
+    lat: 12.9345,
+    lon: 77.6256,
+    desc: 'Elderly male collapsed, CPR initiated',
+  },
+  {
+    label: 'Respiratory Distress',
+    type: 'BREATHING',
+    priority: 'HIGH' as const,
+    address: 'MG Road Metro Station, Bengaluru',
+    lat: 12.9756,
+    lon: 77.6066,
+    desc: 'Severe shortness of breath, asthma history',
+  },
+];
 
 export const NewEmergencyModal: React.FC<NewEmergencyModalProps> = ({
   initialCoordinates,
@@ -81,7 +135,6 @@ export const NewEmergencyModal: React.FC<NewEmergencyModalProps> = ({
       setDescription((prev) => (prev ? prev + ' ' + speech : speech));
 
       const lower = speech.toLowerCase();
-      // Entity extraction
       if (lower.includes('cardiac') || lower.includes('chest pain') || lower.includes('heart attack')) {
         setType('CARDIAC');
         setPriority('CRITICAL');
@@ -98,55 +151,53 @@ export const NewEmergencyModal: React.FC<NewEmergencyModalProps> = ({
         setType('PEDIATRIC');
         setPriority('HIGH');
       }
-
-      if (lower.includes('mg road')) {
-        setAddress('MG Road Metro Station, Bengaluru');
-        setLatitude(12.9756);
-        setLongitude(77.6066);
-      } else if (lower.includes('koramangala')) {
-        setAddress('Koramangala 80ft Road, Bengaluru');
-        setLatitude(12.9352);
-        setLongitude(77.6245);
-      } else if (lower.includes('indiranagar')) {
-        setAddress('100ft Road, Indiranagar, Bengaluru');
-        setLatitude(12.9784);
-        setLongitude(77.6408);
-      }
     };
 
-    recognition.start();
+    try {
+      recognition.start();
+    } catch {
+      setIsListening(false);
+    }
   };
 
   const handleRunAiTriage = async () => {
     if (!description.trim()) return;
     setTriageLoading(true);
+
     try {
       const res = await fetch(`${API_BASE}/ai/triage`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ description, type }),
+        body: JSON.stringify({
+          description,
+          emergencyType: type,
+        }),
       });
+
       if (res.ok) {
-        const json = await res.json();
-        setTriageSuggestion(json);
+        const data = await res.json();
+        setTriageSuggestion(data);
         return;
       }
-    } catch (e) {
-      console.warn('AI Triage remote gateway unavailable, using embedded clinical triage model', e);
-      const lower = (description + ' ' + type).toLowerCase();
-      let priority = 'MEDIUM';
-      let confidence = 0.92;
-      let reason = 'Standard medical evaluation and monitoring indicated.';
-      let protocolChecklist = ['Check vital signs (BP, HR, SpO2)', 'Establish peripheral IV line', 'Administer oxygen therapy as indicated'];
+    } catch {}
 
-      if (lower.includes('cardiac') || lower.includes('chest pain') || lower.includes('heart') || lower.includes('arrest') || lower.includes('cpr')) {
+    // Fallback heuristic triage
+    try {
+      await new Promise((r) => setTimeout(r, 600));
+      const lower = description.toLowerCase();
+      let priority: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' = 'MEDIUM';
+      let confidence = 0.88;
+      let reason = 'Standard EMS emergency dispatch required.';
+      let protocolChecklist = ['Monitor ABC vitals', 'Position patient safely', 'Prepare AED if unresponsiveness occurs'];
+
+      if (lower.includes('cardiac') || lower.includes('cpr') || lower.includes('unconscious') || lower.includes('chest pain')) {
         priority = 'CRITICAL';
-        confidence = 0.98;
-        reason = 'Acute Coronary Syndrome / Sudden Cardiac Event risk detected.';
-        protocolChecklist = ['Immediate CPR / AED deployment', '12-lead ECG acquisition', 'Aspirin 300mg oral', 'High-flow O2 via non-rebreather'];
-      } else if (lower.includes('unconscious') || lower.includes('stroke') || lower.includes('head') || lower.includes('collision') || lower.includes('bleed') || lower.includes('accident')) {
+        confidence = 0.96;
+        reason = 'High-risk cardiovascular event with hemodynamic instability.';
+        protocolChecklist = ['Continuous CPR with bag-valve-mask', 'Attach 12-lead ECG monitor', 'Prepare IV epinephrine & defibrillator'];
+      } else if (lower.includes('accident') || lower.includes('collision') || lower.includes('crash') || lower.includes('bleed')) {
         priority = 'CRITICAL';
-        confidence = 0.95;
+        confidence = 0.94;
         reason = 'Major polytrauma or critical neurological compromise risk detected.';
         protocolChecklist = ['Airway & C-spine immobilization', 'GCS neurological assessment', 'Control severe hemorrhage', 'Direct transport to Level 1 Trauma'];
       } else if (lower.includes('breath') || lower.includes('asthma') || lower.includes('chok') || lower.includes('dyspnea')) {
@@ -161,7 +212,7 @@ export const NewEmergencyModal: React.FC<NewEmergencyModalProps> = ({
         suggestedType: type || 'MEDICAL',
         confidence,
         reason,
-        protocolChecklist
+        protocolChecklist,
       });
     } finally {
       setTriageLoading(false);
@@ -180,37 +231,7 @@ export const NewEmergencyModal: React.FC<NewEmergencyModalProps> = ({
     }
   };
 
-  const presets = [
-    {
-      label: 'Vehicle Collision',
-      type: 'ACCIDENT',
-      priority: 'CRITICAL' as const,
-      address: 'Indiranagar 100ft Road, Bengaluru',
-      lat: 12.9784,
-      lon: 77.6408,
-      desc: 'High-speed collision with injuries',
-    },
-    {
-      label: 'Cardiac Arrest',
-      type: 'CARDIAC',
-      priority: 'CRITICAL' as const,
-      address: 'Koramangala 4th Block, Bengaluru',
-      lat: 12.9345,
-      lon: 77.6256,
-      desc: 'Elderly male collapsed, CPR initiated',
-    },
-    {
-      label: 'Respiratory Distress',
-      type: 'BREATHING',
-      priority: 'HIGH' as const,
-      address: 'MG Road Metro Station, Bengaluru',
-      lat: 12.9756,
-      lon: 77.6066,
-      desc: 'Severe shortness of breath, asthma history',
-    },
-  ];
-
-  const applyPreset = (p: typeof presets[0]) => {
+  const applyPreset = (p: typeof PRESETS[0]) => {
     setType(p.type);
     setPriority(p.priority);
     setAddress(p.address);
@@ -235,36 +256,30 @@ export const NewEmergencyModal: React.FC<NewEmergencyModalProps> = ({
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-dialog" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="text-red" size={20} />
-            <h2>Report New Emergency Incident</h2>
-          </div>
-          <button className="btn-close" onClick={onClose}>
-            <X size={20} />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="modal-body">
-          {/* Voice-to-Text Call Intake Bar */}
+    <Dialog
+      isOpen={true}
+      onClose={onClose}
+      title="Report emergency incident"
+      icon="emergency"
+      maxWidth="680px"
+    >
+      <form onSubmit={handleSubmit}>
+        <Stack gap={16} fullWidth>
+          {/* Voice-to-Text Intake Bar */}
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              marginBottom: '14px',
               padding: '10px 14px',
               backgroundColor: 'var(--md-sys-color-surface-container)',
-              borderRadius: '8px',
+              borderRadius: '12px',
               border: '1px solid var(--md-sys-color-outline-variant)',
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <button
                 type="button"
-                className={`btn btn-xs ${isListening ? 'btn-dispatch' : 'btn-outline'}`}
                 onClick={toggleVoiceIntake}
                 style={{
                   display: 'inline-flex',
@@ -279,10 +294,11 @@ export const NewEmergencyModal: React.FC<NewEmergencyModalProps> = ({
                   backgroundColor: isListening ? 'var(--md-sys-color-error)' : 'var(--md-sys-color-surface)',
                   color: isListening ? '#ffffff' : 'var(--md-sys-color-primary)',
                   cursor: 'pointer',
+                  transition: 'background-color 150ms ease',
                 }}
               >
-                {isListening ? <MicOff size={14} className="animate-pulse" /> : <Mic size={14} />}
-                <span>{isListening ? 'Listening Live... (Speak)' : 'Voice-to-Text Intake'}</span>
+                <Icon name={isListening ? 'mic_off' : 'mic'} size={16} />
+                <span>{isListening ? 'Listening Live... (Speak)' : 'Voice-to-text intake'}</span>
               </button>
               {voiceTranscript && (
                 <span style={{ fontSize: '12px', color: 'var(--md-sys-color-primary)', fontStyle: 'italic' }}>
@@ -295,196 +311,221 @@ export const NewEmergencyModal: React.FC<NewEmergencyModalProps> = ({
             </span>
           </div>
 
-          <div className="presets-bar">
-            <span className="text-secondary text-xs flex items-center gap-1">
-              <Sparkles size={12} />
-              Quick Presets:
+          {/* Quick Presets */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <span
+              style={{
+                fontSize: '12px',
+                fontWeight: 500,
+                color: 'var(--md-sys-color-text-secondary)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+              }}
+            >
+              <Icon name="bolt" size={16} style={{ color: 'var(--md-sys-color-warning)' }} />
+              Quick presets:
             </span>
-            <div className="flex gap-1 flex-wrap">
-              {presets.map((p) => (
-                <button
-                  key={p.label}
-                  type="button"
-                  className="btn btn-xs btn-outline"
-                  onClick={() => applyPreset(p)}
-                >
-                  {p.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="form-grid">
-            <div className="form-group">
-              <label>Caller Name</label>
-              <input
-                type="text"
-                value={callerName}
-                onChange={(e) => setCallerName(e.target.value)}
-                placeholder="e.g. Rahul Sharma"
-                required
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Callback Phone</label>
-              <input
-                type="text"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="e.g. +91 98765 43210"
-                required
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Emergency Type</label>
-              <select value={type} onChange={(e) => setType(e.target.value)}>
-                <option value="ACCIDENT">ACCIDENT</option>
-                <option value="CARDIAC">CARDIAC</option>
-                <option value="BREATHING">BREATHING</option>
-                <option value="TRAUMA">TRAUMA</option>
-                <option value="PEDIATRIC">PEDIATRIC</option>
-                <option value="MATERNITY">MATERNITY</option>
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label>Priority</label>
-              <select
-                value={priority}
-                onChange={(e) => setPriority(e.target.value as any)}
-              >
-                <option value="CRITICAL">CRITICAL</option>
-                <option value="HIGH">HIGH</option>
-                <option value="MEDIUM">MEDIUM</option>
-                <option value="LOW">LOW</option>
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label>Patient Count</label>
-              <input
-                type="number"
-                min="1"
-                value={patientCount}
-                onChange={(e) => setPatientCount(parseInt(e.target.value) || 1)}
-                required
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Location / Address</label>
-              <input
-                type="text"
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                placeholder="e.g. Brigade Road Junction, Bengaluru"
-                required
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Latitude</label>
-              <input
-                type="number"
-                step="0.0001"
-                value={latitude}
-                onChange={(e) => setLatitude(parseFloat(e.target.value) || 0)}
-                required
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Longitude</label>
-              <input
-                type="number"
-                step="0.0001"
-                value={longitude}
-                onChange={(e) => setLongitude(parseFloat(e.target.value) || 0)}
-                required
-              />
-            </div>
-          </div>
-
-          <div className="form-group mt-2">
-            <div className="flex items-center justify-between mb-1">
-              <label>Incident Details / Clinical Notes</label>
+            {PRESETS.map((p) => (
               <button
+                key={p.label}
                 type="button"
-                className="btn btn-xs btn-outline-sky"
-                onClick={handleRunAiTriage}
-                disabled={triageLoading || !description.trim()}
+                onClick={() => applyPreset(p)}
+                style={{
+                  height: '28px',
+                  padding: '0 10px',
+                  borderRadius: '14px',
+                  border: '1px solid var(--md-sys-color-outline)',
+                  backgroundColor: 'var(--md-sys-color-surface-container)',
+                  color: 'var(--md-sys-color-text)',
+                  fontSize: '11px',
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                  transition: 'background-color 150ms ease',
+                }}
               >
-                <Sparkles size={12} />
-                <span>{triageLoading ? 'Triaging...' : 'AI Clinical Triage'}</span>
+                {p.label}
               </button>
-            </div>
-            <textarea
-              rows={2}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Enter patient symptoms, mechanism of injury, vitals or scene hazards..."
+            ))}
+          </div>
+
+          {/* 2-Column Form Fields */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: '12px',
+            }}
+          >
+            <Field
+              label="Caller name"
+              placeholder="e.g. Rahul Sharma"
+              value={callerName}
+              onChange={(e) => setCallerName(e.target.value)}
+              leadingIcon="person"
+              required
+            />
+            <Field
+              label="Callback phone"
+              placeholder="e.g. +91 98765 43210"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              leadingIcon="call"
+              required
+            />
+            <Select
+              label="Emergency type"
+              value={type}
+              onChange={setType}
+              options={EMERGENCY_TYPES}
+              leadingIcon="medical_services"
+            />
+            <Select
+              label="Priority"
+              value={priority}
+              onChange={(val) => setPriority(val as any)}
+              options={PRIORITY_OPTIONS}
+              leadingIcon="priority_high"
+            />
+            <Field
+              label="Patient count"
+              type="number"
+              min={1}
+              value={patientCount}
+              onChange={(e) => setPatientCount(parseInt(e.target.value) || 1)}
+              leadingIcon="group"
+              required
+            />
+            <Field
+              label="Location / Address"
+              placeholder="e.g. Brigade Road Junction"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              leadingIcon="location_on"
+              required
+            />
+            <Field
+              label="Latitude"
+              type="number"
+              step="0.0001"
+              value={latitude}
+              onChange={(e) => setLatitude(parseFloat(e.target.value) || 0)}
+              leadingIcon="my_location"
+              required
+            />
+            <Field
+              label="Longitude"
+              type="number"
+              step="0.0001"
+              value={longitude}
+              onChange={(e) => setLongitude(parseFloat(e.target.value) || 0)}
+              leadingIcon="explore"
+              required
             />
           </div>
 
+          {/* Incident Details / Clinical Notes & AI Triage */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: '12px', fontWeight: 500, color: 'var(--md-sys-color-text-secondary)' }}>
+                Incident details / Clinical notes
+              </span>
+              <button
+                type="button"
+                onClick={handleRunAiTriage}
+                disabled={triageLoading || !description.trim()}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  padding: '2px 8px',
+                  borderRadius: '12px',
+                  border: '1px solid var(--md-sys-color-primary)',
+                  backgroundColor: 'var(--md-sys-color-primary-container)',
+                  color: 'var(--md-sys-color-on-primary-container)',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  opacity: triageLoading || !description.trim() ? 0.6 : 1,
+                }}
+              >
+                <Icon name="auto_awesome" size={14} />
+                <span>{triageLoading ? 'Triaging...' : 'AI clinical triage'}</span>
+              </button>
+            </div>
+            <Field
+              label="Clinical notes & symptoms"
+              multiline
+              rows={2}
+              placeholder="Enter patient symptoms, mechanism of injury, vitals or scene hazards..."
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              leadingIcon="description"
+            />
+          </div>
+
+          {/* AI Triage Recommendation Banner */}
           {triageSuggestion && (
-            <div className="ai-triage-modal-banner mt-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className={`priority-tag ${triageSuggestion.priority.toLowerCase()}`}>
-                    {triageSuggestion.priority}
-                  </span>
-                  <strong className="text-xs font-mono text-amber">{triageSuggestion.esiLevel}</strong>
-                  <span className="text-xs text-secondary">· Requires {triageSuggestion.requiredUnit}</span>
-                </div>
-                <button type="button" className="btn btn-xs btn-primary" onClick={applyAiTriage}>
-                  Apply Recommendation
-                </button>
+            <div
+              style={{
+                padding: '10px 14px',
+                borderRadius: '8px',
+                backgroundColor: 'var(--md-sys-color-surface-container)',
+                border: '1px solid var(--md-sys-color-primary)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span
+                  style={{
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    padding: '2px 6px',
+                    borderRadius: '4px',
+                    backgroundColor: 'var(--md-sys-color-error-container)',
+                    color: 'var(--md-sys-color-on-error-container)',
+                  }}
+                >
+                  {triageSuggestion.priority}
+                </span>
+                <span style={{ fontSize: '12px', color: 'var(--md-sys-color-text)' }}>
+                  {triageSuggestion.reason}
+                </span>
               </div>
+              <Button size="small" variant="filled" onClick={applyAiTriage}>
+                Apply recommendation
+              </Button>
             </div>
           )}
 
-          <div className="modal-actions mt-4" style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-            <button
-              type="button"
-              className="btn btn-outline"
-              onClick={onClose}
-              style={{
-                height: '40px',
-                padding: '0 20px',
-                borderRadius: '20px',
-                border: '1px solid var(--md-sys-color-outline)',
-                backgroundColor: 'transparent',
-                color: 'var(--md-sys-color-text)',
-                fontSize: '13px',
-                fontWeight: 500,
-                cursor: 'pointer',
-              }}
-            >
+          {/* Dialog Actions */}
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'flex-end',
+              gap: '12px',
+              paddingTop: '8px',
+              borderTop: '1px solid var(--md-sys-color-outline-variant)',
+            }}
+          >
+            <Button variant="outlined" type="button" onClick={onClose}>
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="filled"
               type="submit"
-              className="btn btn-primary"
               style={{
-                height: '40px',
-                padding: '0 24px',
-                borderRadius: '20px',
-                border: 'none',
-                backgroundColor: 'var(--md-sys-color-primary)',
-                color: 'var(--md-sys-color-on-primary)',
-                fontSize: '13px',
-                fontWeight: 600,
-                cursor: 'pointer',
-                boxShadow: 'var(--elevation-1)',
+                backgroundColor: 'var(--md-sys-color-emergency)',
+                color: '#ffffff',
               }}
             >
-              Dispatch Request Intake
-            </button>
+              Dispatch request intake
+            </Button>
           </div>
-        </form>
-      </div>
-    </div>
+        </Stack>
+      </form>
+    </Dialog>
   );
 };
