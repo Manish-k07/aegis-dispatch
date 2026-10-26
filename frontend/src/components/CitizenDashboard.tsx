@@ -366,7 +366,7 @@ export const CitizenDashboard: React.FC<CitizenDashboardProps> = ({
             onClick={onLogout}
             startIcon={<Icon name="logout" size={18} />}
           >
-            <span className="m3-hide-mobile">Sign out</span>
+            <span className="m3-hide-mobile">Log out</span>
           </Button>
         </div>
       </header>

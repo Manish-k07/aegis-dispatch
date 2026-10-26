@@ -887,3 +887,49 @@
   display: flex;
   align-items: center;
 }
+
+/* ==========================================================================
+   M3 MENU POPOVER & MENU ITEMS
+   ========================================================================== */
+.m3-menu-popover {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25) !important;
+  animation: m3-menu-appear 150ms ease-out;
+}
+
+@keyframes m3-menu-appear {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.m3-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 16px;
+  border: none;
+  background: transparent;
+  color: var(--md-sys-color-text);
+  font-family: var(--md-ref-typeface-plain);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  transition: background-color 150ms ease;
+  box-sizing: border-box;
+}
+
+.m3-menu-item:hover {
+  background-color: var(--md-sys-color-surface-container-high) !important;
+}
+
+.m3-menu-item-logout:hover {
+  background-color: var(--md-sys-color-error-container) !important;
+  color: var(--md-sys-color-on-error-container) !important;
+}

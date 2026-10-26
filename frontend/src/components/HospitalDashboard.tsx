@@ -227,7 +227,7 @@ export const HospitalDashboard: React.FC<HospitalDashboardProps> = ({
               icon="logout"
               onClick={onLogout}
             >
-              Sign out
+              Log out
             </Button>
           )}
         </Row>

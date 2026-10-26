@@ -287,7 +287,7 @@ export const DriverDashboard: React.FC<DriverDashboardProps> = ({
               icon="logout"
               onClick={onLogout}
             >
-              Sign out
+              Log out
             </Button>
           )}
         </Row>

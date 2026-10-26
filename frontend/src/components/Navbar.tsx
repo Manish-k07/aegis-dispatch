@@ -91,8 +91,9 @@ export const Navbar: React.FC<NavbarProps> = ({
           backgroundColor: 'var(--md-sys-color-surface)',
           borderBottom: '1px solid var(--md-sys-color-outline)',
           flexShrink: 0,
-          zIndex: 100,
-          overflow: 'hidden',
+          position: 'relative',
+          zIndex: 1000,
+          overflow: 'visible',
         }}
       >
         {/* Left: 32px logo + "Aegis Dispatch" + small "Prototype" chip (8px gap) */}
@@ -423,13 +424,13 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <span>About / Prototype</span>
               </button>
 
-              {/* 4. Sign out */}
+              {/* 4. Log out */}
               {onLogout && (
                 <>
                   <div style={{ height: '1px', backgroundColor: 'var(--md-sys-color-outline-variant)', margin: '4px 0' }} />
                   <button
                     type="button"
-                    className="m3-menu-item"
+                    className="m3-menu-item m3-menu-item-logout"
                     onClick={() => {
                       setIsUserMenuOpen(false);
                       onLogout();
@@ -444,12 +445,13 @@ export const Navbar: React.FC<NavbarProps> = ({
                       background: 'none',
                       color: 'var(--md-sys-color-error)',
                       fontSize: '14px',
+                      fontWeight: 500,
                       cursor: 'pointer',
                       textAlign: 'left',
                     }}
                   >
                     <Icon name="logout" size={20} />
-                    <span>Sign out</span>
+                    <span>Log out</span>
                   </button>
                 </>
               )}
