@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Ambulance, Hospital, AuthSession, CitizenProfile } from '../types';
+import { API_BASE } from '../config';
 import {
   PageContainer,
   Stack,
@@ -82,7 +83,7 @@ export const LoginGateway: React.FC<LoginGatewayProps> = ({
   };
 
   // Dispatcher submit
-  const handleDispatcherSubmit = (e: React.FormEvent) => {
+  const handleDispatcherSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setDispatcherError(null);
     const badge = dispatcherBadge.trim().toUpperCase();
@@ -94,24 +95,51 @@ export const LoginGateway: React.FC<LoginGatewayProps> = ({
     }
 
     setIsLoading(true);
-    setTimeout(() => {
+    try {
+      const res = await fetch(`${API_BASE}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          role: 'DISPATCHER',
+          badgeNumber: badge,
+          pin: pin,
+        }),
+      });
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        setDispatcherError(errJson.error || 'Authentication failed. Invalid badge number or security PIN.');
+        setIsLoading(false);
+        return;
+      }
+
+      const data = await res.json();
       setIsLoading(false);
-      // Valid credentials check: badge required and PIN must be numeric 4+ digits
-      if (pin === '1120' || pin === '9110' || pin.length >= 4) {
+      onLogin({
+        role: 'DISPATCHER',
+        userLabel: data.userLabel || badge,
+        subLabel: data.subLabel || 'Central CAD Console',
+        loginTime: new Date().toISOString(),
+      });
+    } catch {
+      // Offline fallback: ONLY accept valid demo credentials, reject everything else
+      setIsLoading(false);
+      const isDemoValid = (badge === 'CAD-042' || badge === 'CAD-011' || badge === 'DISP-901') && pin === '1120';
+      if (isDemoValid) {
         onLogin({
           role: 'DISPATCHER',
-          userLabel: badge,
-          subLabel: 'Central CAD Console',
+          userLabel: badge === 'CAD-011' ? 'K. Raman' : 'A. Sharma',
+          subLabel: `Central CAD Console · ${badge}`,
           loginTime: new Date().toISOString(),
         });
       } else {
-        setDispatcherError('Authentication failed. Invalid dispatcher badge ID or PIN.');
+        setDispatcherError('Authentication failed. Invalid badge number or security PIN.');
       }
-    }, 200);
+    }
   };
 
   // Paramedic / Responder submit
-  const handleDriverSubmit = (e: React.FormEvent) => {
+  const handleDriverSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setDriverError(null);
     const vehicleId = driverCallSign.trim();
@@ -126,24 +154,54 @@ export const LoginGateway: React.FC<LoginGatewayProps> = ({
     const matchedAmb = ambulances.find((a) => a.id === vehicleId) || ambulances[0];
 
     setIsLoading(true);
-    setTimeout(() => {
+    try {
+      const res = await fetch(`${API_BASE}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          role: 'DRIVER',
+          badgeNumber: badge,
+          pin: pin,
+          vehicleId: matchedAmb?.registrationNumber || vehicleId,
+        }),
+      });
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        setDriverError(errJson.error || 'Authentication rejected. Invalid credentials.');
+        setIsLoading(false);
+        return;
+      }
+
+      const data = await res.json();
       setIsLoading(false);
-      if (pin === '1001' || pin.length >= 4) {
+      onLogin({
+        role: 'DRIVER',
+        userLabel: data.userLabel || `${badge} · ${matchedAmb.registrationNumber}`,
+        subLabel: data.subLabel || `${matchedAmb.type} Mobile Data Terminal`,
+        ambulanceId: data.unitId || matchedAmb.id,
+        loginTime: new Date().toISOString(),
+      });
+    } catch {
+      // Offline fallback: ONLY accept valid demo credentials
+      setIsLoading(false);
+      const isDemoValid = (badge === 'MED-702' || badge === 'PM-402') && pin === '1001';
+      if (isDemoValid) {
         onLogin({
           role: 'DRIVER',
-          userLabel: `${badge} · ${matchedAmb.registrationNumber}`,
+          userLabel: `R. Rao · ${matchedAmb.registrationNumber}`,
           subLabel: `${matchedAmb.type} Mobile Data Terminal`,
           ambulanceId: matchedAmb.id,
           loginTime: new Date().toISOString(),
         });
       } else {
-        setDriverError('Authentication rejected. Invalid ignition PIN.');
+        setDriverError('Authentication rejected. Invalid paramedic credentials.');
       }
-    }, 200);
+    }
   };
 
   // Hospital ED submit
-  const handleHospitalSubmit = (e: React.FormEvent) => {
+  const handleHospitalSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setHospitalError(null);
     const facilityId = hospitalFacilityCode.trim();
@@ -158,9 +216,39 @@ export const LoginGateway: React.FC<LoginGatewayProps> = ({
     const matchedHosp = hospitals.find((h) => h.id === facilityId) || hospitals[0];
 
     setIsLoading(true);
-    setTimeout(() => {
+    try {
+      const res = await fetch(`${API_BASE}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          role: 'HOSPITAL',
+          badgeNumber: badge,
+          pin: pin,
+          hospitalId: facilityId,
+        }),
+      });
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        setHospitalError(errJson.error || 'Access denied. Invalid facility credentials.');
+        setIsLoading(false);
+        return;
+      }
+
+      const data = await res.json();
       setIsLoading(false);
-      if (pin === '2001' || pin === '4020' || pin.length >= 4) {
+      onLogin({
+        role: 'HOSPITAL',
+        userLabel: data.userLabel || matchedHosp.name,
+        subLabel: data.subLabel || `Emergency Department · ${badge}`,
+        hospitalId: data.hospitalId || matchedHosp.id,
+        loginTime: new Date().toISOString(),
+      });
+    } catch {
+      // Offline fallback: ONLY accept valid demo credentials
+      setIsLoading(false);
+      const isDemoValid = (badge === 'RN-402' || badge === 'NURSE-12' || badge === 'DR-201') && pin === '2001';
+      if (isDemoValid) {
         onLogin({
           role: 'HOSPITAL',
           userLabel: matchedHosp.name,
@@ -169,13 +257,13 @@ export const LoginGateway: React.FC<LoginGatewayProps> = ({
           loginTime: new Date().toISOString(),
         });
       } else {
-        setHospitalError('Access denied. Invalid facility authorization PIN.');
+        setHospitalError('Access denied. Invalid facility credentials.');
       }
-    }, 200);
+    }
   };
 
   // Citizen Login submit
-  const handleCitizenLoginSubmit = (e: React.FormEvent) => {
+  const handleCitizenLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setCitizenLoginError(null);
     const input = citizenLoginId.trim();
@@ -186,12 +274,88 @@ export const LoginGateway: React.FC<LoginGatewayProps> = ({
       return;
     }
 
-    setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      const cleanDigits = input.replace(/[^0-9]/g, '').slice(-10);
+    const cleanDigits = input.replace(/[^0-9]/g, '').slice(-10);
 
-      // Check registered accounts
+    setIsLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          role: 'CITIZEN',
+          badgeNumber: cleanDigits,
+          pin: password,
+        }),
+      });
+
+      if (!res.ok) {
+        // Also check if locally registered account exists
+        let registeredList: RegisteredCitizenAccount[] = [];
+        try {
+          const saved = localStorage.getItem('aegis_registered_citizens');
+          if (saved) registeredList = JSON.parse(saved);
+        } catch {}
+
+        const found = registeredList.find(
+          (acc) => acc.loginId.replace(/[^0-9]/g, '').slice(-10) === cleanDigits && acc.password === password
+        );
+
+        if (found) {
+          setIsLoading(false);
+          onLogin({
+            role: 'CITIZEN',
+            userLabel: found.profile.name,
+            subLabel: `Citizen Profile · Blood: ${found.profile.bloodGroup || 'O+'}`,
+            citizenProfile: found.profile,
+            loginTime: new Date().toISOString(),
+          });
+          return;
+        }
+
+        const errJson = await res.json().catch(() => ({}));
+        setCitizenLoginError(errJson.error || 'Invalid phone number or password. Access denied.');
+        setIsLoading(false);
+        return;
+      }
+
+      const data = await res.json();
+      setIsLoading(false);
+      const defaultProfile: CitizenProfile = data.citizenProfile ? {
+        id: 'cit-priya-01',
+        name: (data.citizenProfile.name as string) || data.userLabel,
+        gender: (data.citizenProfile.gender as any) || 'FEMALE',
+        age: Number(data.citizenProfile.age) || 29,
+        phone: (data.citizenProfile.phone as string) || `+91 ${cleanDigits}`,
+        email: 'priya.sharma@example.com',
+        diseases: (data.citizenProfile.diseases as string[]) || ['Severe asthma'],
+        allergies: (data.citizenProfile.allergies as string[]) || ['Penicillin / amoxicillin'],
+        bloodGroup: (data.citizenProfile.bloodGroup as any) || 'O+',
+        emergencyContactName: (data.citizenProfile.emergencyContactName as string) || 'Amit Patel (Spouse)',
+        emergencyContactPhone: (data.citizenProfile.emergencyContactPhone as string) || '+91 98450 99887',
+      } : {
+        id: 'cit-priya-01',
+        name: data.userLabel,
+        gender: 'FEMALE',
+        age: 29,
+        phone: `+91 ${cleanDigits}`,
+        email: 'priya.sharma@example.com',
+        diseases: ['Severe asthma'],
+        allergies: ['Penicillin / amoxicillin'],
+        bloodGroup: 'O+',
+        emergencyContactName: 'Amit Patel (Spouse)',
+        emergencyContactPhone: '+91 98450 99887',
+      };
+
+      onLogin({
+        role: 'CITIZEN',
+        userLabel: data.userLabel,
+        subLabel: data.subLabel || `Citizen Profile · Blood: ${defaultProfile.bloodGroup}`,
+        citizenProfile: defaultProfile,
+        loginTime: new Date().toISOString(),
+      });
+    } catch {
+      setIsLoading(false);
+      // Offline fallback: check registered accounts or demo user
       let registeredList: RegisteredCitizenAccount[] = [];
       try {
         const saved = localStorage.getItem('aegis_registered_citizens');
@@ -213,22 +377,20 @@ export const LoginGateway: React.FC<LoginGatewayProps> = ({
         return;
       }
 
-      // Default demo citizen check
-      if (cleanDigits === '9845012345' || cleanDigits.length === 10) {
+      if (cleanDigits === '9845012345' && (password === '1120' || password === 'password123')) {
         const defaultProfile: CitizenProfile = {
           id: 'cit-priya-01',
-          name: 'Priya Patel',
+          name: 'Priya Sharma',
           gender: 'FEMALE',
-          age: 34,
-          phone: `+91 ${cleanDigits || '98450 12345'}`,
-          email: 'priya.patel@example.com',
+          age: 29,
+          phone: `+91 98450 12345`,
+          email: 'priya.sharma@example.com',
           diseases: ['Severe asthma'],
           allergies: ['Penicillin / amoxicillin'],
-          bloodGroup: 'B+',
+          bloodGroup: 'O+',
           emergencyContactName: 'Amit Patel (Spouse)',
           emergencyContactPhone: '+91 98450 99887',
         };
-
         onLogin({
           role: 'CITIZEN',
           userLabel: defaultProfile.name,
@@ -237,9 +399,9 @@ export const LoginGateway: React.FC<LoginGatewayProps> = ({
           loginTime: new Date().toISOString(),
         });
       } else {
-        setCitizenLoginError('Invalid phone number or password. Please verify credentials or register.');
+        setCitizenLoginError('Invalid phone number or password. Access denied.');
       }
-    }, 200);
+    }
   };
 
   // Citizen Register submit

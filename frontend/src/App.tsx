@@ -68,6 +68,34 @@ function generateRoadWaypoints(
   return points;
 }
 
+const DemoModeBanner: React.FC<{ isVirtualMode: boolean }> = ({ isVirtualMode }) => {
+  if (!isVirtualMode) return null;
+  return (
+    <div
+      role="status"
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '8px',
+        padding: '6px 16px',
+        backgroundColor: 'var(--md-sys-color-warning-container)',
+        color: 'var(--md-sys-color-warning)',
+        borderBottom: '1px solid var(--md-sys-color-outline-variant)',
+        fontSize: '12px',
+        fontWeight: 600,
+        letterSpacing: '0.2px',
+        position: 'sticky',
+        top: 0,
+        zIndex: 9999,
+      }}
+    >
+      <span style={{ fontSize: '14px' }}>⚠️</span>
+      <span>Demo mode — no backend connected. Running on synthetic simulation.</span>
+    </div>
+  );
+};
+
 export const App: React.FC = () => {
   const [data, setData] = useState<DashboardData>(INITIAL_DEMO_DATA);
 
@@ -263,12 +291,15 @@ export const App: React.FC = () => {
           ...json,
           activeSimulations: json.activeSimulations || prev.activeSimulations || [],
         }));
+        setIsVirtualMode(false);
+        setIsConnected(true);
         return;
       }
+      setIsVirtualMode(true);
     } catch {
       // Backend not running (e.g. Netlify static hosting): activate Virtual Gateway
       setIsVirtualMode(true);
-      setIsConnected(true);
+      setIsConnected(false);
     }
   }, []);
 
@@ -1335,6 +1366,7 @@ export const App: React.FC = () => {
   if (!authSession || !role) {
     return (
       <div className="aegis-app" data-theme={effectiveTheme}>
+        <DemoModeBanner isVirtualMode={isVirtualMode} />
         <LoginGateway
           ambulances={data.ambulances}
           hospitals={data.hospitals}
@@ -1354,6 +1386,7 @@ export const App: React.FC = () => {
   if (role === 'CITIZEN' && citizenProfile) {
     return (
       <div className="aegis-app" data-theme={effectiveTheme}>
+        <DemoModeBanner isVirtualMode={isVirtualMode} />
         <CitizenDashboard
           profile={citizenProfile}
           emergencies={data.emergencies}
@@ -1449,6 +1482,7 @@ export const App: React.FC = () => {
   if (role === 'DRIVER') {
     return (
       <div className="aegis-app" data-theme={effectiveTheme}>
+        <DemoModeBanner isVirtualMode={isVirtualMode} />
         {currentDriverAmbulance ? (
           <DriverDashboard
             ambulance={currentDriverAmbulance}
@@ -1485,6 +1519,7 @@ export const App: React.FC = () => {
   if (role === 'HOSPITAL') {
     return (
       <div className="aegis-app" data-theme={effectiveTheme}>
+        <DemoModeBanner isVirtualMode={isVirtualMode} />
         {currentHospital ? (
           <HospitalDashboard
             hospital={currentHospital}
@@ -1517,6 +1552,7 @@ export const App: React.FC = () => {
   // 5. Central CAD Command Dashboard (DISPATCHER Only)
   return (
     <div className="aegis-app" data-theme={effectiveTheme}>
+      <DemoModeBanner isVirtualMode={isVirtualMode} />
       <Navbar
         data={data}
         isConnected={isConnected}
