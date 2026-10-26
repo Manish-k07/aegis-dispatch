@@ -30,6 +30,9 @@ public class AuthController {
         if (badge == null || badge.isBlank()) {
             badge = body.get("loginId");
         }
+        if (badge == null || badge.isBlank()) {
+            badge = body.get("username");
+        }
         String pin = body.get("pin");
         if (pin == null || pin.isBlank()) {
             pin = body.get("password");
@@ -55,7 +58,49 @@ public class AuthController {
                 "unitId", result.unitId() != null ? result.unitId() : "",
                 "vehicleId", result.vehicleId() != null ? result.vehicleId() : "",
                 "hospitalId", result.hospitalId() != null ? result.hospitalId() : "",
+                "forcePasswordChange", result.forcePasswordChange(),
                 "citizenProfile", result.citizenProfile() != null ? result.citizenProfile() : Map.of()
         ));
+    }
+
+    @PostMapping("/register")
+    public ResponseEntity<?> registerCitizen(@RequestBody Map<String, Object> body) {
+        String phone = (String) body.get("phone");
+        String password = (String) body.get("password");
+        String fullName = (String) body.get("fullName");
+        @SuppressWarnings("unchecked")
+        Map<String, Object> profile = (Map<String, Object>) body.get("medicalProfile");
+
+        AuthService.AuthResult result = authService.registerCitizen(phone, password, fullName, profile);
+        if (!result.success()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", result.error()));
+        }
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
+                "token", result.token(),
+                "role", result.role(),
+                "userLabel", result.userLabel(),
+                "subLabel", result.subLabel(),
+                "badgeNumber", result.badgeNumber(),
+                "citizenProfile", result.citizenProfile() != null ? result.citizenProfile() : Map.of()
+        ));
+    }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<?> changePassword(@RequestBody Map<String, String> body) {
+        String username = body.get("username");
+        String oldPassword = body.get("oldPassword");
+        String newPassword = body.get("newPassword");
+
+        if (username == null || oldPassword == null || newPassword == null) {
+            return ResponseEntity.badRequest().body(Map.of("error", "username, oldPassword, and newPassword are required"));
+        }
+
+        boolean ok = authService.changePassword(username, oldPassword, newPassword);
+        if (!ok) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", "Failed to update password. Please verify your old password and ensure new password is at least 6 characters."));
+        }
+
+        return ResponseEntity.ok(Map.of("message", "Password changed successfully"));
     }
 }

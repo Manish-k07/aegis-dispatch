@@ -31,8 +31,11 @@ else
 fi
 BACKEND_PID=$!
 
-echo "Waiting for Backend to initialize..."
-sleep 6
+echo "Waiting for Backend health check at http://localhost:8080/actuator/health..."
+until curl -s -f http://localhost:8080/actuator/health | grep -q '"status":"UP"'; do
+    sleep 1
+done
+echo "Backend is healthy (UP)!"
 
 echo "Starting Frontend..."
 cd "$PROJECT_ROOT/frontend"
@@ -41,8 +44,9 @@ FRONTEND_PID=$!
 
 echo "==================================================="
 echo "✓ Services active:"
-echo "  Backend:  http://localhost:8080"
-echo "  Frontend: http://localhost:5173"
+echo "  Backend Health: http://localhost:8080/actuator/health"
+echo "  Backend API:    http://localhost:8080/api"
+echo "  Frontend:       http://localhost:5173"
 echo "Press Ctrl+C to terminate all services."
 echo "==================================================="
 

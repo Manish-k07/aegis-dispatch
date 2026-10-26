@@ -2,9 +2,9 @@ name: Aegis Dispatch CAD • CI/CD Pipeline
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "feature/**" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "main", "feature/**" ]
 
 jobs:
   # 1. Backend Verification & Test Suite
@@ -22,13 +22,13 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      - name: Build and Test Backend with Maven
+      - name: Build and Test Backend with Maven (Auth, Roles, State Machine, Admin Bootstrap)
         working-directory: ./backend
         run: mvn clean test -B
 
   # 2. Frontend Verification & TypeScript Checks
   frontend-build:
-    name: Frontend TypeScript & Vite Build (Node 22)
+    name: Frontend Lint, Typecheck, & Playwright E2E
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -45,9 +45,31 @@ jobs:
         working-directory: ./frontend
         run: npm ci
 
+      - name: Run ESLint
+        working-directory: ./frontend
+        run: npm run lint
+
       - name: Run TypeScript typecheck & production bundle
         working-directory: ./frontend
         run: npm run build
+
+      - name: Set up JDK 21 for E2E backend
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Install Playwright Browsers
+        working-directory: ./frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Playwright E2E Suite
+        working-directory: ./frontend
+        run: |
+          nohup mvn -f ../backend/pom.xml spring-boot:run > backend.log 2>&1 &
+          npm run dev -- --host 0.0.0.0 --port 5173 &
+          sleep 12
+          npx playwright test e2e/live-and-demo-modes.spec.ts
 
   # 3. Docker Container Build Verification
   docker-build:

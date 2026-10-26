@@ -5,9 +5,11 @@ import { Button } from './common/Button';
 import { IconButton } from './common/IconButton';
 import { Switch } from './common/Switch';
 import { MenuPopover } from './common/MenuPopover';
-import { Dialog } from './common/Dialog';
 import { Tooltip } from './common/Tooltip';
 import { formatTime } from '../utils/time';
+import { useMode } from '../services/ModeProvider';
+import { DemoBarChip } from './DemoBarChip';
+import { AboutModal } from './AboutModal';
 
 interface NavbarProps {
   data: DashboardData;
@@ -48,6 +50,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   theme = 'dark',
   onToggleTheme,
 }) => {
+  const { mode, connectionStatus, requestModeSwitch, exitDemo } = useMode();
   const [currentTime, setCurrentTime] = useState<string>(() => formatTime(new Date()));
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isAboutOpen, setIsAboutOpen] = useState(false);
@@ -203,7 +206,10 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Right cluster: 12px gaps, ALL controls 40px tall, vertically centered on midline */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', justifyContent: 'flex-end', flexShrink: 0 }}>
-          {/* Status chip: dot + "Live" + clock as ONE unified chip with a divider */}
+          {/* Demo Mode Persistent Slim Chip */}
+          {mode === 'DEMO' && <DemoBarChip />}
+
+          {/* Status chip: dot + connection state + clock as ONE unified chip with a divider */}
           <div
             className="m3-hide-tablet"
             style={{
@@ -226,12 +232,23 @@ export const Navbar: React.FC<NavbarProps> = ({
                 width: '8px',
                 height: '8px',
                 borderRadius: '50%',
-                backgroundColor: isConnected ? 'var(--md-sys-color-success)' : 'var(--md-sys-color-error)',
+                backgroundColor:
+                  connectionStatus === 'CONNECTED'
+                    ? 'var(--md-sys-color-success)'
+                    : connectionStatus === 'OFFLINE'
+                    ? 'var(--md-sys-color-error)'
+                    : 'var(--md-sys-color-warning)',
                 display: 'inline-block',
                 flexShrink: 0,
               }}
             />
-            <span style={{ fontWeight: 600 }}>{isConnected ? 'Live' : 'Offline'}</span>
+            <span style={{ fontWeight: 600 }}>
+              {connectionStatus === 'CONNECTED'
+                ? 'Connected'
+                : connectionStatus === 'OFFLINE'
+                ? 'Offline'
+                : 'Reconnecting'}
+            </span>
             <div style={{ width: '1px', height: '16px', backgroundColor: 'var(--md-sys-color-outline)' }} />
             <span style={{ fontVariantNumeric: 'tabular-nums', color: 'var(--md-sys-color-text-secondary)' }}>
               {currentTime}
@@ -415,7 +432,61 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <span>{isAudioEnabled ? 'Mute alerts' : 'Unmute alerts'}</span>
               </button>
 
-              {/* 3. About / Prototype */}
+              {/* 3. Demo Mode Switch */}
+              {mode === 'LIVE' ? (
+                <button
+                  type="button"
+                  className="m3-menu-item"
+                  onClick={() => {
+                    setIsUserMenuOpen(false);
+                    requestModeSwitch('DEMO');
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    width: '100%',
+                    padding: '10px 16px',
+                    border: 'none',
+                    background: 'none',
+                    color: 'var(--md-sys-color-text)',
+                    fontSize: '14px',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                  }}
+                >
+                  <Icon name="science" size={20} />
+                  <span>Switch to demo mode</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="m3-menu-item"
+                  onClick={() => {
+                    setIsUserMenuOpen(false);
+                    exitDemo();
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    width: '100%',
+                    padding: '10px 16px',
+                    border: 'none',
+                    background: 'none',
+                    color: 'var(--md-sys-color-warning)',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                  }}
+                >
+                  <Icon name="logout" size={20} />
+                  <span>Exit demo mode</span>
+                </button>
+              )}
+
+              {/* 4. About Aegis Dispatch */}
               <button
                 type="button"
                 className="m3-menu-item"
@@ -438,10 +509,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                 }}
               >
                 <Icon name="info" size={20} />
-                <span>About / Prototype</span>
+                <span>About Aegis Dispatch</span>
               </button>
 
-              {/* 4. Log out */}
+              {/* 5. Log out */}
               {onLogout && (
                 <>
                   <div style={{ height: '1px', backgroundColor: 'var(--md-sys-color-outline-variant)', margin: '4px 0' }} />
@@ -477,23 +548,8 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
       </header>
 
-      {/* About / Prototype Dialog */}
-      <Dialog
-        isOpen={isAboutOpen}
-        onClose={() => setIsAboutOpen(false)}
-        title="About Aegis Dispatch"
-        confirmLabel="Close"
-        onConfirm={() => setIsAboutOpen(false)}
-      >
-        <div style={{ fontSize: '14px', lineHeight: '20px', color: 'var(--md-sys-color-text-secondary)' }}>
-          <p style={{ marginTop: 0 }}>
-            Aegis is an emergency medical response and dispatch coordination prototype built on Google Material Design 3.
-          </p>
-          <p>
-            It provides unified real-time dispatch management, paramedic vehicle routing, hospital emergency department coordination, and citizen assistance.
-          </p>
-        </div>
-      </Dialog>
+      {/* About Aegis Dispatch Modal */}
+      <AboutModal isOpen={isAboutOpen} onClose={() => setIsAboutOpen(false)} />
     </>
   );
 };

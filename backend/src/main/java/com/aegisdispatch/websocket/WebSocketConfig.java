@@ -8,13 +8,16 @@ import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry
 
 import java.util.Arrays;
 
+/**
+ * WebSocket allowed origins use the same list as CORS_ORIGIN.
+ */
 @Configuration
 @EnableWebSocket
 public class WebSocketConfig implements WebSocketConfigurer {
 
     private final LiveSocketHandler handler;
 
-    @Value("${app.cors-allowed-origins:${app.cors-origin:http://localhost:5173,http://localhost:8080,http://127.0.0.1:5173,http://127.0.0.1:8080,http://172.20.10.2:5173,http://172.20.10.2:8080}}")
+    @Value("${app.cors-origin:${CORS_ORIGIN:http://localhost:5173,http://localhost:8080,http://127.0.0.1:5173,http://127.0.0.1:8080}}")
     private String allowedOrigins;
 
     public WebSocketConfig(LiveSocketHandler handler) {
@@ -28,10 +31,7 @@ public class WebSocketConfig implements WebSocketConfigurer {
                 .filter(s -> !s.isEmpty())
                 .toArray(String[]::new);
 
-        if (origins.length > 0) {
-            registry.addHandler(handler, "/ws/live").setAllowedOrigins(origins);
-        } else {
-            registry.addHandler(handler, "/ws/live");
-        }
+        registry.addHandler(handler, "/ws/live")
+                .setAllowedOrigins(origins);
     }
 }

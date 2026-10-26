@@ -1,97 +1,77 @@
-# Feature Audit & Implementation Status Matrix (Aegis 112 CAD / MDT / ED / Citizen)
+# Aegis Dispatch • Feature Matrix: Live vs. Demo Capabilities
 
 Date: October 2026  
-Status Legend:
-- **Working end-to-end**: Functional across client, server, database, and real-time channels.
-- **Partial**: Partially implemented; requires real server-side validation, database persistence, or protocol refinement.
-- **UI-only mock**: Static mock/simulation without real operational backend backing; slated for cleanup, demo labelling, or removal.
-- **Remove**: Non-functional mock with no architectural backing; removed from active UI and preserved in README Roadmap.
+Architecture: Spring Boot 3.5 (Java 21) REST & STOMP / PostgreSQL + React 18 / Vite / TypeScript
 
 ---
 
-## 1. Central CAD Console
+## 1. Operating Mode Architecture Overview
 
-| Area / Feature | Component / Action | Current Status | Plan / Disposition |
-|---|---|---|---|
-| **Top App Bar Search** | Incident & address query filter | Partial | Enhance to search across incidents, units, and hospitals with unified results (Step 4). |
-| **Top App Bar Audio** | Mute/unmute chime toggle | Working end-to-end | Keep. Plays priority dispatch chimes and SOS alerts. |
-| **Connection Pill** | WebSocket / Server status indicator | Partial | Upgrade to auto-reconnect with exponential backoff and offline queue (Step 2). |
-| **Clock Display** | 24-hour live UTC/Local clock | Working end-to-end | Keep. Standard M3 typography. |
-| **Theme Toggle** | Light / Dark mode switcher | Working end-to-end | Keep. M3 design tokens. |
-| **Auto-Dispatch Switch** | Auto-assign nearest available unit to critical queue | Partial | Convert to explicit switch (Default OFF). Only assigns top-ranked available unit for rule-meeting incidents, logs "Auto", and shows rationale (Step 4). |
-| **New Incident Intake** | Manual CAD incident intake modal | Partial | Wire end-to-end with server validation, Geocoding, and duplicate checks (Step 4). |
-| **AI Dispatch Copilot** | `AICopilotDrawer.tsx` | UI-only mock | Label "Simulated" for now. In Step 8, implement server-side gateway, mock provider, kill switch, PII redaction, and `<AiSuggestion>` advisory component. |
-| **Fleet Diagnostics** | `FleetMaintenanceModal.tsx` | UI-only mock | **Remove**. No vehicle OBD-II telemetry backend planned. Document in README Roadmap. |
-| **Predictive Surge Staging** | `PredictiveSurgeModal.tsx` | UI-only mock | **Remove**. Synthetic static sectors. Document in README Roadmap. |
-| **Next-Gen 112 Video** | `NG911CallerVideoModal.tsx` | UI-only mock | **Remove**. Fake video stream overlay. Document in README Roadmap. |
-| **V2X Green Wave Preemption** | `V2XPreemptionHUD.tsx` | UI-only mock | Keep as Demo behind `TrafficSignalProvider` interface with a visible "Simulated" chip (Step 7). |
-| **MCI Triage Matrix** | `MciTriageModal.tsx` & top bar banner | UI-only mock | **Remove**. Static casualty tally. Document in README Roadmap. |
-| **Drone First Responder** | `DroneDispatchModal.tsx` | UI-only mock | **Remove**. Simulated UAV payload drop. Document in README Roadmap. |
-| **Clinical QA Compliance** | `ClinicalQaModal.tsx` | UI-only mock | **Remove**. Hardcoded AHA scorecards. Document in README Roadmap. |
-| **Regional ED Capacity HUD** | `HospitalCapacityHUD.tsx` | Partial | **Remove modal**. Consolidate real bed counters into Hospital Dashboard and CAD Hospital tab (Steps 4 & 6). |
-| **Privacy & Compliance Modal** | `LegalModal.tsx` | UI-only mock | **Remove**. Replace with neutral About/Prototype disclaimer dialog (Step 7). |
-| **Save Snapshot to Disk** | `SaveToFileModal.tsx` / Overflow menu | Partial | **Remove**. Replace with CAD Analytics summary + CSV export (Step 4). |
-| **Reset Simulation Data** | Overflow menu / `/system/reset` | Partial | Restrict to dev-only Demo Mode toggle (Step 7). |
-| **Incident Queue Cards** | Review & Auto-assign buttons | Partial | "Review" opens detail drawer with timeline, patient info, assign/reassign, duplicate merge, and close disposition (Step 4). |
-| **Active Missions List** | Status progression steps (1-10) | Partial | Replaced by strict server-side state machine with actor logging and real-time updates (Step 2). |
-| **Fleet Board** | Ambulance unit cards, telemetry | Partial | Show status, last GPS ping age (flag stale > 60s), assigned crew (Step 4). |
-| **Hospitals Board** | Hospital cards, bed counters | Partial | Show route ETA, bed availability, divert status, and recommendation reason (Step 4). |
+| Dimension | LIVE Mode (System Default) | DEMO Mode (Explicit Toggle Only) |
+|---|---|---|
+| **Activation** | Default mode on boot, page load, and reload. | Explicit user button click on Login screen or Avatar dropdown. |
+| **Data Source** | `LiveDataSource` via Spring Boot REST (`/api/*`) and STOMP WebSocket (`/ws`). | `DemoDataSource` in-browser simulator (`frontend/src/demo/`). Zero backend calls. |
+| **Persistence** | Relational Database (PostgreSQL / H2). | Isolated in browser `aegis.demo.*` LocalStorage namespace. |
+| **Storage Isolation** | Uses `aegis.live.*` storage keys. Demo tokens never read or write to live keys. | Uses `aegis.demo.*` storage keys. Wiped immediately upon exiting demo mode. |
+| **UI Indicators** | No banners. Clean operational theme. Shows connection chip (`Connected` / `Reconnecting` / `Offline`). | Persistent slim chip in top bar: `Demo mode — synthetic data` with `Exit demo` button. |
+| **Failure Handling** | If backend unreachable, shows full error screen with retry & backoff. **Never falls back silently to fake data.** | N/A (runs entirely client-side). |
 
 ---
 
-## 2. Paramedic MDT Dashboard
+## 2. Live vs. Demo Feature Comparison
 
-| Feature / Control | Component / Action | Current Status | Plan / Disposition |
-|---|---|---|---|
-| **Vehicle Unit Lock** | MDT session vehicle binding | Partial | Enforce on server. Paramedic bound to assigned unit; cannot switch units without re-authenticating (Step 1). |
-| **Mission Card** | Assigned incident details & dispatch status | Partial | Appears strictly for assigned unit; displays patient details, destination, OSRM turn-by-turn routing (Step 5). |
-| **Status Progression** | En Route, On Scene, Transporting, At Hospital | Partial | Large touch buttons backed by server-side state machine; rejected on invalid transitions (Step 2 & Step 5). |
-| **Turn-by-Turn Map** | `AmbulanceRouteMap.tsx` with OSM tiles | Working end-to-end | Keep. Real OSRM route waypoints, street names, and live distance/ETA. |
-| **Follow Unit** | Map auto-pan toggle button | Working end-to-end | Keep. Keeps ambulance marker centered during transit. |
-| **Simulated Vitals Monitor** | `MedicalMonitorWidget.tsx` | Partial | Save vitals to database with timestamps, trend sparkline, and out-of-range alerts (Step 5). |
-| **Simulate ST-Elevation** | ECG STEMI trigger button | UI-only mock | Restrict to Demo Mode and label clearly as "Simulated" (Step 5 & Step 7). |
-| **Broadcast Pre-Alert** | Hospital pre-arrival summary notification | Partial | One-tap pre-arrival summary (age, complaint, vitals, ETA); queued offline if disconnected (Step 5). |
-| **Save MDT Log** | Top bar button | Partial | **Remove**. Replace with basic ePCR (complaint, interventions, medications with times) and PDF/print export (Step 5). |
-| **GPS Telemetry Pings** | Live location updates | Partial | Debounce client-side GPS pings to 1 update per 3-5s (Step 5). |
+### Central CAD Console
+| Feature | LIVE Mode | DEMO Mode |
+|---|---|---|
+| **Incident Intake** | Real emergency calls submitted by Citizens or Dispatchers; validated and saved to `emergencies` table. | Pre-configured simulation emergency queue (`ACCIDENT`, `CARDIAC`, `BREATHING`). |
+| **Multi-Factor Dispatch Recommendation** | Real OSRM road distance & duration calculations, vehicle clinical capability matching, and availability scoring. | Client-side ranking using geometric distance. |
+| **Unit Assignment & State Machine** | Full server-side state machine with transitions logged to `incident_events` with actor ID and timestamp. | In-memory simulated transitions. |
+| **Geospatial Map** | Real Leaflet GIS displaying live unit locations from paramedic GPS telemetry and real incident coordinates. | Simulated animated vehicle progression along pre-defined waypoints. |
+| **Auto-Dispatch** | Configurable server-evaluated automatic dispatch for critical calls with full audit trail. | Client-side simulated dispatch. |
+| **Hospital Trauma Bay Capacity** | Live hospital counters published by hospital staff through WebSocket broadcasts. | Static or timer-incremented bed counters. |
+
+### Paramedic MDT Terminal
+| Feature | LIVE Mode | DEMO Mode |
+|---|---|---|
+| **Authentication & Vehicle Binding** | Driver/Medic authenticated via JWT; bound to assigned vehicle registration. | Selectable demo responder profile (`Arun Kumar / KA-01-AE-1001`). |
+| **Incident Navigation** | Real turn-by-turn route waypoints from OSRM with live ETA. | Simulated route rendering. |
+| **Vehicle Telemetry & GPS** | Real device GPS telemetry debounced to 1 update every 3–5 seconds sent to `/api/ambulances/{id}/location`. | Automated timer-driven coordinate stepping along road route. |
+| **Patient Vitals Entry** | Real clinical vitals recorded by medic, validated, and saved to database with timestamps. | Animated sinusoidal simulated ECG rhythm with triggerable ST-elevation STEMI demo button (labeled "Simulated"). |
+| **Pre-Arrival Hospital Pre-Alert** | Sends real pre-alert notification with patient summary and vitals to target hospital ED. | Client-side toast notification. |
+
+### Hospital Emergency Department (ED) Console
+| Feature | LIVE Mode | DEMO Mode |
+|---|---|---|
+| **Facility Binding** | Staff authenticated via JWT; locked to assigned hospital facility. | Selectable demo facility (`Aegis City General`). |
+| **Inbound Ambulances** | Live inbound vehicles carrying patients routed to this hospital, showing live paramedic vitals and ETA. | Simulated incoming ambulance queue. |
+| **Patient Handover** | "Patient received" action triggers final state transition, writes to `incident_events`, and releases ambulance. | In-memory simulated handover. |
+| **Bed & Trauma Bay Management** | Live counters (+ / -) updated in database and pushed immediately across all CAD terminals. | In-memory counter state. |
+| **Facility Readiness Toggles** | Live switches for Cath Lab, Trauma Bay, and CT Scanner with staff update timestamp. | In-memory readiness state. |
+
+### Citizen SOS Portal
+| Feature | LIVE Mode | DEMO Mode |
+|---|---|---|
+| **Authentication** | Citizen self-registration with phone and hashed password; secure JWT session. | Pre-configured demo citizen (`Priya Sharma / 9845012345`). |
+| **One-Tap SOS Dispatch** | Captures real HTML5 geolocation, reverses address, and posts incident to CAD queue within 1 second. | Generates demo incident in browser storage. |
+| **Live Unit Tracking** | Real-time tracking of assigned ambulance en-route with live ETA updates via WebSocket. | Simulated tracking counter and route. |
+| **Digital Health Profile** | Patient profile with medical conditions, allergies, and emergency contacts saved to database. | Pre-populated mock health profile. |
+| **Emergency Guidance** | Web Audio API CPR metronome at 110 BPM and direct emergency hotline links. | Web Audio API CPR metronome at 110 BPM. |
+
+### Administration & Security
+| Feature | LIVE Mode | DEMO Mode |
+|---|---|---|
+| **System Administrator Console** | Full user management (`/api/admin/users`): create dispatchers, paramedics with unit binding, hospital staff with facility binding. | Disabled in demo mode. |
+| **First-Run Bootstrap** | Automatic root admin account provisioning from `AEGIS_ADMIN_USERNAME` / `AEGIS_ADMIN_PASSWORD` on empty DB. | N/A. |
+| **Rate Limiting** | Server-side IP rate limiting on login and citizen SOS endpoints. | N/A. |
+| **CORS Isolation** | Restrictive origin checks driven by `CORS_ORIGIN`. | N/A (runs client-side). |
 
 ---
 
-## 3. Hospital Emergency Department Console
+## 3. Roadmapped Future Modules
 
-| Feature / Control | Component / Action | Current Status | Plan / Disposition |
-|---|---|---|---|
-| **Facility Lock** | Hospital session facility binding | Partial | Enforce on server. Staff locked to their facility; facility switcher only in dev mode (Step 1). |
-| **Inbound Patients List** | Incoming ambulances and patient triage | Partial | Real-time inbound list from real incidents: ETA, patient summary, latest vitals, Accept / Request divert (Step 6). |
-| **Patient Received** | Handover confirmation button | Partial | Closes transport leg, writes `incident_events`, and notifies CAD and MDT (Step 2 & Step 6). |
-| **Bed & Bay Steppers** | ER, ICU, Trauma counters (+ / -) | Partial | Real-time optimistic update published to server and broadcast via WebSocket to CAD and Paramedics (Step 6). |
-| **Department Readiness** | Cath Lab, CT Scanner, OR toggles | Partial | Live toggle switches saved to database with staff timestamp (Step 6). |
-| **Save ED Log** | Top bar button | Partial | **Remove**. Replace with live Recent Activity Log of inbound and admitted patients (Step 6). |
-| **Diversion Toggle** | Hospital diversion status switch | Partial | Real-time divert status with reason; updates CAD routing algorithm (Step 6). |
-
----
-
-## 4. Citizen Emergency Portal
-
-| Feature / Control | Component / Action | Current Status | Plan / Disposition |
-|---|---|---|---|
-| **One-Tap SOS Button** | Emergency medical assistance request | Partial | Add HTML5 high-accuracy Geolocation, reverse-geocoding, manual pin fallback, and coordinate transmission (Step 3). |
-| **Safety Confirmation** | Confirm dialog & 5s Undo | Working end-to-end | Keep. Prevents accidental dispatches. Add cancellation with reason and false-alarm handling (Step 3). |
-| **Emergency Tracking** | Live status, unit ETA, assigned ambulance | Partial | Live tracking with real-time updates from CAD/MDT, Web Share API link (Step 3). |
-| **Third-Party SOS** | "Someone else needs help" mode | Missing / New | Implement short symptom checklist feeding rule-based priority config labeled "Decision support, not a medical diagnosis" (Step 3). |
-| **Digital Health ID** | Allergies, conditions, next of kin | Partial | Full validation, multiple emergency contacts, consent line, and access logging (Step 3). |
-| **CPR Metronome** | Audio beep & visual compression guide | Partial | Upgrade to real Web Audio API oscillator beep at 110 BPM, play/pause, prefers-reduced-motion support (Step 3). |
-| **Emergency Hotlines** | 112, 108, 102, 100 direct links | Working end-to-end | Keep `tel:` buttons. Add offline caching via Service Worker (Step 3). |
-| **i18n Localization** | Multi-language support | Missing / New | Implement `react-i18next` for English, Kannada, and Hindi (Step 3). |
-
----
-
-## 5. Shared Login & Identity Gateway
-
-| Feature / Control | Component / Action | Current Status | Plan / Disposition |
-|---|---|---|---|
-| **Credential Validation** | Server-side authentication | UI-only mock | Currently accepts any input. Enforce server-side validation with hashed credentials; reject invalid credentials with errors (Step 1). |
-| **Role Enforcement** | Role permissions & data isolation | Partial | Server-side role authorization (`DISPATCHER`, `PARAMEDIC`, `HOSPITAL_STAFF`, `CITIZEN`). Enforce data isolation (Step 1). |
-| **Operator Switcher** | Dropdowns to pick any ambulance/hospital | Partial | Remove from public view. Bind users strictly to their credentials. Dev-only switcher behind `VITE_DEMO_MODE` (Step 1). |
-| **Session Inactivity Timeout**| Auto-lock shared terminal | Missing / New | 15-minute idle timeout on operational terminals; logout purges local storage (Step 1). |
-| **Rate Limiting** | Endpoint brute-force protection | Missing / New | Rate-limit login and SOS endpoints on the server (Step 1). |
-| **Demo Credentials Guide** | Evaluator credential drawer | Working end-to-end | Kept behind `?demo=1` / development flag (Step 1 & Step 7). |
+The following prototype concepts are documented in the project roadmap for future implementation:
+- **Mass Casualty Incident (MCI) Triage Matrix**: START/SALT triage tag scanning and regional trauma distribution.
+- **Drone First Responder (DFR)**: Autonomous UAV dispatch for pre-arrival AED / Narcan delivery.
+- **Next-Gen 112 Video (WebRTC)**: Direct caller camera video stream ingestion for dispatcher-guided CPR.
+- **Predictive Surge Staging**: Machine-learning driven ambulance prepositioning.
+- **IoT Fleet Diagnostics**: Real-time vehicle OBD-II diagnostics and oxygen cylinder monitoring.

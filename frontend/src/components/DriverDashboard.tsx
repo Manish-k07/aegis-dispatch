@@ -551,11 +551,12 @@ export const DriverDashboard: React.FC<DriverDashboardProps> = ({
             padding: '12px 16px',
             gap: '12px',
             boxSizing: 'border-box',
-            minHeight: 0,
+            height: 'calc(100vh - 68px)',
+            minHeight: '600px',
           }}
         >
           {/* Full Screen Road Navigation Map */}
-          <div style={{ flex: 1, minHeight: '480px', position: 'relative' }}>
+          <div style={{ flex: 1, minHeight: '480px', height: '100%', position: 'relative', display: 'flex', flexDirection: 'column' }}>
             <AmbulanceRouteMap
               ambulance={ambulance}
               dispatch={dispatch}
@@ -758,7 +759,7 @@ export const DriverDashboard: React.FC<DriverDashboardProps> = ({
           </Card>
 
           {/* Route Map Card */}
-          <Card padding={16} variant="outlined" style={{ display: 'flex', flexDirection: 'column', height: '420px' }}>
+          <Card padding={16} variant="outlined" style={{ display: 'flex', flexDirection: 'column', minHeight: '480px' }}>
             <SectionHeader
               icon="explore"
               title="Tactical navigation route"
@@ -775,7 +776,7 @@ export const DriverDashboard: React.FC<DriverDashboardProps> = ({
                 )
               }
             />
-            <div style={{ flex: 1, marginTop: '8px', minHeight: 0, borderRadius: '8px', overflow: 'hidden' }}>
+            <div style={{ flex: 1, marginTop: '8px', minHeight: '400px', borderRadius: '8px', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
               <AmbulanceRouteMap
                 ambulance={ambulance}
                 dispatch={dispatch}

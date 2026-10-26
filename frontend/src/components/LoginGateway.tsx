@@ -1,6 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Ambulance, Hospital, AuthSession, CitizenProfile } from '../types';
-import { API_BASE } from '../config';
+import { ENABLE_DEMO_BUTTON } from '../config';
+import { useMode } from '../services/ModeProvider';
+import { DemoModeModal } from './DemoModeModal';
+import { DemoBarChip } from './DemoBarChip';
 import {
   PageContainer,
   Stack,
@@ -12,7 +15,7 @@ import {
   Icon,
 } from './common';
 
-export type DepartmentalTerminal = 'DISPATCHER' | 'DRIVER' | 'HOSPITAL' | 'CITIZEN';
+export type DepartmentalTerminal = 'DISPATCHER' | 'DRIVER' | 'HOSPITAL' | 'CITIZEN' | 'ADMIN';
 
 interface LoginGatewayProps {
   ambulances: Ambulance[];
@@ -22,12 +25,6 @@ interface LoginGatewayProps {
   onToggleTheme?: () => void;
 }
 
-interface RegisteredCitizenAccount {
-  loginId: string;
-  password: string;
-  profile: CitizenProfile;
-}
-
 export const LoginGateway: React.FC<LoginGatewayProps> = ({
   ambulances,
   hospitals,
@@ -35,10 +32,11 @@ export const LoginGateway: React.FC<LoginGatewayProps> = ({
   theme = 'light',
   onToggleTheme,
 }) => {
-  const [showCredentialsModal, setShowCredentialsModal] = useState(false);
+  const { mode, dataSource, setMode } = useMode();
+  const [showDemoModal, setShowDemoModal] = useState(false);
   const [activeTerminal, setActiveTerminal] = useState<DepartmentalTerminal>('DISPATCHER');
 
-  // Input states (all start empty - NO prefilled secrets)
+  // Input states
   const [dispatcherBadge, setDispatcherBadge] = useState('');
   const [dispatcherPin, setDispatcherPin] = useState('');
   const [showDispatcherPin, setShowDispatcherPin] = useState(false);
@@ -56,10 +54,27 @@ export const LoginGateway: React.FC<LoginGatewayProps> = ({
   const [showHospitalPin, setShowHospitalPin] = useState(false);
   const [hospitalError, setHospitalError] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (!driverCallSign && ambulances.length > 0) {
+      setDriverCallSign(ambulances[0].id);
+    }
+  }, [ambulances, driverCallSign]);
+
+  useEffect(() => {
+    if (!hospitalFacilityCode && hospitals.length > 0) {
+      setHospitalFacilityCode(hospitals[0].id);
+    }
+  }, [hospitals, hospitalFacilityCode]);
+
   const [citizenLoginId, setCitizenLoginId] = useState('');
   const [citizenPassword, setCitizenPassword] = useState('');
   const [showCitizenPassword, setShowCitizenPassword] = useState(false);
   const [citizenLoginError, setCitizenLoginError] = useState<string | null>(null);
+
+  const [adminUsername, setAdminUsername] = useState('');
+  const [adminPassword, setAdminPassword] = useState('');
+  const [showAdminPassword, setShowAdminPassword] = useState(false);
+  const [adminError, setAdminError] = useState<string | null>(null);
 
   const [citizenMode, setCitizenMode] = useState<'LOGIN' | 'REGISTER'>('LOGIN');
   const [regName, setRegName] = useState('');
@@ -71,18 +86,13 @@ export const LoginGateway: React.FC<LoginGatewayProps> = ({
 
   const [isLoading, setIsLoading] = useState(false);
 
-  // Demo helper: only rendered when VITE_DEMO_MODE=true or ?demo=1
-  const isDemo = typeof window !== 'undefined' && (
-    (import.meta as any).env?.VITE_DEMO_MODE === 'true' ||
-    window.location.search.includes('demo=1')
-  );
-
   const handleSelectTerminal = (terminal: DepartmentalTerminal) => {
     setActiveTerminal(terminal);
     setDispatcherError(null);
     setDriverError(null);
     setHospitalError(null);
     setCitizenLoginError(null);
+    setAdminError(null);
     setRegistrationSuccessMsg(null);
     setRegError(null);
   };
@@ -91,7 +101,7 @@ export const LoginGateway: React.FC<LoginGatewayProps> = ({
   const handleDispatcherSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setDispatcherError(null);
-    const badge = dispatcherBadge.trim().toUpperCase();
+    const badge = dispatcherBadge.trim();
     const pin = dispatcherPin.trim();
 
     if (!badge || !pin) {
@@ -101,45 +111,16 @@ export const LoginGateway: React.FC<LoginGatewayProps> = ({
 
     setIsLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          role: 'DISPATCHER',
-          badgeNumber: badge,
-          pin: pin,
-        }),
-      });
-
-      if (!res.ok) {
-        const errJson = await res.json().catch(() => ({}));
-        setDispatcherError(errJson.error || 'Authentication failed. Invalid badge number or security PIN.');
-        setIsLoading(false);
-        return;
-      }
-
-      const data = await res.json();
-      setIsLoading(false);
-      onLogin({
+      const session = await dataSource.login({
         role: 'DISPATCHER',
-        userLabel: data.userLabel || badge,
-        subLabel: data.subLabel || 'Central CAD Console',
-        loginTime: new Date().toISOString(),
+        badgeNumber: badge,
+        pin: pin,
       });
-    } catch {
-      // Offline fallback: ONLY accept valid demo credentials, reject everything else
       setIsLoading(false);
-      const isDemoValid = (badge === 'CAD-042' || badge === 'CAD-011' || badge === 'DISP-901') && pin === '1120';
-      if (isDemoValid) {
-        onLogin({
-          role: 'DISPATCHER',
-          userLabel: badge === 'CAD-011' ? 'K. Raman' : 'A. Sharma',
-          subLabel: `Central CAD Console · ${badge}`,
-          loginTime: new Date().toISOString(),
-        });
-      } else {
-        setDispatcherError('Authentication failed. Invalid badge number or security PIN.');
-      }
+      onLogin(session);
+    } catch (err: any) {
+      setIsLoading(false);
+      setDispatcherError(err.message || 'Authentication failed. Invalid badge number or security PIN.');
     }
   };
 
@@ -147,8 +128,8 @@ export const LoginGateway: React.FC<LoginGatewayProps> = ({
   const handleDriverSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setDriverError(null);
-    const vehicleId = driverCallSign.trim();
-    const badge = driverBadge.trim().toUpperCase();
+    const vehicleId = driverCallSign.trim() || ambulances[0]?.id || '';
+    const badge = driverBadge.trim();
     const pin = driverPin.trim();
 
     if (!vehicleId || !badge || !pin) {
@@ -160,48 +141,17 @@ export const LoginGateway: React.FC<LoginGatewayProps> = ({
 
     setIsLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          role: 'DRIVER',
-          badgeNumber: badge,
-          pin: pin,
-          vehicleId: matchedAmb?.registrationNumber || vehicleId,
-        }),
-      });
-
-      if (!res.ok) {
-        const errJson = await res.json().catch(() => ({}));
-        setDriverError(errJson.error || 'Authentication rejected. Invalid credentials.');
-        setIsLoading(false);
-        return;
-      }
-
-      const data = await res.json();
-      setIsLoading(false);
-      onLogin({
+      const session = await dataSource.login({
         role: 'DRIVER',
-        userLabel: data.userLabel || `${badge} · ${matchedAmb.registrationNumber}`,
-        subLabel: data.subLabel || `${matchedAmb.type} Mobile Data Terminal`,
-        ambulanceId: data.unitId || matchedAmb.id,
-        loginTime: new Date().toISOString(),
+        badgeNumber: badge,
+        pin: pin,
+        ambulanceId: matchedAmb?.registrationNumber || vehicleId,
       });
-    } catch {
-      // Offline fallback: ONLY accept valid demo credentials
       setIsLoading(false);
-      const isDemoValid = (badge === 'MED-702' || badge === 'PM-402') && pin === '1001';
-      if (isDemoValid) {
-        onLogin({
-          role: 'DRIVER',
-          userLabel: `R. Rao · ${matchedAmb.registrationNumber}`,
-          subLabel: `${matchedAmb.type} Mobile Data Terminal`,
-          ambulanceId: matchedAmb.id,
-          loginTime: new Date().toISOString(),
-        });
-      } else {
-        setDriverError('Authentication rejected. Invalid paramedic credentials.');
-      }
+      onLogin(session);
+    } catch (err: any) {
+      setIsLoading(false);
+      setDriverError(err.message || 'Authentication rejected. Invalid credentials.');
     }
   };
 
@@ -209,8 +159,8 @@ export const LoginGateway: React.FC<LoginGatewayProps> = ({
   const handleHospitalSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setHospitalError(null);
-    const facilityId = hospitalFacilityCode.trim();
-    const badge = hospitalStaffBadge.trim().toUpperCase();
+    const facilityId = hospitalFacilityCode.trim() || hospitals[0]?.id || '';
+    const badge = hospitalStaffBadge.trim();
     const pin = hospitalPin.trim();
 
     if (!facilityId || !badge || !pin) {
@@ -218,52 +168,19 @@ export const LoginGateway: React.FC<LoginGatewayProps> = ({
       return;
     }
 
-    const matchedHosp = hospitals.find((h) => h.id === facilityId) || hospitals[0];
-
     setIsLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          role: 'HOSPITAL',
-          badgeNumber: badge,
-          pin: pin,
-          hospitalId: facilityId,
-        }),
-      });
-
-      if (!res.ok) {
-        const errJson = await res.json().catch(() => ({}));
-        setHospitalError(errJson.error || 'Access denied. Invalid facility credentials.');
-        setIsLoading(false);
-        return;
-      }
-
-      const data = await res.json();
-      setIsLoading(false);
-      onLogin({
+      const session = await dataSource.login({
         role: 'HOSPITAL',
-        userLabel: data.userLabel || matchedHosp.name,
-        subLabel: data.subLabel || `Emergency Department · ${badge}`,
-        hospitalId: data.hospitalId || matchedHosp.id,
-        loginTime: new Date().toISOString(),
+        badgeNumber: badge,
+        pin: pin,
+        hospitalId: facilityId,
       });
-    } catch {
-      // Offline fallback: ONLY accept valid demo credentials
       setIsLoading(false);
-      const isDemoValid = (badge === 'RN-402' || badge === 'NURSE-12' || badge === 'DR-201') && pin === '2001';
-      if (isDemoValid) {
-        onLogin({
-          role: 'HOSPITAL',
-          userLabel: matchedHosp.name,
-          subLabel: `Emergency Department · ${badge}`,
-          hospitalId: matchedHosp.id,
-          loginTime: new Date().toISOString(),
-        });
-      } else {
-        setHospitalError('Access denied. Invalid facility credentials.');
-      }
+      onLogin(session);
+    } catch (err: any) {
+      setIsLoading(false);
+      setHospitalError(err.message || 'Access denied. Invalid facility credentials.');
     }
   };
 
@@ -279,138 +196,50 @@ export const LoginGateway: React.FC<LoginGatewayProps> = ({
       return;
     }
 
-    const cleanDigits = input.replace(/[^0-9]/g, '').slice(-10);
+    setIsLoading(true);
+    try {
+      const session = await dataSource.login({
+        role: 'CITIZEN',
+        badgeNumber: input,
+        pin: password,
+      });
+      setIsLoading(false);
+      onLogin(session);
+    } catch (err: any) {
+      setIsLoading(false);
+      setCitizenLoginError(err.message || 'Invalid phone number or password. Access denied.');
+    }
+  };
+
+  // Admin Login submit
+  const handleAdminSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAdminError(null);
+    const user = adminUsername.trim();
+    const pass = adminPassword.trim();
+
+    if (!user || !pass) {
+      setAdminError('Please enter administrator username and password.');
+      return;
+    }
 
     setIsLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          role: 'CITIZEN',
-          badgeNumber: cleanDigits,
-          pin: password,
-        }),
+      const session = await dataSource.login({
+        role: 'ADMIN',
+        badgeNumber: user,
+        pin: pass,
       });
-
-      if (!res.ok) {
-        // Also check if locally registered account exists
-        let registeredList: RegisteredCitizenAccount[] = [];
-        try {
-          const saved = localStorage.getItem('aegis_registered_citizens');
-          if (saved) registeredList = JSON.parse(saved);
-        } catch {}
-
-        const found = registeredList.find(
-          (acc) => acc.loginId.replace(/[^0-9]/g, '').slice(-10) === cleanDigits && acc.password === password
-        );
-
-        if (found) {
-          setIsLoading(false);
-          onLogin({
-            role: 'CITIZEN',
-            userLabel: found.profile.name,
-            subLabel: `Citizen Profile · Blood: ${found.profile.bloodGroup || 'O+'}`,
-            citizenProfile: found.profile,
-            loginTime: new Date().toISOString(),
-          });
-          return;
-        }
-
-        const errJson = await res.json().catch(() => ({}));
-        setCitizenLoginError(errJson.error || 'Invalid phone number or password. Access denied.');
-        setIsLoading(false);
-        return;
-      }
-
-      const data = await res.json();
       setIsLoading(false);
-      const defaultProfile: CitizenProfile = data.citizenProfile ? {
-        id: 'cit-priya-01',
-        name: (data.citizenProfile.name as string) || data.userLabel,
-        gender: (data.citizenProfile.gender as any) || 'FEMALE',
-        age: Number(data.citizenProfile.age) || 29,
-        phone: (data.citizenProfile.phone as string) || `+91 ${cleanDigits}`,
-        email: 'priya.sharma@example.com',
-        diseases: (data.citizenProfile.diseases as string[]) || ['Severe asthma'],
-        allergies: (data.citizenProfile.allergies as string[]) || ['Penicillin / amoxicillin'],
-        bloodGroup: (data.citizenProfile.bloodGroup as any) || 'O+',
-        emergencyContactName: (data.citizenProfile.emergencyContactName as string) || 'Amit Patel (Spouse)',
-        emergencyContactPhone: (data.citizenProfile.emergencyContactPhone as string) || '+91 98450 99887',
-      } : {
-        id: 'cit-priya-01',
-        name: data.userLabel,
-        gender: 'FEMALE',
-        age: 29,
-        phone: `+91 ${cleanDigits}`,
-        email: 'priya.sharma@example.com',
-        diseases: ['Severe asthma'],
-        allergies: ['Penicillin / amoxicillin'],
-        bloodGroup: 'O+',
-        emergencyContactName: 'Amit Patel (Spouse)',
-        emergencyContactPhone: '+91 98450 99887',
-      };
-
-      onLogin({
-        role: 'CITIZEN',
-        userLabel: data.userLabel,
-        subLabel: data.subLabel || `Citizen Profile · Blood: ${defaultProfile.bloodGroup}`,
-        citizenProfile: defaultProfile,
-        loginTime: new Date().toISOString(),
-      });
-    } catch {
+      onLogin(session);
+    } catch (err: any) {
       setIsLoading(false);
-      // Offline fallback: check registered accounts or demo user
-      let registeredList: RegisteredCitizenAccount[] = [];
-      try {
-        const saved = localStorage.getItem('aegis_registered_citizens');
-        if (saved) registeredList = JSON.parse(saved);
-      } catch {}
-
-      const found = registeredList.find(
-        (acc) => acc.loginId.replace(/[^0-9]/g, '').slice(-10) === cleanDigits && acc.password === password
-      );
-
-      if (found) {
-        onLogin({
-          role: 'CITIZEN',
-          userLabel: found.profile.name,
-          subLabel: `Citizen Profile · Blood: ${found.profile.bloodGroup || 'O+'}`,
-          citizenProfile: found.profile,
-          loginTime: new Date().toISOString(),
-        });
-        return;
-      }
-
-      if (cleanDigits === '9845012345' && (password === '1120' || password === 'password123')) {
-        const defaultProfile: CitizenProfile = {
-          id: 'cit-priya-01',
-          name: 'Priya Sharma',
-          gender: 'FEMALE',
-          age: 29,
-          phone: `+91 98450 12345`,
-          email: 'priya.sharma@example.com',
-          diseases: ['Severe asthma'],
-          allergies: ['Penicillin / amoxicillin'],
-          bloodGroup: 'O+',
-          emergencyContactName: 'Amit Patel (Spouse)',
-          emergencyContactPhone: '+91 98450 99887',
-        };
-        onLogin({
-          role: 'CITIZEN',
-          userLabel: defaultProfile.name,
-          subLabel: `Citizen Profile · Blood: ${defaultProfile.bloodGroup}`,
-          citizenProfile: defaultProfile,
-          loginTime: new Date().toISOString(),
-        });
-      } else {
-        setCitizenLoginError('Invalid phone number or password. Access denied.');
-      }
+      setAdminError(err.message || 'Administrator authentication failed. Access denied.');
     }
   };
 
   // Citizen Register submit
-  const handleCitizenRegisterSubmit = (e: React.FormEvent) => {
+  const handleCitizenRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setRegError(null);
     const name = regName.trim();
@@ -427,8 +256,8 @@ export const LoginGateway: React.FC<LoginGatewayProps> = ({
       setRegError('Please enter a valid 10-digit mobile number.');
       return;
     }
-    if (pwd.length < 6) {
-      setRegError('Password must be at least 6 characters long.');
+    if (pwd.length < 4) {
+      setRegError('Password must be at least 4 characters long.');
       return;
     }
     if (pwd !== confirmPwd) {
@@ -436,62 +265,32 @@ export const LoginGateway: React.FC<LoginGatewayProps> = ({
       return;
     }
 
-    const newProfile: CitizenProfile = {
-      id: `cit-${Date.now().toString().slice(-6)}`,
-      name: name,
-      gender: 'PREFER_NOT_TO_SAY',
-      age: 28,
-      phone: `+91 ${cleanPhoneDigits}`,
-      diseases: ['None / healthy'],
-      allergies: ['No known allergies (NKDA)'],
-      bloodGroup: 'O+',
-      registeredAt: new Date().toISOString(),
-    };
-
-    const newAccount: RegisteredCitizenAccount = {
-      loginId: `+91 ${cleanPhoneDigits}`,
-      password: pwd,
-      profile: newProfile,
-    };
-
-    let accounts: RegisteredCitizenAccount[] = [];
+    setIsLoading(true);
     try {
-      const saved = localStorage.getItem('aegis_registered_citizens');
-      if (saved) accounts = JSON.parse(saved);
-    } catch {}
-
-    const updated = [newAccount, ...accounts.filter(a => a.loginId !== newAccount.loginId)];
-    try {
-      localStorage.setItem('aegis_registered_citizens', JSON.stringify(updated));
-    } catch {}
-
-    setCitizenLoginId(`+91 ${cleanPhoneDigits}`);
-    setCitizenPassword(pwd);
-    setCitizenMode('LOGIN');
-    setRegistrationSuccessMsg('Registration successful. Sign in with your phone number and password.');
+      const session = await dataSource.registerCitizen({
+        name,
+        phone: `+91 ${cleanPhoneDigits}`,
+        password: pwd,
+      });
+      setIsLoading(false);
+      onLogin(session);
+    } catch (err: any) {
+      setIsLoading(false);
+      setRegError(err.message || 'Registration failed. An account may already exist with this number.');
+    }
   };
 
-  // Segmented control tabs with exact new names
-  const portalTabs = [
-    { id: 'DISPATCHER', label: 'Dispatch', icon: 'shield' },
-    { id: 'DRIVER', label: 'Responder', icon: 'ambulance' },
-    { id: 'HOSPITAL', label: 'Hospital', icon: 'local_hospital' },
-    { id: 'CITIZEN', label: 'SOS', icon: 'emergency' },
+  const handleEnterDemo = (role: 'DISPATCHER' | 'DRIVER' | 'HOSPITAL' | 'CITIZEN') => {
+    setMode('DEMO', true, role);
+  };
+
+  const terminalTabs: { id: DepartmentalTerminal; label: string; icon: string }[] = [
+    { id: 'DISPATCHER', label: 'CAD Dispatch', icon: 'shield' },
+    { id: 'DRIVER', label: 'Responder (MDT)', icon: 'ambulance' },
+    { id: 'HOSPITAL', label: 'Hospital ED', icon: 'local_hospital' },
+    { id: 'CITIZEN', label: 'Citizen SOS', icon: 'emergency' },
+    { id: 'ADMIN', label: 'System Admin', icon: 'settings' },
   ];
-
-  const vehicleOptions = ambulances.map((a) => ({
-    value: a.id,
-    label: `${a.registrationNumber} (${a.type})`,
-    sublabel: a.driverName ? `Crew: ${a.driverName}` : undefined,
-    icon: 'ambulance',
-  }));
-
-  const hospitalOptions = hospitals.map((h) => ({
-    value: h.id,
-    label: h.name,
-    sublabel: h.address,
-    icon: 'local_hospital',
-  }));
 
   return (
     <div
@@ -507,7 +306,7 @@ export const LoginGateway: React.FC<LoginGatewayProps> = ({
         position: 'relative',
       }}
     >
-      {/* Top-Right Theme Toggle & Quick Credentials */}
+      {/* Top-Right Theme Toggle & Demo Chip */}
       <div
         style={{
           position: 'absolute',
@@ -519,29 +318,7 @@ export const LoginGateway: React.FC<LoginGatewayProps> = ({
           zIndex: 100,
         }}
       >
-        <button
-          type="button"
-          onClick={() => setShowCredentialsModal(true)}
-          style={{
-            height: '36px',
-            padding: '0 12px',
-            borderRadius: '18px',
-            border: '1px solid var(--md-sys-color-outline)',
-            backgroundColor: 'var(--md-sys-color-surface-container)',
-            color: 'var(--md-sys-color-primary)',
-            fontSize: '12px',
-            fontWeight: 600,
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            cursor: 'pointer',
-            boxShadow: 'var(--elevation-1)',
-          }}
-        >
-          <Icon name="key" size={16} />
-          <span>Demo Credentials</span>
-        </button>
-
+        {mode === 'DEMO' && <DemoBarChip />}
         {onToggleTheme && (
           <button
             type="button"
@@ -567,734 +344,735 @@ export const LoginGateway: React.FC<LoginGatewayProps> = ({
         )}
       </div>
 
-      {/* Demo Credentials Quick Reference Modal */}
-      {showCredentialsModal && (
-        <div className="modal-overlay" style={{ zIndex: 2000 }} onClick={() => setShowCredentialsModal(false)}>
-          <div
-            className="modal-dialog"
-            onClick={(e) => e.stopPropagation()}
-            style={{ maxWidth: '520px', width: '92%' }}
-          >
-            <div className="modal-header">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Icon name="key" size={20} style={{ color: 'var(--md-sys-color-primary)' }} />
-                <h2 style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: 'var(--md-sys-color-text)' }}>
-                  All Gateway Login Credentials
-                </h2>
-              </div>
-              <button
-                type="button"
-                className="btn-close"
-                onClick={() => setShowCredentialsModal(false)}
-                aria-label="Close credentials dialog"
-              >
-                <Icon name="close" size={18} />
-              </button>
-            </div>
-            <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '13px' }}>
-              <div style={{ padding: '10px 12px', borderRadius: '8px', backgroundColor: 'var(--md-sys-color-surface-container)' }}>
-                <div style={{ fontWeight: 600, color: 'var(--md-sys-color-primary)', marginBottom: '4px' }}>
-                  1. Central CAD Dispatcher
-                </div>
-                <div style={{ color: 'var(--md-sys-color-text-secondary)', marginBottom: '6px' }}>
-                  Badge ID: <code style={{ fontWeight: 600, color: 'var(--md-sys-color-text)' }}>CAD-042</code> (or <code>CAD-011</code>, <code>DISP-901</code>) &bull; PIN: <code style={{ fontWeight: 600, color: 'var(--md-sys-color-text)' }}>1120</code>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveTerminal('DISPATCHER');
-                    setDispatcherBadge('CAD-042');
-                    setDispatcherPin('1120');
-                    setShowCredentialsModal(false);
-                  }}
-                  style={{
-                    padding: '3px 10px',
-                    borderRadius: '12px',
-                    border: '1px solid var(--md-sys-color-primary)',
-                    backgroundColor: 'var(--md-sys-color-primary-container)',
-                    color: 'var(--md-sys-color-on-primary-container)',
-                    fontSize: '11px',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                  }}
-                >
-                  Fill Dispatcher Credentials
-                </button>
-              </div>
-
-              <div style={{ padding: '10px 12px', borderRadius: '8px', backgroundColor: 'var(--md-sys-color-surface-container)' }}>
-                <div style={{ fontWeight: 600, color: 'var(--md-sys-color-primary)', marginBottom: '4px' }}>
-                  2. Paramedic / MDT Responder
-                </div>
-                <div style={{ color: 'var(--md-sys-color-text-secondary)', marginBottom: '6px' }}>
-                  Ambulance: <code style={{ fontWeight: 600, color: 'var(--md-sys-color-text)' }}>KA-01-AE-1001</code> &bull; Badge ID: <code style={{ fontWeight: 600, color: 'var(--md-sys-color-text)' }}>MED-702</code> (or <code>PM-402</code>) &bull; PIN: <code style={{ fontWeight: 600, color: 'var(--md-sys-color-text)' }}>1001</code>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveTerminal('DRIVER');
-                    setDriverCallSign(ambulances[0]?.id || 'amb-1');
-                    setDriverBadge('MED-702');
-                    setDriverPin('1001');
-                    setShowCredentialsModal(false);
-                  }}
-                  style={{
-                    padding: '3px 10px',
-                    borderRadius: '12px',
-                    border: '1px solid var(--md-sys-color-primary)',
-                    backgroundColor: 'var(--md-sys-color-primary-container)',
-                    color: 'var(--md-sys-color-on-primary-container)',
-                    fontSize: '11px',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                  }}
-                >
-                  Fill Paramedic Credentials
-                </button>
-              </div>
-
-              <div style={{ padding: '10px 12px', borderRadius: '8px', backgroundColor: 'var(--md-sys-color-surface-container)' }}>
-                <div style={{ fontWeight: 600, color: 'var(--md-sys-color-primary)', marginBottom: '4px' }}>
-                  3. Hospital Emergency Department
-                </div>
-                <div style={{ color: 'var(--md-sys-color-text-secondary)', marginBottom: '6px' }}>
-                  Facility: <code style={{ fontWeight: 600, color: 'var(--md-sys-color-text)' }}>Demo City Hospital</code> &bull; Badge ID: <code style={{ fontWeight: 600, color: 'var(--md-sys-color-text)' }}>RN-402</code> (or <code>NURSE-12</code>) &bull; PIN: <code style={{ fontWeight: 600, color: 'var(--md-sys-color-text)' }}>2001</code>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveTerminal('HOSPITAL');
-                    setHospitalFacilityCode(hospitals[0]?.id || 'hosp-1');
-                    setHospitalStaffBadge('RN-402');
-                    setHospitalPin('2001');
-                    setShowCredentialsModal(false);
-                  }}
-                  style={{
-                    padding: '3px 10px',
-                    borderRadius: '12px',
-                    border: '1px solid var(--md-sys-color-primary)',
-                    backgroundColor: 'var(--md-sys-color-primary-container)',
-                    color: 'var(--md-sys-color-on-primary-container)',
-                    fontSize: '11px',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                  }}
-                >
-                  Fill Hospital Credentials
-                </button>
-              </div>
-
-              <div style={{ padding: '10px 12px', borderRadius: '8px', backgroundColor: 'var(--md-sys-color-surface-container)' }}>
-                <div style={{ fontWeight: 600, color: 'var(--md-sys-color-primary)', marginBottom: '4px' }}>
-                  4. Citizen SOS Portal
-                </div>
-                <div style={{ color: 'var(--md-sys-color-text-secondary)', marginBottom: '6px' }}>
-                  Mobile Number: <code style={{ fontWeight: 600, color: 'var(--md-sys-color-text)' }}>9845012345</code> &bull; Password: <code style={{ fontWeight: 600, color: 'var(--md-sys-color-text)' }}>password123</code>
-                  <br />
-                  <span style={{ fontSize: '11px', opacity: 0.8 }}>(Or click Register to sign up with any phone number instantly)</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveTerminal('CITIZEN');
-                    setCitizenMode('LOGIN');
-                    setCitizenLoginId('9845012345');
-                    setCitizenPassword('password123');
-                    setShowCredentialsModal(false);
-                  }}
-                  style={{
-                    padding: '3px 10px',
-                    borderRadius: '12px',
-                    border: '1px solid var(--md-sys-color-primary)',
-                    backgroundColor: 'var(--md-sys-color-primary-container)',
-                    color: 'var(--md-sys-color-on-primary-container)',
-                    fontSize: '11px',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                  }}
-                >
-                  Fill Citizen Credentials
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-      <PageContainer maxWidth={440} padding={0}>
-        <Stack gap={24} fullWidth align="center">
-          {/* Header */}
-          <Stack gap={8} fullWidth align="center" style={{ textAlign: 'center' }}>
+      <PageContainer maxWidth="480px">
+        <Stack gap={24} align="center">
+          {/* Header Brand */}
+          <div style={{ textAlign: 'center' }}>
             <div
               style={{
-                width: '48px',
-                height: '48px',
-                borderRadius: '12px',
-                backgroundColor: 'var(--md-sys-color-primary-container)',
-                color: 'var(--md-sys-color-primary)',
-                display: 'flex',
+                display: 'inline-flex',
                 alignItems: 'center',
                 justifyContent: 'center',
+                width: '56px',
+                height: '56px',
+                borderRadius: '16px',
+                backgroundColor: 'var(--md-sys-color-primary)',
+                color: 'var(--md-sys-color-on-primary)',
+                marginBottom: '12px',
+                boxShadow: 'var(--elevation-2)',
               }}
             >
-              <Icon name="shield" size={24} />
+              <Icon name="shield" size={32} />
             </div>
             <h1
-              className="m3-page-title"
-              style={{ fontSize: '24px', lineHeight: '32px', fontWeight: 600, margin: 0 }}
+              style={{
+                fontSize: '24px',
+                fontWeight: 700,
+                color: 'var(--md-sys-color-text)',
+                margin: 0,
+                letterSpacing: '-0.5px',
+              }}
             >
-              Aegis
+              AEGIS DISPATCH
             </h1>
             <p
               style={{
-                fontSize: '14px',
-                lineHeight: '20px',
+                fontSize: '13px',
                 color: 'var(--md-sys-color-text-secondary)',
-                margin: 0,
+                margin: '4px 0 0 0',
               }}
             >
-              Emergency response and coordination system
+              Emergency Command & Telematics Gateway
             </p>
-          </Stack>
+          </div>
 
           {/* Main Card */}
-          <Card padding={24} style={{ width: '100%' }}>
-            <Stack gap={20} fullWidth>
-              {/* Segmented Control (48px height, selected = primary-container) */}
+          <Card padding={24} style={{ width: '100%', boxSizing: 'border-box' }}>
+            <Stack gap={20}>
+              {/* Tab Selector */}
               <div
-                role="tablist"
                 style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(4, 1fr)',
+                  display: 'flex',
                   backgroundColor: 'var(--md-sys-color-surface-container)',
-                  borderRadius: '24px',
+                  borderRadius: '12px',
                   padding: '4px',
                   gap: '4px',
-                  height: '48px',
-                  boxSizing: 'border-box',
+                  overflowX: 'auto',
                 }}
               >
-                {portalTabs.map((tab) => {
-                  const isSelected = activeTerminal === tab.id;
+                {terminalTabs.map((tab) => {
+                  const isActive = activeTerminal === tab.id;
                   return (
                     <button
                       key={tab.id}
                       type="button"
-                      role="tab"
-                      aria-selected={isSelected}
-                      onClick={() => handleSelectTerminal(tab.id as DepartmentalTerminal)}
+                      onClick={() => handleSelectTerminal(tab.id)}
                       style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '6px',
-                        height: '40px',
-                        borderRadius: '20px',
+                        flex: 1,
+                        minWidth: '64px',
+                        padding: '8px 4px',
                         border: 'none',
-                        backgroundColor: isSelected
-                          ? 'var(--md-sys-color-primary-container)'
+                        borderRadius: '8px',
+                        backgroundColor: isActive
+                          ? 'var(--md-sys-color-surface)'
                           : 'transparent',
-                        color: isSelected
-                          ? 'var(--md-sys-color-on-primary-container)'
+                        color: isActive
+                          ? 'var(--md-sys-color-primary)'
                           : 'var(--md-sys-color-text-secondary)',
-                        fontSize: '13px',
-                        fontWeight: isSelected ? 600 : 500,
+                        fontSize: '11px',
+                        fontWeight: isActive ? 600 : 500,
                         cursor: 'pointer',
-                        transition: 'background-color 150ms ease, color 150ms ease',
+                        transition: 'all 0.15s ease',
+                        boxShadow: isActive ? 'var(--elevation-1)' : 'none',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: '4px',
                         fontFamily: 'inherit',
-                        padding: '0 4px',
-                        whiteSpace: 'nowrap',
                       }}
                     >
-                      <Icon
-                        name={tab.icon}
-                        size={18}
-                        style={{
-                          color: isSelected ? 'var(--md-sys-color-primary)' : 'inherit',
-                        }}
-                      />
-                      <span>{tab.label}</span>
+                      <Icon name={tab.icon} size={16} />
+                      <span style={{ whiteSpace: 'nowrap' }}>{tab.label}</span>
                     </button>
                   );
                 })}
               </div>
 
-              {/* 1. DISPATCH TERMINAL */}
+              {/* DISPATCHER FORM */}
               {activeTerminal === 'DISPATCHER' && (
                 <form onSubmit={handleDispatcherSubmit}>
-                  <Stack gap={16} fullWidth>
-                    <Stack gap={4}>
-                      <Row gap={8}>
-                        <Icon name="support_agent" size={20} style={{ color: 'var(--md-sys-color-primary)' }} />
-                        <h2 style={{ fontSize: '16px', lineHeight: '24px', fontWeight: 500, margin: 0 }}>
-                          Dispatch console
-                        </h2>
-                      </Row>
-                      <p style={{ fontSize: '13px', lineHeight: '18px', color: 'var(--md-sys-color-text-secondary)', margin: 0 }}>
-                        Sign in with your dispatcher badge and PIN
-                      </p>
-                    </Stack>
-
-                    <Field
-                      label="Dispatcher badge ID"
-                      placeholder="e.g. DISP-901"
-                      value={dispatcherBadge}
-                      onChange={(e) => setDispatcherBadge(e.target.value)}
-                      leadingIcon="badge"
-                      required
-                    />
-
-                    <Field
-                      label="CAD security PIN"
-                      type={showDispatcherPin ? 'text' : 'password'}
-                      placeholder="Enter security PIN"
-                      value={dispatcherPin}
-                      onChange={(e) => setDispatcherPin(e.target.value)}
-                      leadingIcon="lock"
-                      trailingIcon={showDispatcherPin ? 'visibility_off' : 'visibility'}
-                      onTrailingIconClick={() => setShowDispatcherPin(!showDispatcherPin)}
-                      required
-                    />
+                  <Stack gap={16}>
+                    <div style={{ fontSize: '13px', color: 'var(--md-sys-color-text-secondary)', lineHeight: '18px' }}>
+                      Sign in to the Central Computer-Aided Dispatch (CAD) console.
+                    </div>
 
                     {dispatcherError && (
                       <div
-                        role="alert"
                         style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          padding: '10px 14px',
+                          padding: '10px 12px',
                           borderRadius: '8px',
                           backgroundColor: 'var(--md-sys-color-error-container)',
                           color: 'var(--md-sys-color-error)',
-                          fontSize: '13px',
+                          fontSize: '12px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
                         }}
                       >
-                        <Icon name="error" size={18} />
+                        <Icon name="error" size={16} />
                         <span>{dispatcherError}</span>
                       </div>
                     )}
 
+                    <Field label="Dispatcher Badge / ID">
+                      <input
+                        type="text"
+                        value={dispatcherBadge}
+                        onChange={(e) => setDispatcherBadge(e.target.value)}
+                        placeholder="e.g. DISPATCH-01"
+                        autoComplete="username"
+                        required
+                        style={{
+                          width: '100%',
+                          height: '44px',
+                          padding: '0 12px',
+                          borderRadius: '8px',
+                          border: '1px solid var(--md-sys-color-outline)',
+                          backgroundColor: 'var(--md-sys-color-surface)',
+                          color: 'var(--md-sys-color-text)',
+                          fontSize: '14px',
+                          boxSizing: 'border-box',
+                        }}
+                      />
+                    </Field>
+
+                    <Field label="Security PIN / Password">
+                      <div style={{ position: 'relative' }}>
+                        <input
+                          type={showDispatcherPin ? 'text' : 'password'}
+                          value={dispatcherPin}
+                          onChange={(e) => setDispatcherPin(e.target.value)}
+                          placeholder="Security PIN or Password"
+                          autoComplete="current-password"
+                          required
+                          style={{
+                            width: '100%',
+                            height: '44px',
+                            padding: '0 40px 0 12px',
+                            borderRadius: '8px',
+                            border: '1px solid var(--md-sys-color-outline)',
+                            backgroundColor: 'var(--md-sys-color-surface)',
+                            color: 'var(--md-sys-color-text)',
+                            fontSize: '14px',
+                            boxSizing: 'border-box',
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowDispatcherPin(!showDispatcherPin)}
+                          style={{
+                            position: 'absolute',
+                            right: '8px',
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            color: 'var(--md-sys-color-text-secondary)',
+                          }}
+                        >
+                          <Icon name={showDispatcherPin ? 'visibility_off' : 'visibility'} size={18} />
+                        </button>
+                      </div>
+                    </Field>
+
                     <Button
                       type="submit"
                       variant="filled"
-                      size="large"
-                      fullWidth
-                      disabled={isLoading || !dispatcherBadge.trim() || !dispatcherPin.trim()}
-                      isLoading={isLoading}
+                      disabled={isLoading}
+                      style={{ height: '44px', marginTop: '4px' }}
                     >
-                      Sign in to CAD
+                      {isLoading ? 'Verifying...' : 'Sign in as Dispatcher'}
                     </Button>
                   </Stack>
                 </form>
               )}
 
-              {/* 2. RESPONDER TERMINAL */}
+              {/* RESPONDER (DRIVER) FORM */}
               {activeTerminal === 'DRIVER' && (
                 <form onSubmit={handleDriverSubmit}>
-                  <Stack gap={16} fullWidth>
-                    <Stack gap={4}>
-                      <Row gap={8}>
-                        <Icon name="ambulance" size={20} style={{ color: 'var(--md-sys-color-primary)' }} />
-                        <h2 style={{ fontSize: '16px', lineHeight: '24px', fontWeight: 500, margin: 0 }}>
-                          Responder terminal
-                        </h2>
-                      </Row>
-                      <p style={{ fontSize: '13px', lineHeight: '18px', color: 'var(--md-sys-color-text-secondary)', margin: 0 }}>
-                        Select vehicle unit and enter driver ignition PIN
-                      </p>
-                    </Stack>
-
-                    <Select
-                      label="Vehicle unit"
-                      value={driverCallSign}
-                      onChange={(val) => setDriverCallSign(val)}
-                      options={vehicleOptions}
-                      leadingIcon="ambulance"
-                    />
-
-                    <Field
-                      label="Paramedic badge ID"
-                      placeholder="e.g. PM-402"
-                      value={driverBadge}
-                      onChange={(e) => setDriverBadge(e.target.value)}
-                      leadingIcon="badge"
-                      required
-                    />
-
-                    <Field
-                      label="Vehicle ignition PIN"
-                      type={showDriverPin ? 'text' : 'password'}
-                      placeholder="Enter 4-digit ignition PIN"
-                      value={driverPin}
-                      onChange={(e) => setDriverPin(e.target.value)}
-                      leadingIcon="lock"
-                      trailingIcon={showDriverPin ? 'visibility_off' : 'visibility'}
-                      onTrailingIconClick={() => setShowDriverPin(!showDriverPin)}
-                      required
-                    />
+                  <Stack gap={16}>
+                    <div style={{ fontSize: '13px', color: 'var(--md-sys-color-text-secondary)', lineHeight: '18px' }}>
+                      Sign in to the Mobile Data Terminal (MDT) bound to your ambulance unit.
+                    </div>
 
                     {driverError && (
                       <div
-                        role="alert"
                         style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          padding: '10px 14px',
+                          padding: '10px 12px',
                           borderRadius: '8px',
                           backgroundColor: 'var(--md-sys-color-error-container)',
                           color: 'var(--md-sys-color-error)',
-                          fontSize: '13px',
+                          fontSize: '12px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
                         }}
                       >
-                        <Icon name="error" size={18} />
+                        <Icon name="error" size={16} />
                         <span>{driverError}</span>
                       </div>
                     )}
 
+                    <Field label="Select Unit / Call Sign">
+                      <select
+                        value={driverCallSign}
+                        onChange={(e) => setDriverCallSign(e.target.value)}
+                        style={{
+                          width: '100%',
+                          height: '44px',
+                          padding: '0 12px',
+                          borderRadius: '8px',
+                          border: '1px solid var(--md-sys-color-outline)',
+                          backgroundColor: 'var(--md-sys-color-surface)',
+                          color: 'var(--md-sys-color-text)',
+                          fontSize: '14px',
+                          boxSizing: 'border-box',
+                        }}
+                      >
+                        {ambulances.map((amb) => (
+                          <option key={amb.id} value={amb.id}>
+                            {amb.registrationNumber} ({amb.type})
+                          </option>
+                        ))}
+                      </select>
+                    </Field>
+
+                    <Field label="Paramedic Badge ID">
+                      <input
+                        type="text"
+                        value={driverBadge}
+                        onChange={(e) => setDriverBadge(e.target.value)}
+                        placeholder="e.g. MEDIC-101"
+                        required
+                        style={{
+                          width: '100%',
+                          height: '44px',
+                          padding: '0 12px',
+                          borderRadius: '8px',
+                          border: '1px solid var(--md-sys-color-outline)',
+                          backgroundColor: 'var(--md-sys-color-surface)',
+                          color: 'var(--md-sys-color-text)',
+                          fontSize: '14px',
+                          boxSizing: 'border-box',
+                        }}
+                      />
+                    </Field>
+
+                    <Field label="Ignition Security PIN">
+                      <div style={{ position: 'relative' }}>
+                        <input
+                          type={showDriverPin ? 'text' : 'password'}
+                          value={driverPin}
+                          onChange={(e) => setDriverPin(e.target.value)}
+                          placeholder="Security PIN"
+                          required
+                          style={{
+                            width: '100%',
+                            height: '44px',
+                            padding: '0 40px 0 12px',
+                            borderRadius: '8px',
+                            border: '1px solid var(--md-sys-color-outline)',
+                            backgroundColor: 'var(--md-sys-color-surface)',
+                            color: 'var(--md-sys-color-text)',
+                            fontSize: '14px',
+                            boxSizing: 'border-box',
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowDriverPin(!showDriverPin)}
+                          style={{
+                            position: 'absolute',
+                            right: '8px',
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            color: 'var(--md-sys-color-text-secondary)',
+                          }}
+                        >
+                          <Icon name={showDriverPin ? 'visibility_off' : 'visibility'} size={18} />
+                        </button>
+                      </div>
+                    </Field>
+
                     <Button
                       type="submit"
                       variant="filled"
-                      size="large"
-                      fullWidth
-                      disabled={isLoading || !driverBadge.trim() || !driverPin.trim()}
-                      isLoading={isLoading}
+                      disabled={isLoading}
+                      style={{ height: '44px', marginTop: '4px' }}
                     >
-                      Sign in to MDT
+                      {isLoading ? 'Verifying...' : 'Launch MDT Navigation'}
                     </Button>
                   </Stack>
                 </form>
               )}
 
-              {/* 3. HOSPITAL TERMINAL */}
+              {/* HOSPITAL ED FORM */}
               {activeTerminal === 'HOSPITAL' && (
                 <form onSubmit={handleHospitalSubmit}>
-                  <Stack gap={16} fullWidth>
-                    <Stack gap={4}>
-                      <Row gap={8}>
-                        <Icon name="local_hospital" size={20} style={{ color: 'var(--md-sys-color-primary)' }} />
-                        <h2 style={{ fontSize: '16px', lineHeight: '24px', fontWeight: 500, margin: 0 }}>
-                          Hospital receiving
-                        </h2>
-                      </Row>
-                      <p style={{ fontSize: '13px', lineHeight: '18px', color: 'var(--md-sys-color-text-secondary)', margin: 0 }}>
-                        Select facility and enter staff authorization PIN
-                      </p>
-                    </Stack>
-
-                    <Select
-                      label="Hospital facility"
-                      value={hospitalFacilityCode}
-                      onChange={(val) => setHospitalFacilityCode(val)}
-                      options={hospitalOptions}
-                      leadingIcon="local_hospital"
-                    />
-
-                    <Field
-                      label="Staff badge ID"
-                      placeholder="e.g. NURSE-12"
-                      value={hospitalStaffBadge}
-                      onChange={(e) => setHospitalStaffBadge(e.target.value)}
-                      leadingIcon="badge"
-                      required
-                    />
-
-                    <Field
-                      label="Facility security PIN"
-                      type={showHospitalPin ? 'text' : 'password'}
-                      placeholder="Enter facility PIN"
-                      value={hospitalPin}
-                      onChange={(e) => setHospitalPin(e.target.value)}
-                      leadingIcon="lock"
-                      trailingIcon={showHospitalPin ? 'visibility_off' : 'visibility'}
-                      onTrailingIconClick={() => setShowHospitalPin(!showHospitalPin)}
-                      required
-                    />
+                  <Stack gap={16}>
+                    <div style={{ fontSize: '13px', color: 'var(--md-sys-color-text-secondary)', lineHeight: '18px' }}>
+                      Sign in to the Emergency Department reception console.
+                    </div>
 
                     {hospitalError && (
                       <div
-                        role="alert"
                         style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          padding: '10px 14px',
+                          padding: '10px 12px',
                           borderRadius: '8px',
                           backgroundColor: 'var(--md-sys-color-error-container)',
                           color: 'var(--md-sys-color-error)',
-                          fontSize: '13px',
+                          fontSize: '12px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
                         }}
                       >
-                        <Icon name="error" size={18} />
+                        <Icon name="error" size={16} />
                         <span>{hospitalError}</span>
                       </div>
                     )}
 
+                    <Field label="Receiving Hospital Facility">
+                      <select
+                        value={hospitalFacilityCode}
+                        onChange={(e) => setHospitalFacilityCode(e.target.value)}
+                        style={{
+                          width: '100%',
+                          height: '44px',
+                          padding: '0 12px',
+                          borderRadius: '8px',
+                          border: '1px solid var(--md-sys-color-outline)',
+                          backgroundColor: 'var(--md-sys-color-surface)',
+                          color: 'var(--md-sys-color-text)',
+                          fontSize: '14px',
+                          boxSizing: 'border-box',
+                        }}
+                      >
+                        {hospitals.map((hosp) => (
+                          <option key={hosp.id} value={hosp.id}>
+                            {hosp.name}
+                          </option>
+                        ))}
+                      </select>
+                    </Field>
+
+                    <Field label="Medical Staff Badge ID">
+                      <input
+                        type="text"
+                        value={hospitalStaffBadge}
+                        onChange={(e) => setHospitalStaffBadge(e.target.value)}
+                        placeholder="e.g. HOSP-101"
+                        required
+                        style={{
+                          width: '100%',
+                          height: '44px',
+                          padding: '0 12px',
+                          borderRadius: '8px',
+                          border: '1px solid var(--md-sys-color-outline)',
+                          backgroundColor: 'var(--md-sys-color-surface)',
+                          color: 'var(--md-sys-color-text)',
+                          fontSize: '14px',
+                          boxSizing: 'border-box',
+                        }}
+                      />
+                    </Field>
+
+                    <Field label="Staff Security PIN">
+                      <div style={{ position: 'relative' }}>
+                        <input
+                          type={showHospitalPin ? 'text' : 'password'}
+                          value={hospitalPin}
+                          onChange={(e) => setHospitalPin(e.target.value)}
+                          placeholder="Security PIN"
+                          required
+                          style={{
+                            width: '100%',
+                            height: '44px',
+                            padding: '0 40px 0 12px',
+                            borderRadius: '8px',
+                            border: '1px solid var(--md-sys-color-outline)',
+                            backgroundColor: 'var(--md-sys-color-surface)',
+                            color: 'var(--md-sys-color-text)',
+                            fontSize: '14px',
+                            boxSizing: 'border-box',
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowHospitalPin(!showHospitalPin)}
+                          style={{
+                            position: 'absolute',
+                            right: '8px',
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            color: 'var(--md-sys-color-text-secondary)',
+                          }}
+                        >
+                          <Icon name={showHospitalPin ? 'visibility_off' : 'visibility'} size={18} />
+                        </button>
+                      </div>
+                    </Field>
+
                     <Button
                       type="submit"
                       variant="filled"
-                      size="large"
-                      fullWidth
-                      disabled={isLoading || !hospitalStaffBadge.trim() || !hospitalPin.trim()}
-                      isLoading={isLoading}
+                      disabled={isLoading}
+                      style={{ height: '44px', marginTop: '4px' }}
                     >
-                      Sign in to Hospital ED
+                      {isLoading ? 'Verifying...' : 'Sign in to Emergency Dept'}
                     </Button>
                   </Stack>
                 </form>
               )}
 
-              {/* 4. CITIZEN / SOS TERMINAL */}
+              {/* CITIZEN SOS / REGISTER FORM */}
               {activeTerminal === 'CITIZEN' && (
                 <>
+                  <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                    <button
+                      type="button"
+                      onClick={() => setCitizenMode('LOGIN')}
+                      style={{
+                        flex: 1,
+                        padding: '8px',
+                        border: 'none',
+                        borderRadius: '6px',
+                        backgroundColor: citizenMode === 'LOGIN' ? 'var(--md-sys-color-primary-container)' : 'transparent',
+                        color: citizenMode === 'LOGIN' ? 'var(--md-sys-color-on-primary-container)' : 'var(--md-sys-color-text-secondary)',
+                        fontWeight: 600,
+                        fontSize: '12px',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Sign In
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCitizenMode('REGISTER')}
+                      style={{
+                        flex: 1,
+                        padding: '8px',
+                        border: 'none',
+                        borderRadius: '6px',
+                        backgroundColor: citizenMode === 'REGISTER' ? 'var(--md-sys-color-primary-container)' : 'transparent',
+                        color: citizenMode === 'REGISTER' ? 'var(--md-sys-color-on-primary-container)' : 'var(--md-sys-color-text-secondary)',
+                        fontWeight: 600,
+                        fontSize: '12px',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Self-Register
+                    </button>
+                  </div>
+
                   {citizenMode === 'LOGIN' ? (
                     <form onSubmit={handleCitizenLoginSubmit}>
-                      <Stack gap={16} fullWidth>
-                        <Stack gap={4}>
-                          <Row gap={8}>
-                            <Icon name="emergency" size={20} style={{ color: '#D93025' }} />
-                            <h2 style={{ fontSize: '16px', lineHeight: '24px', fontWeight: 500, margin: 0 }}>
-                              Citizen portal
-                            </h2>
-                          </Row>
-                          <p style={{ fontSize: '13px', lineHeight: '18px', color: 'var(--md-sys-color-text-secondary)', margin: 0 }}>
-                            Sign in with your mobile number and password
-                          </p>
-                        </Stack>
-
-                        {registrationSuccessMsg && (
-                          <div
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '8px',
-                              padding: '10px 14px',
-                              borderRadius: '8px',
-                              backgroundColor: 'var(--md-sys-color-success-container)',
-                              color: 'var(--md-sys-color-success)',
-                              fontSize: '13px',
-                            }}
-                          >
-                            <Icon name="check_circle" size={18} />
-                            <span>{registrationSuccessMsg}</span>
-                          </div>
-                        )}
-
-                        <Field
-                          label="Mobile phone number"
-                          type="tel"
-                          placeholder="e.g. +91 98450 12345"
-                          value={citizenLoginId}
-                          onChange={(e) => setCitizenLoginId(e.target.value)}
-                          leadingIcon="phone"
-                          required
-                        />
-
-                        <Field
-                          label="Account password"
-                          type={showCitizenPassword ? 'text' : 'password'}
-                          placeholder="Enter password"
-                          value={citizenPassword}
-                          onChange={(e) => setCitizenPassword(e.target.value)}
-                          leadingIcon="lock"
-                          trailingIcon={showCitizenPassword ? 'visibility_off' : 'visibility'}
-                          onTrailingIconClick={() => setShowCitizenPassword(!showCitizenPassword)}
-                          required
-                        />
-
+                      <Stack gap={16}>
                         {citizenLoginError && (
                           <div
-                            role="alert"
                             style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '8px',
-                              padding: '10px 14px',
+                              padding: '10px 12px',
                               borderRadius: '8px',
                               backgroundColor: 'var(--md-sys-color-error-container)',
                               color: 'var(--md-sys-color-error)',
-                              fontSize: '13px',
+                              fontSize: '12px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
                             }}
                           >
-                            <Icon name="error" size={18} />
+                            <Icon name="error" size={16} />
                             <span>{citizenLoginError}</span>
                           </div>
                         )}
 
+                        <Field label="Mobile Phone Number">
+                          <input
+                            type="tel"
+                            value={citizenLoginId}
+                            onChange={(e) => setCitizenLoginId(e.target.value)}
+                            placeholder="e.g. 9845012345"
+                            required
+                            style={{
+                              width: '100%',
+                              height: '44px',
+                              padding: '0 12px',
+                              borderRadius: '8px',
+                              border: '1px solid var(--md-sys-color-outline)',
+                              backgroundColor: 'var(--md-sys-color-surface)',
+                              color: 'var(--md-sys-color-text)',
+                              fontSize: '14px',
+                              boxSizing: 'border-box',
+                            }}
+                          />
+                        </Field>
+
+                        <Field label="Account Password">
+                          <div style={{ position: 'relative' }}>
+                            <input
+                              type={showCitizenPassword ? 'text' : 'password'}
+                              value={citizenPassword}
+                              onChange={(e) => setCitizenPassword(e.target.value)}
+                              placeholder="Account Password"
+                              required
+                              style={{
+                                width: '100%',
+                                height: '44px',
+                                padding: '0 40px 0 12px',
+                                borderRadius: '8px',
+                                border: '1px solid var(--md-sys-color-outline)',
+                                backgroundColor: 'var(--md-sys-color-surface)',
+                                color: 'var(--md-sys-color-text)',
+                                fontSize: '14px',
+                                boxSizing: 'border-box',
+                              }}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowCitizenPassword(!showCitizenPassword)}
+                              style={{
+                                position: 'absolute',
+                                right: '8px',
+                                top: '50%',
+                                transform: 'translateY(-50%)',
+                                background: 'none',
+                                border: 'none',
+                                cursor: 'pointer',
+                                color: 'var(--md-sys-color-text-secondary)',
+                              }}
+                            >
+                              <Icon name={showCitizenPassword ? 'visibility_off' : 'visibility'} size={18} />
+                            </button>
+                          </div>
+                        </Field>
+
                         <Button
                           type="submit"
                           variant="filled"
-                          size="large"
-                          fullWidth
-                          disabled={isLoading || !citizenLoginId.trim() || !citizenPassword.trim()}
-                          isLoading={isLoading}
+                          disabled={isLoading}
+                          style={{ height: '44px', marginTop: '4px' }}
                         >
-                          Sign in
+                          {isLoading ? 'Verifying...' : 'Sign in as Citizen'}
                         </Button>
-
-                        <div style={{ textAlign: 'center', paddingTop: '4px' }}>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setCitizenMode('REGISTER');
-                              setCitizenLoginError(null);
-                              setRegistrationSuccessMsg(null);
-                            }}
-                            style={{
-                              background: 'none',
-                              border: 'none',
-                              color: 'var(--md-sys-color-primary)',
-                              fontSize: '13px',
-                              fontWeight: 500,
-                              cursor: 'pointer',
-                              fontFamily: 'inherit',
-                              textDecoration: 'underline',
-                            }}
-                          >
-                            New user? Register citizen profile
-                          </button>
-                        </div>
                       </Stack>
                     </form>
                   ) : (
                     <form onSubmit={handleCitizenRegisterSubmit}>
-                      <Stack gap={16} fullWidth>
-                        <Stack gap={4}>
-                          <Row gap={8}>
-                            <Icon name="person_add" size={20} style={{ color: 'var(--md-sys-color-primary)' }} />
-                            <h2 style={{ fontSize: '16px', lineHeight: '24px', fontWeight: 500, margin: 0 }}>
-                              Create citizen profile
-                            </h2>
-                          </Row>
-                          <p style={{ fontSize: '13px', lineHeight: '18px', color: 'var(--md-sys-color-text-secondary)', margin: 0 }}>
-                            Enter your name, mobile number, and password
-                          </p>
-                        </Stack>
-
-                        <Field
-                          label="Full legal name"
-                          placeholder="e.g. Rahul Sharma"
-                          value={regName}
-                          onChange={(e) => setRegName(e.target.value)}
-                          leadingIcon="person"
-                          required
-                        />
-
-                        <Field
-                          label="Mobile phone number"
-                          type="tel"
-                          placeholder="e.g. 9845012345"
-                          value={regPhone}
-                          onChange={(e) => setRegPhone(e.target.value)}
-                          leadingIcon="phone"
-                          required
-                        />
-
-                        <Field
-                          label="New password"
-                          type="password"
-                          placeholder="At least 6 characters"
-                          value={regPassword}
-                          onChange={(e) => setRegPassword(e.target.value)}
-                          leadingIcon="lock"
-                          required
-                        />
-
-                        <Field
-                          label="Confirm password"
-                          type="password"
-                          placeholder="Re-enter password"
-                          value={regConfirmPassword}
-                          onChange={(e) => setRegConfirmPassword(e.target.value)}
-                          leadingIcon="lock"
-                          required
-                        />
-
+                      <Stack gap={14}>
                         {regError && (
-                          <div
-                            role="alert"
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '8px',
-                              padding: '10px 14px',
-                              borderRadius: '8px',
-                              backgroundColor: 'var(--md-sys-color-error-container)',
-                              color: 'var(--md-sys-color-error)',
-                              fontSize: '13px',
-                            }}
-                          >
-                            <Icon name="error" size={18} />
-                            <span>{regError}</span>
+                          <div style={{ padding: '10px 12px', borderRadius: '8px', backgroundColor: 'var(--md-sys-color-error-container)', color: 'var(--md-sys-color-error)', fontSize: '12px' }}>
+                            {regError}
                           </div>
                         )}
-
-                        <Button
-                          type="submit"
-                          variant="filled"
-                          size="large"
-                          fullWidth
-                          disabled={!regName.trim() || !regPhone.trim() || !regPassword.trim() || !regConfirmPassword.trim()}
-                        >
-                          Register and proceed to sign in
+                        <Field label="Full Name">
+                          <input type="text" value={regName} onChange={(e) => setRegName(e.target.value)} placeholder="Full Name" required style={{ width: '100%', height: '40px', padding: '0 12px', borderRadius: '8px', border: '1px solid var(--md-sys-color-outline)', boxSizing: 'border-box' }} />
+                        </Field>
+                        <Field label="Mobile Phone Number">
+                          <input type="tel" value={regPhone} onChange={(e) => setRegPhone(e.target.value)} placeholder="10-digit phone number" required style={{ width: '100%', height: '40px', padding: '0 12px', borderRadius: '8px', border: '1px solid var(--md-sys-color-outline)', boxSizing: 'border-box' }} />
+                        </Field>
+                        <Field label="Password">
+                          <input type="password" value={regPassword} onChange={(e) => setRegPassword(e.target.value)} placeholder="Min 4 characters" required style={{ width: '100%', height: '40px', padding: '0 12px', borderRadius: '8px', border: '1px solid var(--md-sys-color-outline)', boxSizing: 'border-box' }} />
+                        </Field>
+                        <Field label="Confirm Password">
+                          <input type="password" value={regConfirmPassword} onChange={(e) => setRegConfirmPassword(e.target.value)} placeholder="Re-enter password" required style={{ width: '100%', height: '40px', padding: '0 12px', borderRadius: '8px', border: '1px solid var(--md-sys-color-outline)', boxSizing: 'border-box' }} />
+                        </Field>
+                        <Button type="submit" variant="filled" disabled={isLoading} style={{ height: '44px', marginTop: '4px' }}>
+                          {isLoading ? 'Creating account...' : 'Create Citizen Account'}
                         </Button>
-
-                        <div style={{ textAlign: 'center', paddingTop: '4px' }}>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setCitizenMode('LOGIN');
-                              setRegError(null);
-                            }}
-                            style={{
-                              background: 'none',
-                              border: 'none',
-                              color: 'var(--md-sys-color-primary)',
-                              fontSize: '13px',
-                              fontWeight: 500,
-                              cursor: 'pointer',
-                              fontFamily: 'inherit',
-                              textDecoration: 'underline',
-                            }}
-                          >
-                            Already registered? Return to sign in
-                          </button>
-                        </div>
                       </Stack>
                     </form>
                   )}
                 </>
               )}
+
+              {/* ADMIN FORM */}
+              {activeTerminal === 'ADMIN' && (
+                <form onSubmit={handleAdminSubmit}>
+                  <Stack gap={16}>
+                    <div style={{ fontSize: '13px', color: 'var(--md-sys-color-text-secondary)', lineHeight: '18px' }}>
+                      Sign in to the Aegis System Administration Console.
+                    </div>
+
+                    {adminError && (
+                      <div
+                        style={{
+                          padding: '10px 12px',
+                          borderRadius: '8px',
+                          backgroundColor: 'var(--md-sys-color-error-container)',
+                          color: 'var(--md-sys-color-error)',
+                          fontSize: '12px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                        }}
+                      >
+                        <Icon name="error" size={16} />
+                        <span>{adminError}</span>
+                      </div>
+                    )}
+
+                    <Field label="Administrator Username">
+                      <input
+                        type="text"
+                        value={adminUsername}
+                        onChange={(e) => setAdminUsername(e.target.value)}
+                        placeholder="e.g. admin"
+                        autoComplete="username"
+                        required
+                        style={{
+                          width: '100%',
+                          height: '44px',
+                          padding: '0 12px',
+                          borderRadius: '8px',
+                          border: '1px solid var(--md-sys-color-outline)',
+                          backgroundColor: 'var(--md-sys-color-surface)',
+                          color: 'var(--md-sys-color-text)',
+                          fontSize: '14px',
+                          boxSizing: 'border-box',
+                        }}
+                      />
+                    </Field>
+
+                    <Field label="Administrator Password">
+                      <div style={{ position: 'relative' }}>
+                        <input
+                          type={showAdminPassword ? 'text' : 'password'}
+                          value={adminPassword}
+                          onChange={(e) => setAdminPassword(e.target.value)}
+                          placeholder="Password"
+                          autoComplete="current-password"
+                          required
+                          style={{
+                            width: '100%',
+                            height: '44px',
+                            padding: '0 40px 0 12px',
+                            borderRadius: '8px',
+                            border: '1px solid var(--md-sys-color-outline)',
+                            backgroundColor: 'var(--md-sys-color-surface)',
+                            color: 'var(--md-sys-color-text)',
+                            fontSize: '14px',
+                            boxSizing: 'border-box',
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowAdminPassword(!showAdminPassword)}
+                          style={{
+                            position: 'absolute',
+                            right: '8px',
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            color: 'var(--md-sys-color-text-secondary)',
+                          }}
+                        >
+                          <Icon name={showAdminPassword ? 'visibility_off' : 'visibility'} size={18} />
+                        </button>
+                      </div>
+                    </Field>
+
+                    <Button
+                      type="submit"
+                      variant="filled"
+                      disabled={isLoading}
+                      style={{ height: '44px', marginTop: '4px' }}
+                    >
+                      {isLoading ? 'Verifying...' : 'Sign in as Administrator'}
+                    </Button>
+                  </Stack>
+                </form>
+              )}
             </Stack>
           </Card>
 
-          {/* Dev Demo Credentials Collapsed Helper (rendered only when VITE_DEMO_MODE=true or ?demo=1) */}
-          {isDemo && (
-            <details
+          {/* Outlined Demo Mode Button below the sign-in card */}
+          {ENABLE_DEMO_BUTTON && (
+            <Button
+              variant="outlined"
+              onClick={() => setShowDemoModal(true)}
               style={{
                 width: '100%',
-                fontSize: '12px',
-                color: 'var(--md-sys-color-text-secondary)',
-                backgroundColor: 'var(--md-sys-color-surface-container)',
-                border: '1px solid var(--md-sys-color-outline)',
-                borderRadius: '8px',
-                padding: '8px 12px',
-                cursor: 'pointer',
+                height: '44px',
+                justifyContent: 'center',
+                gap: '8px',
+                borderColor: 'var(--md-sys-color-outline)',
+                color: 'var(--md-sys-color-primary)',
+                fontWeight: 600,
               }}
             >
-              <summary style={{ fontWeight: 500 }}>
-                Demo credentials guide
-              </summary>
-              <div style={{ paddingTop: '8px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <div><strong>Dispatch:</strong> Badge: <code>DISP-901</code> | PIN: <code>1120</code></div>
-                <div><strong>Responder:</strong> Unit: <code>KA-01-AE-1001</code> | Badge: <code>PM-402</code> | PIN: <code>1001</code></div>
-                <div><strong>Hospital:</strong> Facility: Select hospital | Badge: <code>NURSE-12</code> | PIN: <code>2001</code></div>
-                <div><strong>Citizen:</strong> Phone: <code>9845012345</code> | Password: <code>password123</code></div>
-              </div>
-            </details>
+              <Icon name="play_arrow" size={18} />
+              <span>Demo mode</span>
+            </Button>
           )}
         </Stack>
       </PageContainer>
+
+      {/* Demo Mode Selection Modal */}
+      <DemoModeModal
+        isOpen={showDemoModal}
+        onClose={() => setShowDemoModal(false)}
+        onEnterDemo={handleEnterDemo}
+        selectedTabRole={activeTerminal === 'ADMIN' ? 'DISPATCHER' : activeTerminal}
+      />
     </div>
   );
 };

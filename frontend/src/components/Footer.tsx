@@ -315,25 +315,11 @@ export const Footer: React.FC<FooterProps> = ({
           </span>
         </div>
 
-        {/* Right zone: muted "Prototype" + version */}
+        {/* Right zone: version */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
           <span style={{ color: 'var(--md-sys-color-outline)' }}>|</span>
-          {isVirtualMode && (
-            <span
-              style={{
-                fontSize: '10px',
-                padding: '1px 6px',
-                borderRadius: '4px',
-                backgroundColor: 'var(--md-sys-color-warning-container)',
-                color: 'var(--md-sys-color-on-warning-container)',
-                fontWeight: 600,
-              }}
-            >
-              Simulated data
-            </span>
-          )}
           <span style={{ fontSize: '11px', color: 'var(--md-sys-color-text-secondary)', opacity: 0.8 }}>
-            Prototype v1.0.0
+            v1.0.0
           </span>
         </div>
       </footer>

@@ -40,6 +40,7 @@ public class SecurityHeadersFilter implements Filter {
                     "default-src 'self'; " +
                     "connect-src 'self' http: https: ws: wss:; " +
                     "img-src 'self' data: blob: https:; " +
+                    "font-src 'self' data: https: fonts.gstatic.com; " +
                     "style-src 'self' 'unsafe-inline' https:; " +
                     "script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; " +
                     "frame-ancestors 'none';");

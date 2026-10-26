@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
@@ -20,11 +21,13 @@ public class RoutingService {
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final Map<String, RouteResult> routeCache = new ConcurrentHashMap<>();
+    private final String osrmBaseUrl;
 
-    public RoutingService() {
+    public RoutingService(@Value("${app.osrm-base-url:https://router.project-osrm.org}") String osrmBaseUrl) {
+        this.osrmBaseUrl = osrmBaseUrl.endsWith("/") ? osrmBaseUrl.substring(0, osrmBaseUrl.length() - 1) : osrmBaseUrl;
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(4000);
-        factory.setReadTimeout(5000);
+        factory.setConnectTimeout(3000);
+        factory.setReadTimeout(4000);
         this.restTemplate = new RestTemplate(factory);
     }
 
@@ -49,18 +52,21 @@ public class RoutingService {
         private final double durationMinutes;
         private final List<double[]> waypoints; // [lat, lon]
         private final List<Step> steps;
+        private final boolean isEstimated;
 
-        public RouteResult(double distanceKm, double durationMinutes, List<double[]> waypoints, List<Step> steps) {
+        public RouteResult(double distanceKm, double durationMinutes, List<double[]> waypoints, List<Step> steps, boolean isEstimated) {
             this.distanceKm = distanceKm;
             this.durationMinutes = durationMinutes;
             this.waypoints = waypoints;
             this.steps = steps;
+            this.isEstimated = isEstimated;
         }
 
         public double getDistanceKm() { return distanceKm; }
         public double getDurationMinutes() { return durationMinutes; }
         public List<double[]> getWaypoints() { return waypoints; }
         public List<Step> getSteps() { return steps; }
+        public boolean isEstimated() { return isEstimated; }
     }
 
     public RouteResult calculateRoute(double startLat, double startLon, double endLat, double endLon) {
@@ -73,8 +79,8 @@ public class RoutingService {
         try {
             // OSRM format: /route/v1/driving/{lon1},{lat1};{lon2},{lat2}?overview=full&geometries=geojson&steps=true
             String url = String.format(Locale.US,
-                    "https://router.project-osrm.org/route/v1/driving/%.6f,%.6f;%.6f,%.6f?overview=full&geometries=geojson&steps=true",
-                    startLon, startLat, endLon, endLat);
+                    "%s/route/v1/driving/%.6f,%.6f;%.6f,%.6f?overview=full&geometries=geojson&steps=true",
+                    osrmBaseUrl, startLon, startLat, endLon, endLat);
 
             ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
@@ -124,14 +130,14 @@ public class RoutingService {
                         waypoints.add(new double[]{endLat, endLon});
                     }
 
-                    RouteResult result = new RouteResult(distanceKm, durationMin, waypoints, steps);
+                    RouteResult result = new RouteResult(distanceKm, durationMin, waypoints, steps, false);
                     routeCache.put(cacheKey, result);
                     return result;
                 }
             }
         } catch (Exception e) {
-            log.warn("OSRM routing failed for ({}, {}) -> ({}, {}): {}. Falling back to urban Haversine model.",
-                    startLat, startLon, endLat, endLon, e.getMessage());
+            log.warn("OSRM routing via {} failed for ({}, {}) -> ({}, {}): {}. Falling back to urban Haversine model.",
+                    osrmBaseUrl, startLat, startLon, endLat, endLon, e.getMessage());
         }
 
         // Fallback: Haversine with 1.32 urban tortuosity factor
@@ -160,7 +166,7 @@ public class RoutingService {
                 new Step("Proceed towards incident location", roadKm * 500, "Primary Route")
         );
 
-        return new RouteResult(roadKm, durationMin, waypoints, steps);
+        return new RouteResult(roadKm, durationMin, waypoints, steps, true);
     }
 
     private String formatManeuver(String type, String modifier, String name) {
@@ -170,7 +176,7 @@ public class RoutingService {
             return "Arrive at destination on " + (name.isBlank() ? "the route" : name);
         } else if ("turn".equalsIgnoreCase(type)) {
             return "Turn " + (modifier.isBlank() ? "" : modifier + " ") + "onto " + (name.isBlank() ? "the cross street" : name);
-        } else if ("continue".equalsIgnoreCase(type) || "new name".equalsIgnoreCase(type)) {
+        } else if ("continue".equalsIgnoreCase(type)) {
             return "Continue onto " + (name.isBlank() ? "the avenue" : name);
         } else {
             return (modifier.isBlank() ? "Proceed" : "Turn " + modifier) + " on " + (name.isBlank() ? "the street" : name);

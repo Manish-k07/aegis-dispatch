@@ -117,7 +117,7 @@ export interface DashboardData {
   activeSimulations?: string[];
 }
 
-export type UserRole = 'DISPATCHER' | 'DRIVER' | 'HOSPITAL' | 'CITIZEN' | null;
+export type UserRole = 'DISPATCHER' | 'DRIVER' | 'PARAMEDIC' | 'HOSPITAL' | 'HOSPITAL_STAFF' | 'CITIZEN' | 'ADMIN' | null;
 
 export interface CitizenProfile {
   id: string;

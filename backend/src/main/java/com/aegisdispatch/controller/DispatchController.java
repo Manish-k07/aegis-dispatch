@@ -28,6 +28,7 @@ public class DispatchController {
     private final AuditService audit;
     private final AuditLogRepository auditRepo;
     private final AmbulanceLocationRepository locationRepo;
+    private final IncidentEventRepository incidentEventRepository;
     private final SimulationService simulationService;
     private final RoutingService routingService;
     private final com.aegisdispatch.service.CadFileService cadFileService;
@@ -46,6 +47,7 @@ public class DispatchController {
             AuditService audit,
             AuditLogRepository auditRepo,
             AmbulanceLocationRepository locationRepo,
+            IncidentEventRepository incidentEventRepository,
             SimulationService simulationService,
             RoutingService routingService,
             com.aegisdispatch.service.CadFileService cadFileService,
@@ -63,6 +65,7 @@ public class DispatchController {
         this.audit = audit;
         this.auditRepo = auditRepo;
         this.locationRepo = locationRepo;
+        this.incidentEventRepository = incidentEventRepository;
         this.simulationService = simulationService;
         this.routingService = routingService;
         this.cadFileService = cadFileService;
@@ -127,6 +130,18 @@ public class DispatchController {
         e.setUpdatedAt(Instant.now());
         Emergency saved = emergencies.save(e);
 
+        if (incidentEventRepository != null) {
+            incidentEventRepository.save(new IncidentEvent(
+                    saved.getId(),
+                    null,
+                    "EMERGENCY_REPORTED",
+                    e.getCallerName() != null ? e.getCallerName() : "Caller",
+                    null,
+                    saved.getStatus(),
+                    "Type: " + saved.getType() + " Priority: " + saved.getPriority()
+            ));
+        }
+
         audit.log(
                 e.getCallerName() != null ? e.getCallerName() : "Operator",
                 "EMERGENCY_CREATED",
@@ -141,6 +156,36 @@ public class DispatchController {
                 saved.getId(), saved.getPriority(), saved.getType()));
         triggerAutoSave("EMERGENCY_CREATED");
         return saved;
+    }
+
+    @RequestMapping(value = {"/emergencies/{id}", "/emergencies/{id}/status"}, method = {RequestMethod.PATCH, RequestMethod.POST})
+    @Transactional
+    public ResponseEntity<?> updateEmergencyStatus(@PathVariable UUID id, @RequestBody Map<String, String> body) {
+        Emergency e = emergencies.findById(id).orElse(null);
+        if (e == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "Emergency not found"));
+        }
+        String newStatus = body.getOrDefault("status", "CANCELLED");
+        String prevStatus = e.getStatus();
+        e.setStatus(newStatus);
+        e.setUpdatedAt(Instant.now());
+        emergencies.save(e);
+
+        dispatches.findByEmergencyId(id).ifPresent(d -> {
+            d.setStatus("CANCELLED");
+            dispatches.save(d);
+            ambulances.findById(d.getAmbulanceId()).ifPresent(a -> {
+                a.setStatus("AVAILABLE");
+                a.setSpeed(0);
+                ambulances.save(a);
+            });
+            simulationService.stopSimulation(d.getId());
+        });
+
+        audit.log(body.getOrDefault("actor", "User"), "STATUS_CHANGED", "EMERGENCY", id, prevStatus, newStatus, "Status updated to " + newStatus);
+        ws.broadcast(String.format("{\"event\":\"EMERGENCY_UPDATED\",\"id\":\"%s\",\"status\":\"%s\"}", id, newStatus));
+        triggerAutoSave("EMERGENCY_STATUS_UPDATED");
+        return ResponseEntity.ok(e);
     }
 
     @PostMapping("/dispatches")
@@ -201,14 +246,22 @@ public class DispatchController {
         audit.log(d.getDispatcherName(), "AMBULANCE_ASSIGNED", "DISPATCH", d.getId(),
                 "PENDING_DISPATCH", "DISPATCHED", "ambulance=" + aid + ";emergency=" + eid);
 
+        if (incidentEventRepository != null) {
+            incidentEventRepository.save(new IncidentEvent(
+                    eid,
+                    d.getId(),
+                    "UNIT_ASSIGNED",
+                    d.getDispatcherName(),
+                    "PENDING_DISPATCH",
+                    "DISPATCHED",
+                    "Unit " + a.getRegistrationNumber() + " assigned"
+            ));
+        }
+
         ws.broadcast(String.format("{\"event\":\"AMBULANCE_ASSIGNED\",\"dispatchId\":\"%s\",\"emergencyId\":\"%s\",\"ambulanceId\":\"%s\"}",
                 d.getId(), eid, aid));
 
         triggerAutoSave("AMBULANCE_ASSIGNED");
-        try {
-            simulationService.startSimulation(d.getId());
-        } catch (Exception ignored) {
-        }
         return ResponseEntity.ok(d);
     }
 
@@ -283,6 +336,18 @@ public class DispatchController {
         audit.log(body.getOrDefault("dispatcher", "Dispatcher"), "STATUS_CHANGED", "DISPATCH", id,
                 prevStatus, nextStatus, "emergency=" + d.getEmergencyId() + ";ambulance=" + d.getAmbulanceId());
 
+        if (incidentEventRepository != null) {
+            incidentEventRepository.save(new IncidentEvent(
+                    d.getEmergencyId(),
+                    d.getId(),
+                    "STATUS_CHANGED",
+                    body.getOrDefault("actor", body.getOrDefault("dispatcher", "Personnel")),
+                    prevStatus,
+                    nextStatus,
+                    body.getOrDefault("notes", "Status transitioned to " + nextStatus)
+            ));
+        }
+
         ws.broadcast(String.format("{\"event\":\"STATUS_CHANGED\",\"dispatchId\":\"%s\",\"status\":\"%s\",\"ambulanceStatus\":\"%s\"}",
                 id, nextStatus, a != null ? a.getStatus() : ""));
 
@@ -355,8 +420,52 @@ public class DispatchController {
                 "distanceKm", route.getDistanceKm(),
                 "durationMinutes", route.getDurationMinutes(),
                 "waypoints", route.getWaypoints(),
-                "steps", route.getSteps()
+                "steps", route.getSteps(),
+                "isEstimated", route.isEstimated()
         ));
+    }
+
+    @GetMapping("/emergencies/{id}/events")
+    public ResponseEntity<?> getIncidentEvents(@PathVariable UUID id) {
+        if (incidentEventRepository == null) return ResponseEntity.ok(List.of());
+        return ResponseEntity.ok(incidentEventRepository.findByIncidentIdOrderByOccurredAtAsc(id));
+    }
+
+    @PostMapping("/emergencies/{id}/close")
+    @Transactional
+    public ResponseEntity<?> closeIncident(@PathVariable UUID id, @RequestBody(required = false) Map<String, String> body) {
+        Emergency e = emergencies.findById(id).orElse(null);
+        if (e == null) return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "Emergency not found"));
+
+        String prevStatus = e.getStatus();
+        String disposition = body != null && body.containsKey("disposition") ? body.get("disposition") : "RESOLVED";
+        String actor = body != null && body.containsKey("actor") ? body.get("actor") : "Dispatcher";
+        String notes = body != null && body.containsKey("notes") ? body.get("notes") : "Disposition: " + disposition;
+
+        e.setStatus("CLOSED");
+        e.setUpdatedAt(Instant.now());
+        emergencies.save(e);
+
+        dispatches.findByEmergencyId(id).ifPresent(d -> {
+            d.setStatus("CLOSED");
+            d.setCompletedAt(Instant.now());
+            dispatches.save(d);
+            ambulances.findById(d.getAmbulanceId()).ifPresent(a -> {
+                a.setStatus("AVAILABLE");
+                a.setSpeed(0);
+                ambulances.save(a);
+            });
+            simulationService.stopSimulation(d.getId());
+        });
+
+        if (incidentEventRepository != null) {
+            incidentEventRepository.save(new IncidentEvent(
+                    id, null, "INCIDENT_CLOSED", actor, prevStatus, "CLOSED", notes
+            ));
+        }
+
+        ws.broadcast(String.format("{\"event\":\"EMERGENCY_CLOSED\",\"id\":\"%s\",\"disposition\":\"%s\"}", id, disposition));
+        return ResponseEntity.ok(Map.of("message", "Incident closed", "id", id, "disposition", disposition));
     }
 
     @GetMapping("/audit")

@@ -62,6 +62,34 @@ CREATE TABLE IF NOT EXISTS audit_logs (
  entity_id UUID, previous_state TEXT, new_state TEXT, metadata TEXT, created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS users (
+  id UUID PRIMARY KEY,
+  username VARCHAR(80) UNIQUE NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  role VARCHAR(40) NOT NULL,
+  full_name VARCHAR(120) NOT NULL,
+  phone VARCHAR(40),
+  assigned_vehicle_id VARCHAR(80),
+  assigned_hospital_id VARCHAR(80),
+  force_password_change BOOLEAN NOT NULL DEFAULT FALSE,
+  metadata TEXT,
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS incident_events (
+  id BIGSERIAL PRIMARY KEY,
+  incident_id UUID NOT NULL,
+  dispatch_id UUID,
+  event_type VARCHAR(60) NOT NULL,
+  actor VARCHAR(120) NOT NULL,
+  from_status VARCHAR(40),
+  to_status VARCHAR(40) NOT NULL,
+  notes TEXT,
+  occurred_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
+CREATE INDEX IF NOT EXISTS idx_incident_events_incident ON incident_events(incident_id);
 CREATE INDEX IF NOT EXISTS idx_emergencies_status ON emergencies(status);
 CREATE INDEX IF NOT EXISTS idx_ambulances_status ON ambulances(status);
 CREATE INDEX IF NOT EXISTS idx_ambulance_locations_time ON ambulance_locations(ambulance_id, recorded_at DESC);

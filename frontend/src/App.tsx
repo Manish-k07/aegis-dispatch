@@ -14,6 +14,9 @@ import { HospitalList } from './components/HospitalList';
 import { Footer } from './components/Footer';
 import { LoginGateway } from './components/LoginGateway';
 import { CitizenDashboard } from './components/CitizenDashboard';
+import { AdminDashboard } from './components/AdminDashboard';
+import { BackendNotConfiguredScreen } from './components/BackendNotConfiguredScreen';
+import { BackendUnreachableScreen } from './components/BackendUnreachableScreen';
 import { Tabs } from './components/common';
 import { Icon } from './components/common/Icon';
 import {
@@ -30,8 +33,8 @@ import {
   CitizenProfile
 } from './types';
 import { audioSystem } from './utils/audio';
-import { API_BASE, WS_URL } from './config';
-import { INITIAL_DEMO_DATA, INITIAL_DEMO_AUDIT_LOGS } from './utils/demoData';
+import { API_BASE, IS_BACKEND_CONFIGURED } from './config';
+import { ModeProvider, useMode } from './services/ModeProvider';
 
 // Haversine distance in km
 function calculateDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -48,108 +51,69 @@ function calculateDistanceKm(lat1: number, lon1: number, lat2: number, lon2: num
   return Math.round(R * c * 10) / 10;
 }
 
-// Realistic road waypoints following arterial street corridors
-function generateRoadWaypoints(
-  startLat: number,
-  startLon: number,
-  endLat: number,
-  endLon: number,
-  steps: number = 8
-): [number, number][] {
-  const points: [number, number][] = [];
-  points.push([startLat, startLon]);
+const AppContent: React.FC = () => {
+  const {
+    mode,
+    dataSource,
+    connectionStatus,
+    isBackendReachable,
+    checkBackendHealth,
+    setMode,
+    exitDemo,
+  } = useMode();
 
-  const latDiff = endLat - startLat;
-  const lonDiff = endLon - startLon;
+  const [data, setData] = useState<DashboardData>({
+    emergencies: [],
+    ambulances: [],
+    hospitals: [],
+    dispatches: [],
+    activeSimulations: [],
+  });
 
-  // Midpoint arterial corner junction following street grid
-  const midLat = startLat + latDiff * 0.45;
-  const midLon = startLon + lonDiff * 0.55;
-
-  // Leg 1: along street corridor 1
-  const leg1Steps = Math.max(3, Math.floor(steps / 2));
-  for (let i = 1; i <= leg1Steps; i++) {
-    const frac = i / leg1Steps;
-    points.push([
-      startLat + (midLat - startLat) * frac,
-      startLon + (lonDiff * 0.04) * Math.sin(frac * Math.PI),
-    ]);
-  }
-
-  // Turn point / road junction
-  points.push([midLat, midLon]);
-
-  // Leg 2: along destination street
-  const leg2Steps = Math.max(3, Math.floor(steps / 2));
-  for (let i = 1; i < leg2Steps; i++) {
-    const frac = i / leg2Steps;
-    points.push([
-      midLat + (endLat - midLat) * frac,
-      midLon + (endLon - midLon) * frac,
-    ]);
-  }
-
-  points.push([endLat, endLon]);
-  return points;
-}
-
-const DemoModeBanner: React.FC<{ isVirtualMode: boolean }> = ({ isVirtualMode }) => {
-  if (!isVirtualMode) return null;
-  return (
-    <div
-      role="status"
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '8px',
-        padding: '6px 16px',
-        backgroundColor: 'var(--md-sys-color-warning-container)',
-        color: 'var(--md-sys-color-warning)',
-        borderBottom: '1px solid var(--md-sys-color-outline-variant)',
-        fontSize: '12px',
-        fontWeight: 600,
-        letterSpacing: '0.2px',
-        position: 'sticky',
-        top: 0,
-        zIndex: 9999,
-      }}
-    >
-      <span style={{ fontSize: '14px' }}>⚠️</span>
-      <span>Demo mode — no backend connected. Running on synthetic simulation.</span>
-    </div>
-  );
-};
-
-export const App: React.FC = () => {
-  const [data, setData] = useState<DashboardData>(INITIAL_DEMO_DATA);
+  const sessionKey = `aegis.${mode.toLowerCase()}.auth_session`;
 
   // Authentication & Role Session Isolation
   const [authSession, setAuthSession] = useState<AuthSession | null>(() => {
     try {
-      const saved = localStorage.getItem('aegis_auth_session');
+      const saved = localStorage.getItem(sessionKey);
       if (saved) return JSON.parse(saved);
-    } catch {
-      // ignore
-    }
+    } catch {}
     return null;
   });
 
   const [role, setRole] = useState<UserRole>(() => {
     try {
-      const saved = localStorage.getItem('aegis_auth_session');
+      const saved = localStorage.getItem(sessionKey);
       if (saved) {
         const parsed = JSON.parse(saved);
         return parsed.role || null;
       }
-    } catch {
-      // ignore
-    }
+    } catch {}
     return null;
   });
 
+  // Re-sync session when mode changes
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(`aegis.${mode.toLowerCase()}.auth_session`);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        setAuthSession(parsed);
+        setRole(parsed.role || null);
+        if (parsed.ambulanceId) setSelectedDriverAmbulanceId(parsed.ambulanceId);
+        if (parsed.hospitalId) setSelectedHospitalId(parsed.hospitalId);
+        if (parsed.citizenProfile) setCitizenProfile(parsed.citizenProfile);
+      } else {
+        setAuthSession(null);
+        setRole(null);
+      }
+    } catch {
+      setAuthSession(null);
+      setRole(null);
+    }
+  }, [mode]);
+
   // Google Material M3 Theme Management
-  // Defaults: Citizen, Login, Hospital default to light; CAD and Driver MDT default to dark.
   const [userThemeOverride, setUserThemeOverride] = useState<'light' | 'dark' | null>(() => {
     try {
       const saved = localStorage.getItem('aegis_theme_preference');
@@ -160,7 +124,7 @@ export const App: React.FC = () => {
 
   const effectiveTheme: 'light' | 'dark' = useMemo(() => {
     if (userThemeOverride) return userThemeOverride;
-    if (role === 'DISPATCHER' || role === 'DRIVER') return 'dark';
+    if (role === 'DISPATCHER' || role === 'DRIVER' || role === 'PARAMEDIC') return 'dark';
     return 'light';
   }, [userThemeOverride, role]);
 
@@ -190,42 +154,34 @@ export const App: React.FC = () => {
 
   const [citizenProfile, setCitizenProfile] = useState<CitizenProfile | null>(() => {
     try {
-      const saved = localStorage.getItem('aegis_auth_session');
+      const saved = localStorage.getItem(sessionKey);
       if (saved) {
         const parsed = JSON.parse(saved);
         return parsed.citizenProfile || null;
       }
-    } catch {
-      // ignore
-    }
+    } catch {}
     return null;
   });
 
   const [selectedDriverAmbulanceId, setSelectedDriverAmbulanceId] = useState<string | null>(() => {
     try {
-      const saved = localStorage.getItem('aegis_auth_session');
+      const saved = localStorage.getItem(sessionKey);
       if (saved) {
         const parsed = JSON.parse(saved);
         return parsed.ambulanceId || null;
       }
-    } catch {
-      // ignore
-    }
+    } catch {}
     return null;
   });
 
-  const simWaypointIndexRef = useRef<Record<string, number>>({});
-
   const [selectedHospitalId, setSelectedHospitalId] = useState<string | null>(() => {
     try {
-      const saved = localStorage.getItem('aegis_auth_session');
+      const saved = localStorage.getItem(sessionKey);
       if (saved) {
         const parsed = JSON.parse(saved);
         return parsed.hospitalId || null;
       }
-    } catch {
-      // ignore
-    }
+    } catch {}
     return null;
   });
 
@@ -245,10 +201,8 @@ export const App: React.FC = () => {
       setCitizenProfile(session.citizenProfile);
     }
     try {
-      localStorage.setItem('aegis_auth_session', JSON.stringify(session));
-    } catch {
-      // ignore
-    }
+      localStorage.setItem(`aegis.${mode.toLowerCase()}.auth_session`, JSON.stringify(session));
+    } catch {}
     audioSystem.playMissionCompleteChime();
     setToastMessage(`Authenticated: ${session.userLabel} (${session.role})`);
     setTimeout(() => setToastMessage(null), 4000);
@@ -260,21 +214,19 @@ export const App: React.FC = () => {
     setSelectedDriverAmbulanceId(null);
     setSelectedHospitalId(null);
     try {
-      localStorage.removeItem('aegis_auth_session');
-    } catch {
-      // ignore
-    }
+      localStorage.removeItem(`aegis.${mode.toLowerCase()}.auth_session`);
+      localStorage.removeItem(`aegis.${mode.toLowerCase()}.token`);
+    } catch {}
     setToastMessage('Terminal locked. Returned to Security Gateway.');
     setTimeout(() => setToastMessage(null), 3000);
   };
 
   // Tools & Dialogs
   const [isAICopilotOpen, setIsAICopilotOpen] = useState(false);
-  const [isV2XOpen, setIsV2XOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const handleExportAnalyticsCsv = () => {
-    const url = `${API_BASE}/analytics/export.csv`;
+    const url = dataSource.getAnalyticsExportCsvUrl();
     const link = document.createElement('a');
     link.href = url;
     link.setAttribute('download', `aegis_analytics_${new Date().toISOString().slice(0, 10)}.csv`);
@@ -305,794 +257,159 @@ export const App: React.FC = () => {
   }>({});
 
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
-
   const [liveEvents, setLiveEvents] = useState<string[]>([]);
-  const [auditLogs, setAuditLogs] = useState<AuditLog[]>(INITIAL_DEMO_AUDIT_LOGS);
-  const [isConnected, setIsConnected] = useState(true); // Default to true on initial render
-  const [isVirtualMode, setIsVirtualMode] = useState(false);
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [activeTab, setActiveTab] = useState<'QUEUE' | 'MISSIONS' | 'FLEET' | 'HOSPITALS'>('QUEUE');
 
   const fetchDashboard = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE}/dashboard`);
-      if (res.ok) {
-        const json = await res.json();
-        setData((prev) => ({
-          ...json,
-          activeSimulations: json.activeSimulations || prev.activeSimulations || [],
-        }));
-        setIsVirtualMode(false);
-        setIsConnected(true);
-        return;
-      }
-      setIsVirtualMode(true);
-    } catch {
-      // Backend not running (e.g. Netlify static hosting): activate Virtual Gateway
-      setIsVirtualMode(true);
-      setIsConnected(false);
-    }
-  }, []);
+      const res = await dataSource.getDashboard();
+      setData(res);
+    } catch {}
+  }, [dataSource]);
 
   const fetchAuditLogs = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE}/audit`);
-      if (res.ok) {
-        const json = await res.json();
-        setAuditLogs(json);
-        return;
-      }
-    } catch {
-      // Backend not running: keep demo audit logs
-    }
-  }, []);
+      const logs = await dataSource.getAuditLogs();
+      setAuditLogs(logs);
+    } catch {}
+  }, [dataSource]);
 
   const fetchRoute = useCallback(async (dispatchId: string) => {
     try {
-      const res = await fetch(`${API_BASE}/dispatches/${dispatchId}/route`);
-      if (res.ok) {
-        const routeData = await res.json();
-        setMissionTelemetry((prev) => ({
-          ...prev,
-          roadWaypoints: routeData.waypoints,
-          maneuver: routeData.steps && routeData.steps.length > 0 ? routeData.steps[0].instruction : prev.maneuver,
-          etaRemaining: routeData.durationMinutes,
-        }));
-        return;
+      const route = await dataSource.getRoute(dispatchId);
+      if (route) {
+        setMissionTelemetry({
+          roadWaypoints: route.waypoints,
+          etaRemaining: route.etaMinutes,
+          maneuver: route.maneuvers?.[0]?.instruction || `En route (${route.distanceKm} km)`,
+        });
       }
-    } catch {
-      // Fallback below
-    }
+    } catch {}
+  }, [dataSource]);
 
-    // Client-side route generator fallback
-    setData((currentData) => {
-      const dispatch = currentData.dispatches.find((d) => d.id === dispatchId);
-      if (!dispatch) return currentData;
-
-      const amb = currentData.ambulances.find((a) => a.id === dispatch.ambulanceId);
-      const emg = currentData.emergencies.find((e) => e.id === dispatch.emergencyId);
-      const hosp = dispatch.hospitalId
-        ? currentData.hospitals.find((h) => h.id === dispatch.hospitalId)
-        : null;
-
-      if (!amb || !emg) return currentData;
-
-      const isHeadingToHospital = ['PATIENT_ONBOARD', 'EN_ROUTE_TO_HOSPITAL', 'ARRIVED_AT_HOSPITAL'].includes(dispatch.status);
-      const targetLat = isHeadingToHospital && hosp ? hosp.latitude : emg.latitude;
-      const targetLon = isHeadingToHospital && hosp ? hosp.longitude : emg.longitude;
-      const dist = calculateDistanceKm(amb.latitude, amb.longitude, targetLat, targetLon);
-      const waypoints = generateRoadWaypoints(amb.latitude, amb.longitude, targetLat, targetLon);
-
-      setMissionTelemetry({
-        roadWaypoints: waypoints,
-        maneuver: isHeadingToHospital
-          ? `Emergency priority transit to ${hosp?.name || 'Receiving Trauma ED'}`
-          : `Optimal response route to ${emg.address}`,
-        etaRemaining: Math.max(1, Math.round(dist * 2.2)),
-      });
-
-      return currentData;
-    });
-  }, []);
-
-  // Compute active mission for HUD and map route overlay
-  const activeMissionDispatch = useMemo(() => {
-    const activeList = data.dispatches.filter(
-      (d) => !['COMPLETED', 'CANCELLED'].includes(d.status)
-    );
-    if (selectedDispatchId) {
-      const found = activeList.find((d) => d.id === selectedDispatchId);
-      if (found) return found;
-    }
-    const simulating = activeList.find((d) => (data.activeSimulations || []).includes(d.id));
-    if (simulating) return simulating;
-    return activeList[0] || null;
-  }, [data.dispatches, data.activeSimulations, selectedDispatchId]);
-
-  // Current driver ambulance object
-  const currentDriverAmbulance = useMemo(() => {
-    if (selectedDriverAmbulanceId) {
-      const found = data.ambulances.find((a) => a.id === selectedDriverAmbulanceId);
-      if (found) return found;
-    }
-    return data.ambulances[0] || null;
-  }, [data.ambulances, selectedDriverAmbulanceId]);
-
-  // Current hospital object
-  const currentHospital = useMemo(() => {
-    if (selectedHospitalId) {
-      const found = data.hospitals.find((h) => h.id === selectedHospitalId);
-      if (found) return found;
-    }
-    return data.hospitals[0] || null;
-  }, [data.hospitals, selectedHospitalId]);
-
-  // Driver active dispatch
-  const driverDispatch = useMemo(() => {
-    if (!currentDriverAmbulance) return null;
-    return data.dispatches.find(
-      (d) => d.ambulanceId === currentDriverAmbulance.id && !['COMPLETED', 'CANCELLED'].includes(d.status)
-    ) || null;
-  }, [data.dispatches, currentDriverAmbulance]);
-
-  const driverEmergency = useMemo(() => {
-    if (!driverDispatch) return null;
-    return data.emergencies.find((e) => e.id === driverDispatch.emergencyId) || null;
-  }, [data.emergencies, driverDispatch]);
-
-  const driverHospital = useMemo(() => {
-    if (!driverDispatch?.hospitalId) return null;
-    return data.hospitals.find((h) => h.id === driverDispatch.hospitalId) || null;
-  }, [data.hospitals, driverDispatch]);
-
-  useEffect(() => {
-    const targetDispatchId = driverDispatch?.id || activeMissionDispatch?.id;
-    if (targetDispatchId) {
-      fetchRoute(targetDispatchId);
-    }
-  }, [driverDispatch?.id, activeMissionDispatch?.id, fetchRoute]);
-
-  // Live WebSocket Connection
+  // Event Subscription via DataSource
   useEffect(() => {
     fetchDashboard();
     fetchAuditLogs();
 
-    let isDestroyed = false;
-    let ws: WebSocket | null = null;
-    let reconnectTimeout: any = null;
-
-    const connectWebSocket = () => {
-      if (isDestroyed) return;
-
-      const isStaticDeploy = typeof window !== 'undefined' &&
-        !['localhost', '127.0.0.1'].includes(window.location.hostname) &&
-        !window.location.hostname.startsWith('192.168.') &&
-        !window.location.hostname.startsWith('172.') &&
-        !window.location.hostname.startsWith('10.');
-
-      // If hosted on Netlify or cloud static CDN, activate Virtual Gateway immediately
-      if (isStaticDeploy) {
-        setIsConnected(true);
-        setIsVirtualMode(true);
-        setLiveEvents((prev) => [
-          `${new Date().toLocaleTimeString()} · Connected to Aegis Cloud Virtual Gateway (99.99% SLA • Autonomous Dispatch)`,
-          ...prev.slice(0, 19),
-        ]);
-        return;
-      }
-
+    const unsub = dataSource.subscribeToEvents((payload: any) => {
       try {
-        ws = new WebSocket(WS_URL);
+        const time = new Date().toLocaleTimeString();
+        const evtDesc = payload.event
+          ? `${time} · ${payload.event}${payload.id ? ` [${payload.id.substring(0, 8)}]` : ''}${payload.status ? ` [${payload.status}]` : ''}`
+          : `${time} · Telemetry ping`;
 
-        ws.onopen = () => {
-          if (isDestroyed) return;
-          setIsConnected(true);
-          setIsVirtualMode(false);
-          setLiveEvents((prev) => [
-            `${new Date().toLocaleTimeString()} · Connected to Aegis Dispatch Live WebSocket Gateway`,
-            ...prev.slice(0, 19),
-          ]);
-        };
+        setLiveEvents((prev) => [evtDesc, ...prev.slice(0, 19)]);
 
-        ws.onmessage = (event) => {
-          if (isDestroyed) return;
-          try {
-            const payload = JSON.parse(event.data);
-            const time = new Date().toLocaleTimeString();
-            const evtDesc = payload.event
-              ? `${time} · ${payload.event}${payload.id ? ` [${payload.id.substring(0, 8)}]` : ''}${payload.status ? ` [${payload.status}]` : ''}`
-              : `${time} · Telemetry ping`;
-
-            setLiveEvents((prev) => [evtDesc, ...prev.slice(0, 19)]);
-
-            if (payload.event === 'NEW_EMERGENCY') {
-              audioSystem.playCriticalIncidentChime();
-            } else if (payload.event === 'AMBULANCE_ASSIGNED' || payload.event === 'SIMULATION_STARTED') {
-              audioSystem.playDispatchAlert();
-              if (payload.dispatchId) {
-                setSelectedDispatchId(payload.dispatchId);
-              }
-            } else if (payload.event === 'DATABASE_RESET') {
-              setSelectedEmergency(null);
-              setSelectedDispatchId(null);
-              setCandidates([]);
-              setMissionTelemetry({});
-              setActiveTab('QUEUE');
-            } else if (payload.event === 'VITALS_UPDATED') {
-              if (payload.dispatchId && payload.vitals) {
-                setLiveVitalsByDispatch((prev) => ({
-                  ...prev,
-                  [payload.dispatchId]: payload.vitals,
-                }));
-              }
-              return;
-            } else if (payload.event === 'LOCATION_UPDATED') {
-              setMissionTelemetry((prev) => ({
-                ...prev,
-                maneuver: payload.maneuver,
-                etaRemaining: payload.etaRemaining,
-              }));
-              setData((prev) => ({
-                ...prev,
-                ambulances: prev.ambulances.map((a) =>
-                  a.id === payload.ambulanceId
-                    ? {
-                        ...a,
-                        latitude: payload.latitude,
-                        longitude: payload.longitude,
-                        speed: payload.speed,
-                        heading: payload.heading,
-                      }
-                    : a
-                ),
-              }));
-              return;
-            }
-
-            fetchDashboard();
-            fetchAuditLogs();
-          } catch {
-            // Ignore non-json
+        if (payload.event === 'NEW_EMERGENCY') {
+          audioSystem.playCriticalIncidentChime();
+        } else if (payload.event === 'AMBULANCE_ASSIGNED' || payload.event === 'SIMULATION_STARTED') {
+          audioSystem.playDispatchAlert();
+          if (payload.dispatchId) {
+            setSelectedDispatchId(payload.dispatchId);
           }
-        };
-
-        ws.onclose = () => {
-          if (isDestroyed) return;
-          // Fall back gracefully to Virtual Gateway so it never displays OFFLINE
-          setIsConnected(true);
-          setIsVirtualMode(true);
-          reconnectTimeout = setTimeout(connectWebSocket, 5000);
-        };
-
-        ws.onerror = () => {
-          if (isDestroyed) return;
-          setIsConnected(true);
-          setIsVirtualMode(true);
-        };
-      } catch {
-        setIsConnected(true);
-        setIsVirtualMode(true);
-      }
-    };
-
-    connectWebSocket();
-
-    return () => {
-      isDestroyed = true;
-      if (ws) {
-        ws.onclose = null;
-        ws.onerror = null;
-        ws.close();
-      }
-      if (reconnectTimeout) clearTimeout(reconnectTimeout);
-    };
-  }, [fetchDashboard, fetchAuditLogs]);
-
-  // Autonomous Virtual Gateway Simulation Loop
-  useEffect(() => {
-    const simInterval = setInterval(() => {
-      setData((prevData) => {
-        const activeSims = prevData.activeSimulations || [];
-        if (activeSims.length === 0) return prevData;
-
-        let dataModified = false;
-        let nextDispatches = [...prevData.dispatches];
-        let nextAmbulances = [...prevData.ambulances];
-        let nextEmergencies = [...prevData.emergencies];
-        let nextSims = [...activeSims];
-
-        activeSims.forEach((simId) => {
-          const dispatchIndex = nextDispatches.findIndex((d) => d.id === simId);
-          if (dispatchIndex === -1) return;
-          const dispatch = nextDispatches[dispatchIndex];
-          const ambIndex = nextAmbulances.findIndex((a) => a.id === dispatch.ambulanceId);
-          const emg = nextEmergencies.find((e) => e.id === dispatch.emergencyId);
-          const hosp = dispatch.hospitalId
-            ? prevData.hospitals.find((h) => h.id === dispatch.hospitalId)
-            : prevData.hospitals[0];
-
-          if (ambIndex === -1 || !emg) return;
-          const amb = nextAmbulances[ambIndex];
-          const nowStr = new Date().toISOString();
-
-          // 1. DISPATCHED -> AMBULANCE_ACCEPTED
-          if (dispatch.status === 'DISPATCHED') {
-            nextDispatches[dispatchIndex] = { ...dispatch, status: 'AMBULANCE_ACCEPTED' };
-            dataModified = true;
-            setLiveEvents((evts) => [
-              `${new Date().toLocaleTimeString()} · Unit ${amb.registrationNumber} accepted dispatch #${dispatch.id.slice(-6)}`,
-              ...evts.slice(0, 19),
-            ]);
-            return;
-          }
-
-          // 2. AMBULANCE_ACCEPTED -> EN_ROUTE_TO_SCENE
-          if (dispatch.status === 'AMBULANCE_ACCEPTED') {
-            nextDispatches[dispatchIndex] = { ...dispatch, status: 'EN_ROUTE_TO_SCENE' };
-            dataModified = true;
-            setLiveEvents((evts) => [
-              `${new Date().toLocaleTimeString()} · Unit ${amb.registrationNumber} EN ROUTE to scene`,
-              ...evts.slice(0, 19),
-            ]);
-            return;
-          }
-
-          // 3. EN_ROUTE_TO_SCENE - Realistic Road Navigation
-          if (dispatch.status === 'EN_ROUTE_TO_SCENE') {
-            const waypoints = (missionTelemetry?.roadWaypoints && missionTelemetry.roadWaypoints.length > 2)
-              ? missionTelemetry.roadWaypoints
-              : generateRoadWaypoints(amb.latitude, amb.longitude, emg.latitude, emg.longitude, 12);
-
-            const wpIdx = simWaypointIndexRef.current[dispatch.id] || 0;
-            const targetWp = waypoints[Math.min(wpIdx + 1, waypoints.length - 1)];
-
-            const dLat = targetWp[0] - amb.latitude;
-            const dLon = targetWp[1] - amb.longitude;
-            const distToTarget = Math.sqrt(dLat * dLat + dLon * dLon);
-            const distToEnd = Math.sqrt((emg.latitude - amb.latitude)**2 + (emg.longitude - amb.longitude)**2);
-
-            // Compute heading direction along road
-            const dLonRad = (targetWp[1] - amb.longitude) * Math.PI / 180;
-            const lat1Rad = amb.latitude * Math.PI / 180;
-            const lat2Rad = targetWp[0] * Math.PI / 180;
-            const y = Math.sin(dLonRad) * Math.cos(lat2Rad);
-            const x = Math.cos(lat1Rad) * Math.sin(lat2Rad) - Math.sin(lat1Rad) * Math.cos(lat2Rad) * Math.cos(dLonRad);
-            const heading = Math.round(((Math.atan2(y, x) * 180 / Math.PI) + 360) % 360);
-
-            if (distToEnd < 0.0006 || wpIdx >= waypoints.length - 1) {
-              simWaypointIndexRef.current[dispatch.id] = 0;
-              nextDispatches[dispatchIndex] = { ...dispatch, status: 'ARRIVED_AT_SCENE' };
-              nextAmbulances[ambIndex] = {
-                ...amb,
-                latitude: emg.latitude,
-                longitude: emg.longitude,
-                speed: 0,
-                heading,
-              };
-              audioSystem.playUnitArrivalChime();
-              setLiveEvents((evts) => [
-                `${new Date().toLocaleTimeString()} · [SCENE ARRIVAL] Unit ${amb.registrationNumber} ARRIVED AT SCENE`,
-                ...evts.slice(0, 19),
-              ]);
-            } else {
-              if (distToTarget < 0.0003) {
-                simWaypointIndexRef.current[dispatch.id] = wpIdx + 1;
-              }
-              const step = 0.40;
-              nextAmbulances[ambIndex] = {
-                ...amb,
-                latitude: amb.latitude + dLat * step,
-                longitude: amb.longitude + dLon * step,
-                speed: 48 + Math.floor(Math.random() * 8),
-                heading,
-              };
-            }
-            dataModified = true;
-            return;
-          }
-
-          // 4. ARRIVED_AT_SCENE -> PATIENT_ONBOARD
-          if (dispatch.status === 'ARRIVED_AT_SCENE') {
-            nextDispatches[dispatchIndex] = {
-              ...dispatch,
-              status: 'PATIENT_ONBOARD',
-              hospitalId: dispatch.hospitalId || hosp?.id,
-            };
-            dataModified = true;
-            setLiveEvents((evts) => [
-              `${new Date().toLocaleTimeString()} · [TRIAGE] Unit ${amb.registrationNumber}: Patient onboard & stabilized`,
-              ...evts.slice(0, 19),
-            ]);
-            return;
-          }
-
-          // 5. PATIENT_ONBOARD -> EN_ROUTE_TO_HOSPITAL
-          if (dispatch.status === 'PATIENT_ONBOARD') {
-            nextDispatches[dispatchIndex] = { ...dispatch, status: 'EN_ROUTE_TO_HOSPITAL' };
-            dataModified = true;
-            setLiveEvents((evts) => [
-              `${new Date().toLocaleTimeString()} · [TRANSIT] Unit ${amb.registrationNumber} EN ROUTE to Hospital ED`,
-              ...evts.slice(0, 19),
-            ]);
-            return;
-          }
-
-          // 6. EN_ROUTE_TO_HOSPITAL - Realistic Road Navigation
-          if (dispatch.status === 'EN_ROUTE_TO_HOSPITAL' && hosp) {
-            const waypoints = (missionTelemetry?.roadWaypoints && missionTelemetry.roadWaypoints.length > 2)
-              ? missionTelemetry.roadWaypoints
-              : generateRoadWaypoints(amb.latitude, amb.longitude, hosp.latitude, hosp.longitude, 12);
-
-            const wpIdx = simWaypointIndexRef.current[dispatch.id] || 0;
-            const targetWp = waypoints[Math.min(wpIdx + 1, waypoints.length - 1)];
-
-            const dLat = targetWp[0] - amb.latitude;
-            const dLon = targetWp[1] - amb.longitude;
-            const distToTarget = Math.sqrt(dLat * dLat + dLon * dLon);
-            const distToEnd = Math.sqrt((hosp.latitude - amb.latitude)**2 + (hosp.longitude - amb.longitude)**2);
-
-            const dLonRad = (targetWp[1] - amb.longitude) * Math.PI / 180;
-            const lat1Rad = amb.latitude * Math.PI / 180;
-            const lat2Rad = targetWp[0] * Math.PI / 180;
-            const y = Math.sin(dLonRad) * Math.cos(lat2Rad);
-            const x = Math.cos(lat1Rad) * Math.sin(lat2Rad) - Math.sin(lat1Rad) * Math.cos(lat2Rad) * Math.cos(dLonRad);
-            const heading = Math.round(((Math.atan2(y, x) * 180 / Math.PI) + 360) % 360);
-
-            setLiveVitalsByDispatch((vitals) => ({
-              ...vitals,
-              [dispatch.id]: {
-                heartRate: 80 + Math.floor(Math.random() * 12),
-                bloodPressureSys: 122 + Math.floor(Math.random() * 8),
-                bloodPressureDia: 80 + Math.floor(Math.random() * 6),
-                spO2: 97 + Math.floor(Math.random() * 3),
-                respiratoryRate: 16 + Math.floor(Math.random() * 4),
-                temperature: 36.8,
-                gcs: 15,
-                conditionSummary: 'Hemodynamically stable en route',
-              },
+        } else if (payload.event === 'VITALS_UPDATED') {
+          if (payload.dispatchId && payload.vitals) {
+            setLiveVitalsByDispatch((prev) => ({
+              ...prev,
+              [payload.dispatchId]: payload.vitals,
             }));
-
-            if (distToEnd < 0.0006 || wpIdx >= waypoints.length - 1) {
-              simWaypointIndexRef.current[dispatch.id] = 0;
-              nextDispatches[dispatchIndex] = { ...dispatch, status: 'ARRIVED_AT_HOSPITAL' };
-              nextAmbulances[ambIndex] = {
-                ...amb,
-                latitude: hosp.latitude,
-                longitude: hosp.longitude,
-                speed: 0,
-                heading,
-              };
-              audioSystem.playUnitArrivalChime();
-              setLiveEvents((evts) => [
-                `${new Date().toLocaleTimeString()} · [HOSPITAL ARRIVAL] Unit ${amb.registrationNumber} ARRIVED AT HOSPITAL ED (${hosp.name})`,
-                ...evts.slice(0, 19),
-              ]);
-            } else {
-              if (distToTarget < 0.0003) {
-                simWaypointIndexRef.current[dispatch.id] = wpIdx + 1;
-              }
-              const step = 0.40;
-              nextAmbulances[ambIndex] = {
-                ...amb,
-                latitude: amb.latitude + dLat * step,
-                longitude: amb.longitude + dLon * step,
-                speed: 52 + Math.floor(Math.random() * 8),
-                heading,
-              };
-            }
-            dataModified = true;
-            return;
           }
-
-          // 7. ARRIVED_AT_HOSPITAL -> PATIENT_HANDED_OVER
-          if (dispatch.status === 'ARRIVED_AT_HOSPITAL') {
-            nextDispatches[dispatchIndex] = { ...dispatch, status: 'PATIENT_HANDED_OVER' };
-            dataModified = true;
-            setLiveEvents((evts) => [
-              `${new Date().toLocaleTimeString()} · [HANDOVER] Unit ${amb.registrationNumber}: Patient handed over to triage`,
-              ...evts.slice(0, 19),
-            ]);
-            return;
-          }
-
-          // 8. PATIENT_HANDED_OVER -> COMPLETED
-          if (dispatch.status === 'PATIENT_HANDED_OVER') {
-            nextDispatches[dispatchIndex] = { ...dispatch, status: 'COMPLETED' };
-            nextAmbulances[ambIndex] = { ...amb, status: 'AVAILABLE', speed: 0 };
-            const emgIdx = nextEmergencies.findIndex((e) => e.id === dispatch.emergencyId);
-            if (emgIdx !== -1) {
-              nextEmergencies[emgIdx] = { ...nextEmergencies[emgIdx], status: 'COMPLETED' };
-            }
-            nextSims = nextSims.filter((id) => id !== dispatch.id);
-            audioSystem.playMissionCompleteChime();
-            dataModified = true;
-            setLiveEvents((evts) => [
-              `${new Date().toLocaleTimeString()} · [MISSION COMPLETE] Unit ${amb.registrationNumber} back in service`,
-              ...evts.slice(0, 19),
-            ]);
-          }
-        });
-
-        if (dataModified) {
-          return {
-            ...prevData,
-            dispatches: nextDispatches,
-            ambulances: nextAmbulances,
-            emergencies: nextEmergencies,
-            activeSimulations: nextSims,
-          };
+          return;
+        } else if (payload.event === 'LOCATION_UPDATED') {
+          setData((prev) => ({
+            ...prev,
+            ambulances: prev.ambulances.map((a) =>
+              a.id === payload.ambulanceId
+                ? {
+                    ...a,
+                    latitude: payload.latitude,
+                    longitude: payload.longitude,
+                    speed: payload.speed,
+                    heading: payload.heading,
+                  }
+                : a
+            ),
+          }));
+          return;
         }
-        return prevData;
-      });
-    }, 2800);
 
-    return () => clearInterval(simInterval);
-  }, []);
+        fetchDashboard();
+        fetchAuditLogs();
+      } catch {}
+    });
 
-  // Periodic Telemetry Heartbeat Ping
+    return () => unsub();
+  }, [dataSource, fetchDashboard, fetchAuditLogs]);
+
+  // Periodic Telemetry Heartbeat Ping in CAD UI
   useEffect(() => {
     const telemetryTimer = setInterval(() => {
-      if (isConnected) {
+      if (connectionStatus === 'CONNECTED') {
         const time = new Date().toLocaleTimeString();
         const pings = [
-          `${time} · Telemetry Ping: Fleet GPS lock nominal • 12 active satellite feeds`,
-          `${time} · System Health: CAD Dispatch engine operational • 0 packet loss`,
-          `${time} · Traffic Corridor: Bengaluru East route clear • Real-time factor 1.02`,
+          `${time} · Telemetry Ping: Fleet GPS lock nominal • Real-time feeds operational`,
+          `${time} · System Health: CAD Dispatch engine connected • 0 packet loss`,
+          `${time} · Route Optimization: OSRM routing active`,
         ];
         const randomPing = pings[Math.floor(Math.random() * pings.length)];
         setLiveEvents((prev) => [randomPing, ...prev.slice(0, 19)]);
       }
-    }, 15000);
+    }, 20000);
     return () => clearInterval(telemetryTimer);
-  }, [isConnected]);
+  }, [connectionStatus]);
 
   const handleSelectEmergency = async (emergency: Emergency) => {
     setSelectedEmergency(emergency);
     setIsLoadingCandidates(true);
     try {
-      const res = await fetch(`${API_BASE}/emergencies/${emergency.id}/candidates`);
-      if (res.ok) {
-        const list = await res.json();
-        setCandidates(list);
-        setIsLoadingCandidates(false);
-        return;
-      }
+      const list = await dataSource.getCandidates(emergency.id);
+      setCandidates(list);
     } catch {
-      // Fallback below
+      setCandidates([]);
+    } finally {
+      setIsLoadingCandidates(false);
     }
-
-    // Client-side candidate scoring
-    const avail = data.ambulances.filter((a) => a.status === 'AVAILABLE');
-    const candidatePool = avail.length > 0 ? avail : data.ambulances;
-    const scoredCandidates: Candidate[] = candidatePool
-      .map((amb) => {
-        const dist = calculateDistanceKm(amb.latitude, amb.longitude, emergency.latitude, emergency.longitude);
-        const eta = Math.max(2, Math.round(dist * 2.2));
-        let capability = 90;
-        if (emergency.priority === 'CRITICAL' && amb.type === 'ALS') capability += 10;
-        const score = Math.max(10, Math.round(capability - dist * 2.5));
-        return {
-          ambulance: amb,
-          distanceKm: dist,
-          etaMinutes: eta,
-          capabilityScore: capability,
-          score,
-        };
-      })
-      .sort((a, b) => b.score - a.score);
-
-    setCandidates(scoredCandidates);
-    setIsLoadingCandidates(false);
   };
 
   const handleAssignAmbulance = async (candidate: Candidate) => {
     if (!selectedEmergency) return;
     try {
-      const res = await fetch(`${API_BASE}/dispatches`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          emergencyId: selectedEmergency.id,
-          ambulanceId: candidate.ambulance.id,
-          dispatcher: 'EMS Commander',
-        }),
-      });
-
-      if (res.ok) {
-        const newDispatch = await res.json();
-        setSelectedEmergency(null);
-        setCandidates([]);
-        setSelectedDispatchId(newDispatch.id);
-        fetchRoute(newDispatch.id);
-        audioSystem.playDispatchAlert();
-        fetchDashboard();
-        fetchAuditLogs();
-        setActiveTab('MISSIONS');
-        return;
-      }
-    } catch {
-      // Fallback below
+      const newDispatch = await dataSource.createDispatch(
+        selectedEmergency.id,
+        candidate.ambulance.id,
+        authSession?.userLabel || 'EMS Commander'
+      );
+      setSelectedEmergency(null);
+      setCandidates([]);
+      setSelectedDispatchId(newDispatch.id);
+      fetchRoute(newDispatch.id);
+      audioSystem.playDispatchAlert();
+      fetchDashboard();
+      fetchAuditLogs();
+      setActiveTab('MISSIONS');
+    } catch (err: any) {
+      setToastMessage(`Assignment error: ${err.message}`);
+      setTimeout(() => setToastMessage(null), 4000);
     }
-
-    // Client-side fallback
-    setIsVirtualMode(true);
-    setIsConnected(true);
-    const now = new Date().toISOString();
-    const newDispatchId = `disp-${Date.now()}`;
-    const emg = selectedEmergency;
-    const amb = candidate.ambulance;
-
-    // Pick nearest hospital
-    const hosp = data.hospitals.slice().sort((a, b) => {
-      const dA = calculateDistanceKm(a.latitude, a.longitude, emg.latitude, emg.longitude);
-      const dB = calculateDistanceKm(b.latitude, b.longitude, emg.latitude, emg.longitude);
-      return dA - dB;
-    })[0];
-
-    const newDispatch: Dispatch = {
-      id: newDispatchId,
-      emergencyId: emg.id,
-      ambulanceId: amb.id,
-      dispatcherName: 'EMS Commander',
-      hospitalId: hosp?.id,
-      status: 'DISPATCHED',
-      distanceKm: candidate.distanceKm,
-      etaMinutes: candidate.etaMinutes,
-      score: candidate.score,
-      assignedAt: now,
-    };
-
-    setData((prev) => ({
-      ...prev,
-      emergencies: prev.emergencies.map((e) =>
-        e.id === emg.id ? { ...e, status: 'DISPATCHED' } : e
-      ),
-      ambulances: prev.ambulances.map((a) =>
-        a.id === amb.id ? { ...a, status: 'DISPATCHED' } : a
-      ),
-      dispatches: [newDispatch, ...prev.dispatches],
-      activeSimulations: [...(prev.activeSimulations || []), newDispatchId],
-    }));
-
-    setSelectedEmergency(null);
-    setCandidates([]);
-    setSelectedDispatchId(newDispatchId);
-    audioSystem.playDispatchAlert();
-    setActiveTab('MISSIONS');
-
-    const waypoints = generateRoadWaypoints(amb.latitude, amb.longitude, emg.latitude, emg.longitude);
-    setMissionTelemetry({
-      roadWaypoints: waypoints,
-      maneuver: `Proceed to ${emg.address}`,
-      etaRemaining: candidate.etaMinutes,
-    });
-
-    setAuditLogs((prev) => [
-      {
-        id: Date.now(),
-        actor: 'EMS Commander (Virtual Gateway)',
-        action: 'MANUAL_DISPATCH_ASSIGNED',
-        entityType: 'DISPATCH',
-        entityId: newDispatchId,
-        metadata: `Operator assigned Unit ${amb.registrationNumber} to Incident #${emg.id}`,
-        createdAt: now,
-      },
-      ...prev.slice(0, 49),
-    ]);
-
-    setLiveEvents((prev) => [
-      `${new Date().toLocaleTimeString()} · DISPATCHED ${amb.registrationNumber} -> Incident #${emg.id}`,
-      ...prev.slice(0, 19),
-    ]);
   };
 
-  // Instant 1-Click Auto-Assign System
   const handleAutoAssign = async (emergencyId: string) => {
     try {
-      const res = await fetch(`${API_BASE}/emergencies/${emergencyId}/auto-assign`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dispatcher: 'AI Auto-Dispatcher' }),
-      });
-
-      if (res.ok) {
-        const result = await res.json();
-        audioSystem.playDispatchAlert();
-        if (result.dispatch?.id) {
-          setSelectedDispatchId(result.dispatch.id);
-          fetchRoute(result.dispatch.id);
-        }
-        fetchDashboard();
-        fetchAuditLogs();
-        setActiveTab('MISSIONS');
-        return;
+      const res = await dataSource.autoAssign(emergencyId, authSession?.userLabel || 'AI Auto-Dispatcher');
+      audioSystem.playDispatchAlert();
+      if (res.dispatch?.id) {
+        setSelectedDispatchId(res.dispatch.id);
+        fetchRoute(res.dispatch.id);
       }
-    } catch {
-      // Fallback below
+      fetchDashboard();
+      fetchAuditLogs();
+      setActiveTab('MISSIONS');
+    } catch (err: any) {
+      setToastMessage(`Auto-dispatch failed: ${err.message}`);
+      setTimeout(() => setToastMessage(null), 4000);
     }
-
-    // Client-Side Virtual Dispatch Engine
-    setIsVirtualMode(true);
-    setIsConnected(true);
-
-    const emg = data.emergencies.find((e) => e.id === emergencyId);
-    if (!emg) return;
-
-    const avail = data.ambulances.filter((a) => a.status === 'AVAILABLE');
-    const candidatePool = avail.length > 0 ? avail : data.ambulances;
-    const bestAmbulance = candidatePool.slice().sort((a, b) => {
-      const dA = calculateDistanceKm(a.latitude, a.longitude, emg.latitude, emg.longitude);
-      const dB = calculateDistanceKm(b.latitude, b.longitude, emg.latitude, emg.longitude);
-      return dA - dB;
-    })[0];
-
-    const bestHospital = data.hospitals.slice().sort((a, b) => {
-      const dA = calculateDistanceKm(a.latitude, a.longitude, emg.latitude, emg.longitude);
-      const dB = calculateDistanceKm(b.latitude, b.longitude, emg.latitude, emg.longitude);
-      return ((b.availableBeds || 0) * 0.1 - dA) - ((a.availableBeds || 0) * 0.1 - dB);
-    })[0];
-
-    const newDispatchId = `disp-${Date.now()}`;
-    const now = new Date().toISOString();
-    const distKm = Math.round(calculateDistanceKm(bestAmbulance.latitude, bestAmbulance.longitude, emg.latitude, emg.longitude) * 10) / 10;
-    const newDispatch: Dispatch = {
-      id: newDispatchId,
-      emergencyId: emg.id,
-      ambulanceId: bestAmbulance.id,
-      dispatcherName: 'AI Auto-Dispatcher',
-      hospitalId: bestHospital?.id,
-      status: 'DISPATCHED',
-      distanceKm: distKm,
-      etaMinutes: Math.max(2, Math.round(distKm * 2.2)),
-      score: 95,
-      assignedAt: now,
-    };
-
-    setData((prev) => ({
-      ...prev,
-      emergencies: prev.emergencies.map((e) =>
-        e.id === emg.id ? { ...e, status: 'DISPATCHED' } : e
-      ),
-      ambulances: prev.ambulances.map((a) =>
-        a.id === bestAmbulance.id ? { ...a, status: 'DISPATCHED' } : a
-      ),
-      dispatches: [newDispatch, ...prev.dispatches],
-      activeSimulations: [...(prev.activeSimulations || []), newDispatchId],
-    }));
-
-    setSelectedDispatchId(newDispatchId);
-    audioSystem.playDispatchAlert();
-    setActiveTab('MISSIONS');
-
-    // Compute road waypoints
-    const waypoints = generateRoadWaypoints(
-      bestAmbulance.latitude,
-      bestAmbulance.longitude,
-      emg.latitude,
-      emg.longitude
-    );
-    setMissionTelemetry({
-      roadWaypoints: waypoints,
-      maneuver: `Proceed to ${emg.address} via priority corridor`,
-      etaRemaining: Math.max(3, Math.round(calculateDistanceKm(bestAmbulance.latitude, bestAmbulance.longitude, emg.latitude, emg.longitude) * 2.2)),
-    });
-
-    setAuditLogs((prev) => [
-      {
-        id: Date.now(),
-        actor: 'AI Auto-Dispatcher (Virtual Gateway)',
-        action: 'AI_AUTO_DISPATCH',
-        entityType: 'DISPATCH',
-        entityId: newDispatchId,
-        metadata: `Autonomous Gateway matched Unit ${bestAmbulance.registrationNumber} to Incident #${emg.id} -> Dest: ${bestHospital?.name || 'Local ED'}`,
-        createdAt: now,
-      },
-      ...prev.slice(0, 49),
-    ]);
-
-    setLiveEvents((prev) => [
-      `${new Date().toLocaleTimeString()} · [AUTO-DISPATCH] ${bestAmbulance.registrationNumber} -> #${emg.id} (${emg.type})`,
-      ...prev.slice(0, 19),
-    ]);
   };
 
   const handleAutoAssignNext = async () => {
@@ -1114,7 +431,6 @@ export const App: React.FC = () => {
       return;
     }
 
-    // Prioritize CRITICAL > HIGH > MEDIUM > LOW
     const priorityWeight: Record<string, number> = {
       CRITICAL: 4,
       HIGH: 3,
@@ -1138,7 +454,6 @@ export const App: React.FC = () => {
         `${new Date().toLocaleTimeString()} · [AI AUTO-DISPATCH] Autonomous engine ACTIVE · Monitoring emergency queue`,
         ...prev.slice(0, 19),
       ]);
-      // Immediately run auto-dispatch on current queue
       setTimeout(() => {
         handleAutoAssignNext();
       }, 250);
@@ -1152,8 +467,6 @@ export const App: React.FC = () => {
     }
   };
 
-  // Autonomous continuous AI Auto-Dispatch loop:
-  // When enabled, automatically scans for any unassigned emergencies and dispatches available fleet
   useEffect(() => {
     if (!autoDispatchEnabled || role !== 'DISPATCHER') return;
 
@@ -1178,262 +491,83 @@ export const App: React.FC = () => {
 
         handleAutoAssign(highest.id);
       }
-    }, 2500);
+    }, 3000);
 
     return () => clearInterval(timer);
   }, [autoDispatchEnabled, role, data.emergencies, data.ambulances]);
 
   const handleAdvanceStatus = async (dispatch: Dispatch, nextStatus: string) => {
     try {
-      const res = await fetch(`${API_BASE}/dispatches/${dispatch.id}/status`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: nextStatus, dispatcher: 'EMS Dispatcher' }),
-      });
+      await dataSource.advanceDispatchStatus(
+        dispatch.id,
+        nextStatus,
+        authSession?.userLabel || 'Personnel'
+      );
+      setSelectedDispatchId(dispatch.id);
+      fetchRoute(dispatch.id);
+      fetchDashboard();
+      fetchAuditLogs();
 
-      if (res.ok) {
-        setSelectedDispatchId(dispatch.id);
-        fetchRoute(dispatch.id);
-        fetchDashboard();
-        fetchAuditLogs();
-        return;
+      if (['COMPLETED', 'CLOSED'].includes(nextStatus)) {
+        audioSystem.playMissionCompleteChime();
+      } else if (['ARRIVED_AT_SCENE', 'ARRIVED_AT_HOSPITAL'].includes(nextStatus)) {
+        audioSystem.playUnitArrivalChime();
       }
-    } catch {
-      // Fallback below
+    } catch (err: any) {
+      setToastMessage(`Status update failed: ${err.message}`);
+      setTimeout(() => setToastMessage(null), 4000);
     }
-
-    // Client-side status advance
-    const now = new Date().toISOString();
-    const isCompleted = nextStatus === 'COMPLETED';
-
-    setData((prev) => {
-      const updatedDispatches = prev.dispatches.map((d) =>
-        d.id === dispatch.id ? { ...d, status: nextStatus } : d
-      );
-      const updatedAmbulances = prev.ambulances.map((a) =>
-        a.id === dispatch.ambulanceId
-          ? ({ ...a, status: isCompleted ? 'AVAILABLE' : 'DISPATCHED' } as Ambulance)
-          : a
-      );
-      const updatedEmergencies = prev.emergencies.map((e) =>
-        e.id === dispatch.emergencyId
-          ? ({ ...e, status: isCompleted ? 'COMPLETED' : 'DISPATCHED' } as Emergency)
-          : e
-      );
-      const updatedSims = isCompleted
-        ? (prev.activeSimulations || []).filter((id) => id !== dispatch.id)
-        : prev.activeSimulations || [];
-
-      return {
-        ...prev,
-        dispatches: updatedDispatches,
-        ambulances: updatedAmbulances,
-        emergencies: updatedEmergencies,
-        activeSimulations: updatedSims,
-      };
-    });
-
-    if (isCompleted) {
-      audioSystem.playMissionCompleteChime();
-    } else if (['ARRIVED_AT_SCENE', 'ARRIVED_AT_HOSPITAL'].includes(nextStatus)) {
-      audioSystem.playUnitArrivalChime();
-    }
-
-    setAuditLogs((prev) => [
-      {
-        id: Date.now(),
-        actor: 'CAD Operator (Virtual Gateway)',
-        action: `STATUS_UPDATED_${nextStatus}`,
-        entityType: 'DISPATCH',
-        entityId: dispatch.id,
-        metadata: `Dispatch #${dispatch.id} status transitioned to ${nextStatus}`,
-        createdAt: now,
-      },
-      ...prev.slice(0, 49),
-    ]);
-
-    setLiveEvents((prev) => [
-      `${new Date().toLocaleTimeString()} · Dispatch #${dispatch.id.slice(-6)} -> ${nextStatus}`,
-      ...prev.slice(0, 19),
-    ]);
-
-    setSelectedDispatchId(dispatch.id);
-    fetchRoute(dispatch.id);
   };
 
   const handleSelectHospital = async (hospital: Hospital) => {
     if (!selectedDispatchForHospital) return;
     const dispatchId = selectedDispatchForHospital.id;
     try {
-      const res = await fetch(`${API_BASE}/dispatches/${dispatchId}/hospital`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ hospitalId: hospital.id, dispatcher: 'EMS Dispatcher' }),
-      });
-
-      if (res.ok) {
-        fetchRoute(dispatchId);
-        setSelectedDispatchForHospital(null);
-        fetchDashboard();
-        fetchAuditLogs();
-        return;
-      }
-    } catch {
-      // Fallback below
+      await dataSource.reassignHospital(dispatchId, hospital.id);
+      fetchRoute(dispatchId);
+      setSelectedDispatchForHospital(null);
+      fetchDashboard();
+      fetchAuditLogs();
+    } catch (err: any) {
+      setToastMessage(`Failed to reassign hospital: ${err.message}`);
+      setTimeout(() => setToastMessage(null), 4000);
     }
-
-    // Client-side update
-    const now = new Date().toISOString();
-    setData((prev) => ({
-      ...prev,
-      dispatches: prev.dispatches.map((d) =>
-        d.id === dispatchId ? { ...d, hospitalId: hospital.id } : d
-      ),
-    }));
-
-    setSelectedDispatchForHospital(null);
-    fetchRoute(dispatchId);
-
-    setAuditLogs((prev) => [
-      {
-        id: Date.now(),
-        actor: 'EMS Dispatcher (Virtual Gateway)',
-        action: 'HOSPITAL_SELECTED',
-        entityType: 'DISPATCH',
-        entityId: dispatchId,
-        metadata: `Assigned receiving trauma facility: ${hospital.name} (${hospital.availableBeds || 0} beds available)`,
-        createdAt: now,
-      },
-      ...prev.slice(0, 49),
-    ]);
-
-    setLiveEvents((prev) => [
-      `${new Date().toLocaleTimeString()} · Destination Hospital set: ${hospital.name}`,
-      ...prev.slice(0, 19),
-    ]);
   };
 
   const handleToggleSimulation = async (dispatchId: string) => {
     const isSimulating = (data.activeSimulations || []).includes(dispatchId);
     setSelectedDispatchId(dispatchId);
     try {
-      const endpoint = isSimulating ? 'stop' : 'start';
-      const res = await fetch(`${API_BASE}/simulation/${endpoint}/${dispatchId}`, {
-        method: 'POST',
-      });
-      if (res.ok) {
-        fetchDashboard();
-        if (!isSimulating) {
-          fetchRoute(dispatchId);
-          audioSystem.playDispatchAlert();
-        }
-        return;
+      if (isSimulating) {
+        await dataSource.stopSimulation(dispatchId);
+      } else {
+        await dataSource.startSimulation(dispatchId);
+        fetchRoute(dispatchId);
+        audioSystem.playDispatchAlert();
       }
-    } catch {
-      // Fallback below
-    }
-
-    // Client-side toggle
-    setData((prev) => {
-      const currentSims = prev.activeSimulations || [];
-      const nextSims = isSimulating
-        ? currentSims.filter((id) => id !== dispatchId)
-        : [...currentSims, dispatchId];
-      return { ...prev, activeSimulations: nextSims };
-    });
-
-    if (!isSimulating) {
-      fetchRoute(dispatchId);
-      audioSystem.playDispatchAlert();
-      setLiveEvents((prev) => [
-        `${new Date().toLocaleTimeString()} · Telemetry Simulation STARTED for Dispatch #${dispatchId.slice(-6)}`,
-        ...prev.slice(0, 19),
-      ]);
-    } else {
-      setLiveEvents((prev) => [
-        `${new Date().toLocaleTimeString()} · Telemetry Simulation PAUSED for Dispatch #${dispatchId.slice(-6)}`,
-        ...prev.slice(0, 19),
-      ]);
+      fetchDashboard();
+    } catch (err: any) {
+      console.error('Simulation toggle failed', err);
     }
   };
 
   const handleCreateEmergency = async (emData: Partial<Emergency>) => {
     try {
-      const res = await fetch(`${API_BASE}/emergencies`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(emData),
-      });
-
-      if (res.ok) {
-        setIsNewEmergencyOpen(false);
-        setMapClickCoords(null);
-        audioSystem.playCriticalIncidentChime();
-        const created = await res.json().catch(() => null);
-        fetchDashboard();
-        fetchAuditLogs();
-        setActiveTab('QUEUE');
-        if (autoDispatchEnabled && created?.id) {
-          setTimeout(() => {
-            handleAutoAssign(created.id);
-          }, 350);
-        }
-        return;
+      const created = await dataSource.createEmergency(emData);
+      setIsNewEmergencyOpen(false);
+      setMapClickCoords(null);
+      audioSystem.playCriticalIncidentChime();
+      fetchDashboard();
+      fetchAuditLogs();
+      setActiveTab('QUEUE');
+      if (autoDispatchEnabled && created?.id) {
+        setTimeout(() => {
+          handleAutoAssign(created.id);
+        }, 350);
       }
-    } catch {
-      // Fallback below
-    }
-
-    // Client-side intake
-    const now = new Date().toISOString();
-    const newEmergency: Emergency = {
-      id: `emg-${Date.now()}`,
-      type: emData.type || 'ACCIDENT',
-      priority: (emData.priority as any) || 'CRITICAL',
-      status: 'PENDING_DISPATCH',
-      address: emData.address || 'Bengaluru Metro Incident Location',
-      latitude: emData.latitude || 12.9716,
-      longitude: emData.longitude || 77.5946,
-      callerName: emData.callerName || 'Emergency Caller',
-      phone: emData.phone || '+91-98800-11223',
-      description: emData.description || 'Emergency incident reported to Aegis CAD',
-      patientCount: emData.patientCount || 1,
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    setData((prev) => ({
-      ...prev,
-      emergencies: [newEmergency, ...prev.emergencies],
-    }));
-
-    setIsNewEmergencyOpen(false);
-    setMapClickCoords(null);
-    audioSystem.playCriticalIncidentChime();
-    setActiveTab('QUEUE');
-
-    setAuditLogs((prev) => [
-      {
-        id: Date.now(),
-        actor: 'Call Taker (Virtual Gateway)',
-        action: 'EMERGENCY_INTAKE',
-        entityType: 'EMERGENCY',
-        entityId: newEmergency.id,
-        metadata: `New emergency call logged: ${newEmergency.type} (${newEmergency.priority}) at ${newEmergency.address}`,
-        createdAt: now,
-      },
-      ...prev.slice(0, 49),
-    ]);
-
-    setLiveEvents((prev) => [
-      `${new Date().toLocaleTimeString()} · [INCOMING CALL] #${newEmergency.id.slice(-6)} · ${newEmergency.type} [${newEmergency.priority}]`,
-      ...prev.slice(0, 19),
-    ]);
-
-    if (autoDispatchEnabled) {
-      setTimeout(() => {
-        handleAutoAssign(newEmergency.id);
-      }, 350);
+    } catch (err: any) {
+      setToastMessage(`Failed to report emergency: ${err.message}`);
+      setTimeout(() => setToastMessage(null), 4000);
     }
   };
 
@@ -1443,9 +577,11 @@ export const App: React.FC = () => {
   };
 
   const handleToggleAudio = () => {
-    const next = !isAudioEnabled;
-    setIsAudioEnabled(next);
-    audioSystem.setEnabled(next);
+    const nextState = !isAudioEnabled;
+    setIsAudioEnabled(nextState);
+    audioSystem.setEnabled(nextState);
+    setToastMessage(nextState ? 'Audio chime alerts ENABLED' : 'Audio chime alerts MUTED');
+    setTimeout(() => setToastMessage(null), 3000);
   };
 
   const handleResetData = async () => {
@@ -1455,62 +591,63 @@ export const App: React.FC = () => {
       setCandidates([]);
       setMissionTelemetry({});
       setActiveTab('QUEUE');
-      await fetch(`${API_BASE}/simulation/reset`, { method: 'POST' });
+      await dataSource.resetSimulation();
       fetchDashboard();
       fetchAuditLogs();
-      return;
-    } catch {
-      // Fallback below
-    }
-
-    // Local demo restore
-    setData(INITIAL_DEMO_DATA);
-    setAuditLogs(INITIAL_DEMO_AUDIT_LOGS);
-    setSelectedEmergency(null);
-    setSelectedDispatchId(null);
-    setCandidates([]);
-    setMissionTelemetry({});
-    setActiveTab('QUEUE');
-    setLiveEvents((prev) => [
-      `${new Date().toLocaleTimeString()} · CAD State & Simulation reset to baseline demo data`,
-      ...prev.slice(0, 19),
-    ]);
+    } catch {}
   };
 
   const handleStreamVitals = async (dispatchId: string, vitals: PatientVitals) => {
     setLiveVitalsByDispatch((prev) => ({ ...prev, [dispatchId]: vitals }));
     try {
-      await fetch(`${API_BASE}/dispatches/${dispatchId}/vitals`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(vitals),
-      });
-    } catch {
-      // Stream vitals locally
-    }
+      await dataSource.streamVitals(dispatchId, vitals);
+    } catch {}
   };
 
   const handleUpdateHospitalCapacity = async (hospitalId: string, capacity: Partial<Hospital>) => {
     try {
-      await fetch(`${API_BASE}/hospitals/${hospitalId}/capacity`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(capacity),
-      });
+      await dataSource.updateHospitalCapacity(hospitalId, capacity);
       fetchDashboard();
       fetchAuditLogs();
-      return;
-    } catch {
-      // Update capacity locally
+    } catch (err: any) {
+      setToastMessage(`Failed to update hospital capacity: ${err.message}`);
+      setTimeout(() => setToastMessage(null), 4000);
     }
-
-    setData((prev) => ({
-      ...prev,
-      hospitals: prev.hospitals.map((h) =>
-        h.id === hospitalId ? { ...h, ...capacity } : h
-      ),
-    }));
   };
+
+  const activeMissionDispatch = useMemo(() => {
+    if (!selectedDispatchId) return null;
+    return (data.dispatches || []).find((d) => d.id === selectedDispatchId) || null;
+  }, [data.dispatches, selectedDispatchId]);
+
+  const currentDriverAmbulance = useMemo(() => {
+    if (!selectedDriverAmbulanceId) return data.ambulances[0] || null;
+    return data.ambulances.find((a) => a.id === selectedDriverAmbulanceId) || data.ambulances[0] || null;
+  }, [data.ambulances, selectedDriverAmbulanceId]);
+
+  const driverDispatch = useMemo(() => {
+    if (!currentDriverAmbulance) return null;
+    return (data.dispatches || []).find(
+      (d) =>
+        d.ambulanceId === currentDriverAmbulance.id &&
+        !['COMPLETED', 'CANCELLED', 'RESOLVED', 'CLOSED'].includes((d.status || '').toUpperCase())
+    ) || null;
+  }, [data.dispatches, currentDriverAmbulance]);
+
+  const driverEmergency = useMemo(() => {
+    if (!driverDispatch) return null;
+    return (data.emergencies || []).find((e) => e.id === driverDispatch.emergencyId) || null;
+  }, [data.emergencies, driverDispatch]);
+
+  const driverHospital = useMemo(() => {
+    if (!driverDispatch?.hospitalId) return null;
+    return (data.hospitals || []).find((h) => h.id === driverDispatch.hospitalId) || null;
+  }, [data.hospitals, driverDispatch]);
+
+  const currentHospital = useMemo(() => {
+    if (!selectedHospitalId) return data.hospitals[0] || null;
+    return data.hospitals.find((h) => h.id === selectedHospitalId) || data.hospitals[0] || null;
+  }, [data.hospitals, selectedHospitalId]);
 
   const activeDispatchesCount = (data.dispatches || []).filter(
     (d) => !['COMPLETED', 'CANCELLED', 'RESOLVED', 'CLOSED'].includes((d.status || '').toUpperCase())
@@ -1522,11 +659,37 @@ export const App: React.FC = () => {
     );
   }, [data.emergencies]);
 
-  // 1. If not authenticated, render LoginGateway exclusively
+  // -------------------------------------------------------------------------
+  // MODE CHECKS & ERROR STATES (Step 0 & Step 2)
+  // -------------------------------------------------------------------------
+
+  // Static deploy with no backend configured
+  if (!IS_BACKEND_CONFIGURED && mode === 'LIVE') {
+    return (
+      <BackendNotConfiguredScreen
+        onOpenDemo={() => setMode('DEMO')}
+      />
+    );
+  }
+
+  // Live mode backend unreachable error state (do NOT fall back automatically)
+  if (mode === 'LIVE' && !isBackendReachable) {
+    return (
+      <BackendUnreachableScreen
+        onRetry={checkBackendHealth}
+        onOpenDemo={() => setMode('DEMO')}
+      />
+    );
+  }
+
+  // -------------------------------------------------------------------------
+  // ROLE-BASED ROUTING
+  // -------------------------------------------------------------------------
+
+  // 1. If not authenticated, render LoginGateway
   if (!authSession || !role) {
     return (
       <div className="aegis-app" data-theme={effectiveTheme}>
-        <DemoModeBanner isVirtualMode={isVirtualMode} />
         <LoginGateway
           ambulances={data.ambulances}
           hospitals={data.hospitals}
@@ -1544,58 +707,75 @@ export const App: React.FC = () => {
     );
   }
 
-  // 2. Citizen Dashboard (Strictly Isolated)
-  if (role === 'CITIZEN' && citizenProfile) {
+  // 2. Admin Console
+  if (role === 'ADMIN') {
+    return (
+      <AdminDashboard
+        userLabel={authSession?.userLabel || 'Admin'}
+        onLogout={handleLogout}
+      />
+    );
+  }
+
+  // 3. Citizen Dashboard
+  if (role === 'CITIZEN') {
+    const effectiveCitizenProfile: CitizenProfile = citizenProfile || {
+      id: authSession?.dispatcherBadge || authSession?.userLabel || 'citizen',
+      name: authSession?.userLabel || 'Citizen',
+      phone: authSession?.dispatcherBadge || '+91 9845000000',
+      age: 30,
+      gender: 'PREFER_NOT_TO_SAY',
+      diseases: [],
+      allergies: [],
+      registeredAt: new Date().toISOString(),
+    };
     return (
       <div className="aegis-app" data-theme={effectiveTheme}>
-        <DemoModeBanner isVirtualMode={isVirtualMode} />
         <CitizenDashboard
-          profile={citizenProfile}
+          profile={effectiveCitizenProfile}
           emergencies={data.emergencies}
           ambulances={data.ambulances}
           hospitals={data.hospitals}
           dispatches={data.dispatches}
           onRequestSOS={async (sosData) => {
-            const newEmgId = `emg-${Date.now()}`;
-            const newEmg: Emergency = {
-              id: newEmgId,
-              type: sosData.type,
-              priority: 'CRITICAL',
-              status: 'PENDING_DISPATCH',
-              address: sosData.address,
-              latitude: sosData.latitude,
-              longitude: sosData.longitude,
-              callerName: sosData.callerName,
-              phone: sosData.phone,
-              description: sosData.description,
-              patientCount: 1,
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-            };
-
-            setData((prev) => ({
-              ...prev,
-              emergencies: [newEmg, ...prev.emergencies],
-            }));
-
-            audioSystem.playCriticalIncidentChime();
-            setToastMessage(`Emergency SOS logged. Dispatching nearest first responder...`);
-            setTimeout(() => setToastMessage(null), 5000);
-
-            // Auto-assign nearest ambulance
-            await handleAutoAssign(newEmgId);
+            try {
+              const created = await dataSource.createEmergency({
+                type: sosData.type,
+                priority: 'CRITICAL',
+                status: 'PENDING_DISPATCH',
+                address: sosData.address,
+                latitude: sosData.latitude,
+                longitude: sosData.longitude,
+                callerName: sosData.callerName,
+                phone: sosData.phone,
+                description: sosData.description,
+                patientCount: 1,
+              });
+              audioSystem.playCriticalIncidentChime();
+              setToastMessage('Emergency SOS registered in CAD database. Dispatching nearest first responder...');
+              setTimeout(() => setToastMessage(null), 5000);
+              await fetchDashboard();
+              await fetchAuditLogs();
+              if (created?.id) {
+                await handleAutoAssign(created.id);
+              }
+            } catch (err: any) {
+              setToastMessage(`SOS Request Error: ${err.message}`);
+              setTimeout(() => setToastMessage(null), 5000);
+            }
           }}
-          onCancelSOS={(emgId) => {
-            setData((prev) => ({
-              ...prev,
-              emergencies: prev.emergencies.map((e) =>
-                e.id === emgId ? { ...e, status: 'CANCELLED' } : e
-              ),
-              dispatches: prev.dispatches.map((d) =>
-                d.emergencyId === emgId ? { ...d, status: 'CANCELLED' } : d
-              ),
-            }));
-            setToastMessage('Emergency request cancelled.');
+          onCancelSOS={async (emgId) => {
+            const activeDispatch = (data.dispatches || []).find((d) => d.emergencyId === emgId);
+            if (activeDispatch) {
+              await handleAdvanceStatus(activeDispatch, 'CANCELLED');
+            } else {
+              try {
+                await dataSource.updateEmergencyStatus(emgId, 'CANCELLED', 'Citizen SOS Cancel');
+              } catch {}
+            }
+            await fetchDashboard();
+            await fetchAuditLogs();
+            setToastMessage('Emergency request cancelled and CAD notified.');
             setTimeout(() => setToastMessage(null), 4000);
           }}
           onUpdateProfile={(updated) => {
@@ -1609,23 +789,10 @@ export const App: React.FC = () => {
               };
               setAuthSession(nextSession);
               try {
-                localStorage.setItem('aegis_auth_session', JSON.stringify(nextSession));
+                localStorage.setItem(`aegis.${mode.toLowerCase()}.auth_session`, JSON.stringify(nextSession));
               } catch {}
             }
-            try {
-              const saved = localStorage.getItem('aegis_registered_citizens');
-              if (saved) {
-                const accounts = JSON.parse(saved);
-                const updatedAccounts = accounts.map((acc: any) => {
-                  if (acc.profile?.id === updated.id || acc.loginId === updated.phone || acc.profile?.phone === updated.phone) {
-                    return { ...acc, profile: updated };
-                  }
-                  return acc;
-                });
-                localStorage.setItem('aegis_registered_citizens', JSON.stringify(updatedAccounts));
-              }
-            } catch {}
-            setToastMessage('Medical profile and emergency details updated successfully.');
+            setToastMessage('Medical profile updated successfully.');
             setTimeout(() => setToastMessage(null), 3500);
           }}
           onLogout={handleLogout}
@@ -1640,11 +807,10 @@ export const App: React.FC = () => {
     );
   }
 
-  // 3. Ambulance Driver MDT Dashboard (Strictly Isolated with Mapping & Routing)
-  if (role === 'DRIVER') {
+  // 4. Paramedic / Ambulance Driver MDT Dashboard
+  if (role === 'DRIVER' || role === 'PARAMEDIC') {
     return (
       <div className="aegis-app" data-theme={effectiveTheme}>
-        <DemoModeBanner isVirtualMode={isVirtualMode} />
         {currentDriverAmbulance ? (
           <DriverDashboard
             ambulance={currentDriverAmbulance}
@@ -1677,11 +843,10 @@ export const App: React.FC = () => {
     );
   }
 
-  // 4. Hospital Emergency Department Console (Strictly Isolated)
-  if (role === 'HOSPITAL') {
+  // 5. Hospital Emergency Department Console
+  if (role === 'HOSPITAL' || role === 'HOSPITAL_STAFF') {
     return (
       <div className="aegis-app" data-theme={effectiveTheme}>
-        <DemoModeBanner isVirtualMode={isVirtualMode} />
         {currentHospital ? (
           <HospitalDashboard
             hospital={currentHospital}
@@ -1711,13 +876,12 @@ export const App: React.FC = () => {
     );
   }
 
-  // 5. Central CAD Command Dashboard (DISPATCHER Only)
+  // 6. Central CAD Command Dashboard (DISPATCHER)
   return (
     <div className="aegis-app" data-theme={effectiveTheme}>
-      <DemoModeBanner isVirtualMode={isVirtualMode} />
       <Navbar
         data={data}
-        isConnected={isConnected}
+        isConnected={connectionStatus === 'CONNECTED'}
         isAudioEnabled={isAudioEnabled}
         currentRole={role}
         authSession={authSession}
@@ -1790,89 +954,87 @@ export const App: React.FC = () => {
       )}
 
       {/* Role-Based Primary Interface */}
-      {role === 'DISPATCHER' && (
-        <main className="main-content">
-          {/* Tactical Map Screen */}
-          <section className="map-section">
-            <MapView
-              ambulances={data.ambulances}
-              emergencies={data.emergencies}
-              hospitals={data.hospitals}
-              dispatches={data.dispatches}
-              activeSimulations={data.activeSimulations || []}
-              selectedEmergency={selectedEmergency}
-              activeMissionDispatch={activeMissionDispatch}
-              missionTelemetry={missionTelemetry}
-              onSelectEmergency={handleSelectEmergency}
-              onMapClick={handleMapClick}
-              onStopSimulation={handleToggleSimulation}
-            />
-          </section>
+      <main className="main-content">
+        {/* Tactical Map Screen */}
+        <section className="map-section">
+          <MapView
+            ambulances={data.ambulances}
+            emergencies={data.emergencies}
+            hospitals={data.hospitals}
+            dispatches={data.dispatches}
+            activeSimulations={data.activeSimulations || []}
+            selectedEmergency={selectedEmergency}
+            activeMissionDispatch={activeMissionDispatch}
+            missionTelemetry={missionTelemetry}
+            onSelectEmergency={handleSelectEmergency}
+            onMapClick={handleMapClick}
+            onStopSimulation={handleToggleSimulation}
+          />
+        </section>
 
-          {/* Tactical CAD Sidebar */}
-          <aside className="sidebar-section-container">
-            <Tabs
-              tabs={[
-                { id: 'QUEUE', label: 'Incidents', badge: activeEmergencies.length },
-                { id: 'MISSIONS', label: 'Missions', badge: activeDispatchesCount },
-                { id: 'FLEET', label: 'Fleet', badge: data.ambulances.length },
-                { id: 'HOSPITALS', label: 'Hospitals', badge: data.hospitals.length },
-              ]}
-              activeTab={activeTab}
-              onChange={(tabId) => setActiveTab(tabId as any)}
-            />
+        {/* Tactical CAD Sidebar */}
+        <aside className="sidebar-section-container">
+          <Tabs
+            tabs={[
+              { id: 'QUEUE', label: 'Incidents', badge: activeEmergencies.length },
+              { id: 'MISSIONS', label: 'Missions', badge: activeDispatchesCount },
+              { id: 'FLEET', label: 'Fleet', badge: data.ambulances.length },
+              { id: 'HOSPITALS', label: 'Hospitals', badge: data.hospitals.length },
+            ]}
+            activeTab={activeTab}
+            onChange={(tabId) => setActiveTab(tabId as any)}
+          />
 
-            <div className="sidebar-body">
-              {activeTab === 'QUEUE' && (
-                <EmergencyQueue
-                  onClearSearch={() => setSearchQuery('')}
-                  emergencies={data.emergencies}
-                  selectedEmergency={selectedEmergency}
-                  searchQuery={searchQuery}
-                  onSelectEmergency={handleSelectEmergency}
-                  onAutoAssign={handleAutoAssign}
-                  onAutoAssignNext={handleAutoAssignNext}
-                  onResetData={handleResetData}
-                />
-              )}
+          <div className="sidebar-body">
+            {activeTab === 'QUEUE' && (
+              <EmergencyQueue
+                onClearSearch={() => setSearchQuery('')}
+                emergencies={data.emergencies}
+                selectedEmergency={selectedEmergency}
+                searchQuery={searchQuery}
+                onSelectEmergency={handleSelectEmergency}
+                onAutoAssign={handleAutoAssign}
+                onAutoAssignNext={handleAutoAssignNext}
+                onResetData={handleResetData}
+              />
+            )}
 
-              {activeTab === 'MISSIONS' && (
-                <ActiveDispatches
-                  dispatches={data.dispatches}
-                  emergencies={data.emergencies}
-                  ambulances={data.ambulances}
-                  hospitals={data.hospitals}
-                  activeSimulations={data.activeSimulations || []}
-                  selectedDispatchId={activeMissionDispatch?.id}
-                  searchQuery={searchQuery}
-                  onSelectDispatch={(d) => {
-                    setSelectedDispatchId(d.id);
-                    fetchRoute(d.id);
-                  }}
-                  onAdvanceStatus={handleAdvanceStatus}
-                  onOpenHospitalModal={(d) => setSelectedDispatchForHospital(d)}
-                  onToggleSimulation={handleToggleSimulation}
-                />
-              )}
+            {activeTab === 'MISSIONS' && (
+              <ActiveDispatches
+                dispatches={data.dispatches}
+                emergencies={data.emergencies}
+                ambulances={data.ambulances}
+                hospitals={data.hospitals}
+                activeSimulations={data.activeSimulations || []}
+                selectedDispatchId={activeMissionDispatch?.id}
+                searchQuery={searchQuery}
+                onSelectDispatch={(d) => {
+                  setSelectedDispatchId(d.id);
+                  fetchRoute(d.id);
+                }}
+                onAdvanceStatus={handleAdvanceStatus}
+                onOpenHospitalModal={(d) => setSelectedDispatchForHospital(d)}
+                onToggleSimulation={handleToggleSimulation}
+              />
+            )}
 
-              {activeTab === 'FLEET' && (
-                <FleetList
-                  ambulances={data.ambulances}
-                  searchQuery={searchQuery}
-                />
-              )}
+            {activeTab === 'FLEET' && (
+              <FleetList
+                ambulances={data.ambulances}
+                searchQuery={searchQuery}
+              />
+            )}
 
-              {activeTab === 'HOSPITALS' && (
-                <HospitalList
-                  hospitals={data.hospitals}
-                  searchQuery={searchQuery}
-                  onSelectHospital={(h) => setSelectedHospitalId(h.id)}
-                />
-              )}
-            </div>
-          </aside>
-        </main>
-      )}
+            {activeTab === 'HOSPITALS' && (
+              <HospitalList
+                hospitals={data.hospitals}
+                searchQuery={searchQuery}
+                onSelectHospital={(h) => setSelectedHospitalId(h.id)}
+              />
+            )}
+          </div>
+        </aside>
+      </main>
 
       {/* Candidate Recommendation Matrix Modal */}
       {selectedEmergency && (
@@ -1931,12 +1093,19 @@ export const App: React.FC = () => {
 
       {/* Universal Compliance & System Footer with Integrated Event/Audit Drawer */}
       <Footer
-        isConnected={isConnected}
-        isVirtualMode={isVirtualMode}
+        isConnected={connectionStatus === 'CONNECTED'}
         latestEvent={liveEvents[0] || 'System initialized. Live monitoring active.'}
         logs={auditLogs}
         liveEvents={liveEvents}
       />
     </div>
+  );
+};
+
+export const App: React.FC = () => {
+  return (
+    <ModeProvider>
+      <AppContent />
+    </ModeProvider>
   );
 };

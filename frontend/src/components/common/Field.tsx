@@ -12,6 +12,7 @@ export interface FieldProps extends Omit<React.InputHTMLAttributes<HTMLInputElem
   suffix?: string;
   multiline?: boolean;
   rows?: number;
+  children?: React.ReactNode;
 }
 
 export const Field: React.FC<FieldProps> = ({
@@ -32,6 +33,7 @@ export const Field: React.FC<FieldProps> = ({
   disabled,
   className = '',
   style,
+  children,
   ...props
 }) => {
   const [isFocused, setIsFocused] = useState(false);
@@ -91,7 +93,11 @@ export const Field: React.FC<FieldProps> = ({
           />
         )}
 
-        {multiline ? (
+        {children ? (
+          <div style={{ flex: 1, width: '100%', display: 'flex', alignItems: 'center' }}>
+            {children}
+          </div>
+        ) : multiline ? (
           <textarea
             id={inputId}
             className="m3-field-input"

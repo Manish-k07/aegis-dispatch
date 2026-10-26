@@ -283,8 +283,8 @@ export const MapView: React.FC<MapViewProps> = ({
     tileUrl = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
     attribution = '&copy; Esri World Imagery';
   } else if (mapLayer === 'TERRAIN') {
-    tileUrl = 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png';
-    attribution = '&copy; OpenTopoMap contributors';
+    tileUrl = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}';
+    attribution = '&copy; Esri World Topo Map &copy; OpenStreetMap contributors';
   }
 
   // Active mission ambulance and target for HUD
@@ -601,7 +601,7 @@ export const MapView: React.FC<MapViewProps> = ({
         scrollWheelZoom={true}
         className="leaflet-container"
       >
-        <TileLayer attribution={attribution} url={tileUrl} maxZoom={19} />
+        <TileLayer key={tileUrl} attribution={attribution} url={tileUrl} maxZoom={19} maxNativeZoom={19} />
 
         <MapClickHandler onMapClick={onMapClick} />
         <FitBoundsController

@@ -302,7 +302,7 @@ export const CitizenDashboard: React.FC<CitizenDashboardProps> = ({
       setEditForm({ ...editForm, diseases: ['None / healthy'] });
       return;
     }
-    const current = editForm.diseases.filter((d) => !d.toLowerCase().includes('none'));
+    const current = (editForm.diseases || []).filter((d) => !d.toLowerCase().includes('none'));
     if (current.includes(disease)) {
       const next = current.filter((d) => d !== disease);
       setEditForm({ ...editForm, diseases: next.length > 0 ? next : ['None / healthy'] });
@@ -316,7 +316,7 @@ export const CitizenDashboard: React.FC<CitizenDashboardProps> = ({
       setEditForm({ ...editForm, allergies: ['No known allergies (NKDA)'] });
       return;
     }
-    const current = editForm.allergies.filter((a) => !a.toLowerCase().includes('no known'));
+    const current = (editForm.allergies || []).filter((a) => !a.toLowerCase().includes('no known'));
     if (current.includes(allergy)) {
       const next = current.filter((a) => a !== allergy);
       setEditForm({ ...editForm, allergies: next.length > 0 ? next : ['No known allergies (NKDA)'] });
@@ -1085,8 +1085,8 @@ export const CitizenDashboard: React.FC<CitizenDashboardProps> = ({
                     Allergies
                   </div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                    {profile.allergies.length > 0 ? (
-                      profile.allergies.map((allergy, i) => (
+                    {(profile.allergies || []).length > 0 ? (
+                      (profile.allergies || []).map((allergy, i) => (
                         <StatusChip key={i} label={allergy} tone="neutral" size="small" />
                       ))
                     ) : (
@@ -1110,8 +1110,8 @@ export const CitizenDashboard: React.FC<CitizenDashboardProps> = ({
                     Medical conditions
                   </div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                    {profile.diseases.length > 0 ? (
-                      profile.diseases.map((disease, i) => (
+                    {(profile.diseases || []).length > 0 ? (
+                      (profile.diseases || []).map((disease, i) => (
                         <StatusChip key={i} label={disease} tone="neutral" size="small" />
                       ))
                     ) : (
@@ -1527,7 +1527,7 @@ export const CitizenDashboard: React.FC<CitizenDashboardProps> = ({
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
               {PRESET_DISEASES.map((d) => {
-                const isSelected = editForm.diseases.includes(d);
+                const isSelected = (editForm.diseases || []).includes(d);
                 return (
                   <StatusChip
                     key={d}
@@ -1548,7 +1548,7 @@ export const CitizenDashboard: React.FC<CitizenDashboardProps> = ({
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
               {PRESET_ALLERGIES.map((a) => {
-                const isSelected = editForm.allergies.includes(a);
+                const isSelected = (editForm.allergies || []).includes(a);
                 return (
                   <StatusChip
                     key={a}

@@ -4,43 +4,68 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Docker: Deploy-Ready](https://img.shields.io/badge/Docker-Deploy--Ready-sky.svg)](docker-compose.yml)
 
-Enterprise-grade, full-stack, real-time Computer-Aided Emergency Medical Dispatch (CAD) command & control platform. Engineered for 911/112 public safety answering points, paramedic ambulance fleets, and regional hospital Emergency Departments (ED).
+Enterprise-grade, full-stack, real-time Computer-Aided Emergency Medical Dispatch (CAD) command & control platform. Engineered for 911/112 public safety answering points, paramedic ambulance fleets, regional hospital Emergency Departments (ED), and citizen emergency assistance.
 
 ---
 
-## 🚀 Key Capabilities
+## 🚀 Operating Modes: Live by Default vs. Explicit Demo
 
-- **Autonomous Auto-Dispatch Engine**: Real-time multi-factor candidate ranking (OSRM road ETA, clinical capabilities, unit availability, distance, live traffic).
-- **Interactive Geospatial Tactical Map**: Leaflet GIS map with animated directional vehicle markers, priority-pulsing incident pins, live route lines, and hospital trauma bay capacity gauges.
-- **Paramedic Mobile Data Terminal (MDT)**: In-cab navigation, road HUD, speed/heading telemetry, and one-click voice status updates.
-- **Hospital Emergency Department (ED) Console**: Real-time pre-arrival patient vitals monitoring (Heart Rate, Blood Pressure, $SpO_2$, Respiration), trauma bay allocations, and one-click clinical handover.
-- **AI Triage & Operations Assistant**: Automated clinical severity triage, intelligent call intake, and voice-assisted dispatching.
-- **Full File Persistence & Snapshots**: Automated and manual export of complete operational CAD state into JSON snapshots, CSV tables, and timestamped backups.
-- **Multi-Device & Network Ready**: Auto-resolving host architecture enabling instant deployment across local Wi-Fi / LAN laptops, tablets, and in-cab vehicle terminals.
-
----
-
-## 🔒 Security & Compliance
-
-Aegis Dispatch Pro incorporates defense-in-depth architectural safeguards:
-- **HTTP Security Headers**: Enforced `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `X-XSS-Protection: 1; mode=block`, and restrictive `Content-Security-Policy`.
-- **CORS Origin Isolation**: Configurable allowed origins via `app.cors-allowed-origins` / `CORS_ALLOWED_ORIGINS` eliminating wildcard credential exposure.
-- **Zero Host Disclosure**: System backup endpoints sanitize server disk paths, ensuring host internal directories are never leaked to API consumers.
-- **Exception Shielding**: `GlobalExceptionHandler` intercepts server errors, providing structured JSON payloads while suppressing internal stack traces.
-- **Payload & Coordinate Boundary Checks**: Latitude/longitude constraints ($[-90, 90]$, $[-180, 180]$) and string length bounds prevent memory abuse.
+Aegis Dispatch Pro runs as a **real, fully-connected operational system by default**:
+1. **LIVE Mode (Default)**:
+   - Connects directly to the Spring Boot REST API and real-time STOMP/WebSocket channels.
+   - Zero synthetic simulation, fake incidents, or mock vitals.
+   - All state transitions persist in the relational database (`users`, `emergencies`, `ambulances`, `hospitals`, `dispatches`, `incident_events`).
+   - If the backend is unreachable, the system displays a clear, actionable error state with exponential retry backoff and a secondary link to Demo mode. It **never silently falls back to fake data**.
+2. **DEMO Mode (Explicit User Toggle Only)**:
+   - Activated only when a user explicitly clicks the **"Demo mode"** button on the login screen or in the user avatar menu.
+   - Runs a completely self-contained in-browser simulator (`frontend/src/demo/`) with zero calls to the production backend.
+   - Features strict storage isolation under the `aegis.demo.*` namespace, ensuring demo sessions cannot access live JWT tokens or corrupt live data.
+   - Distinct, persistent status bar chip: `Demo mode — synthetic data`.
 
 ---
 
-## 🐳 Deploy-Ready Quickstart (Docker Compose)
+## 🔒 Security, Authentication & Role Isolation
 
-Deploy the entire production stack (PostGIS Database, Spring Boot Backend, and Nginx + React Frontend) with a single command:
+- **Role-Based Access Control (RBAC)**: Enforced via HMAC-SHA256 JWT tokens with roles `DISPATCHER`, `PARAMEDIC`, `HOSPITAL_STAFF`, `CITIZEN`, and `ADMIN`.
+- **First-Run Administrator Bootstrap**: On an empty database, the backend automatically initializes a single root administrator account from `AEGIS_ADMIN_USERNAME` and `AEGIS_ADMIN_PASSWORD` (hashed with salt; forces password change on first sign-in).
+- **Admin Management Console**: System administrators can provision dispatchers, bind paramedics to specific vehicle units, bind clinical staff to hospitals, and manage fleet assets.
+- **Citizen Self-Registration**: Citizens can securely self-register with phone number and password to access their digital health profile and one-tap SOS dispatch.
+- **Audit Logging**: Every incident dispatch, unit transit update, and hospital handover writes an immutable row into `incident_events` with actor ID and ISO timestamp.
+- **CORS & Origin Hardening**: API endpoints and WebSocket endpoints strictly honor origins configured in `CORS_ORIGIN`.
+
+---
+
+## ⚙️ Environment Variables Reference
+
+| Variable | Target Component | Default Value | Description |
+|---|---|---|---|
+| `VITE_API_BASE_URL` | Frontend | `/api` (or empty for proxy) | Base HTTP URL for REST endpoints (e.g. `http://localhost:8080/api`). |
+| `VITE_WS_URL` | Frontend | `/ws` (or empty for proxy) | Base WebSocket/STOMP endpoint (e.g. `http://localhost:8080/ws`). |
+| `VITE_ENABLE_DEMO_BUTTON` | Frontend | `true` | Controls visibility of the "Demo mode" toggle button. Set to `false` in production deployments to hide the demo launcher completely. |
+| `CORS_ORIGIN` | Backend | `http://localhost:5173,http://localhost:8080` | Comma-separated list of permitted web origins for REST CORS and WebSocket handshakes. |
+| `AEGIS_ADMIN_USERNAME` | Backend | `admin` | Username for the first-run system administrator account. |
+| `AEGIS_ADMIN_PASSWORD` | Backend | `Admin@Aegis2026` | Initial password for the administrator account (never logged; hashed upon database insertion). |
+| `OSRM_BASE_URL` | Backend | `https://router.project-osrm.org` | Road network routing engine URL with automatic straight-line distance fallback if unreachable. |
+| `SPRING_PROFILES_ACTIVE` | Backend | `postgres` (or `default`) | Active Spring profile (`postgres` for production, `default` for embedded H2, `dev-seed` for local test rows). |
+| `POSTGRES_DB` | Database | `aegis_dispatch` | PostgreSQL database name. |
+| `POSTGRES_USER` | Database | `aegis` | PostgreSQL database user. |
+| `POSTGRES_PASSWORD` | Database | `postgres` | PostgreSQL database password. |
+| `DB_URL` | Backend | `jdbc:postgresql://postgres:5432/aegis_dispatch` | JDBC connection URL. |
+| `DB_USER` | Backend | `aegis` | JDBC username. |
+| `DB_PASSWORD` | Backend | `postgres` | JDBC password. |
+
+---
+
+## 🐳 Quickstart with Docker Compose
+
+Deploy the complete multi-tier production stack (PostgreSQL + PostGIS, Spring Boot Backend, and Nginx + React Frontend) with health checks:
 
 ```bash
 # 1. Clone the repository
 git clone https://github.com/Manish-k07/aegis-dispatch.git
 cd aegis-dispatch
 
-# 2. Configure environment variables (optional, defaults provided)
+# 2. Configure environment variables
 cp .env.example .env
 
 # 3. Launch the containerized production stack
@@ -48,60 +73,10 @@ docker compose up -d --build
 ```
 
 ### Access Points:
-- **Web Console (Nginx Reverse Proxy):** [http://localhost:5173](http://localhost:5173) (or `http://localhost:80`)
+- **Web Interface:** [http://localhost:5173](http://localhost:5173) (or `http://localhost:80`)
 - **Backend API Gateway:** [http://localhost:8080/api/dashboard](http://localhost:8080/api/dashboard)
 - **Actuator Health Monitor:** [http://localhost:8080/actuator/health](http://localhost:8080/actuator/health)
 - **PostGIS Database:** `localhost:5432` (database: `aegis_dispatch`, user: `aegis`)
-
----
-
-## ⚡ Direct Netlify Deployment
-
-Aegis Dispatch Pro includes native [`netlify.toml`](netlify.toml) with SPA redirect handling, security headers, and instant offline/demo fallback mode.
-
-### Option 1: One-Click Git Deploy (Recommended)
-1. Go to [app.netlify.com](https://app.netlify.com) and click **"Add new site" > "Import an existing project"**.
-2. Select **GitHub** and choose your repository: **`Manish-k07/aegis-dispatch`**.
-3. Netlify automatically detects `netlify.toml` (`base: frontend`, `publish: dist`, `command: npm run build`).
-4. Click **Deploy aegis-dispatch** — your site is instantly live at `https://<your-site>.netlify.app`!
-
-### Option 2: Command-Line Deploy
-Double-click `deploy-netlify.bat` or run:
-```bash
-cd frontend
-npm run build
-npx netlify-cli deploy --prod --dir=dist
-```
-
----
-
-## ☁️ Google Cloud Run Deployment
-
-The repository includes a production container build in `Dockerfile`, a hardened runtime configuration, and `cloudbuild.yaml`.
-
-### Local production container
-
-```bash
-docker build -t aegis-dispatch .
-docker run --rm -p 8080:8080 \
-  -e CORS_ORIGIN=http://localhost:8080 \
-  aegis-dispatch
-```
-
-The container serves the React UI and Spring Boot API from the same origin.
-
-### Cloud Run Setup
-
-For a managed cloud deployment, provision a PostgreSQL database (Cloud SQL for PostgreSQL), create an Artifact Registry repository, and create a Secret Manager secret named `aegis-db-password`.
-
-Then configure the substitutions in `cloudbuild.yaml` for your Google Cloud project, Cloud Run region, Cloud SQL instance, database URL, and public Cloud Run origin before running Cloud Build.
-
-Required Google Cloud services:
-- Cloud Run
-- Artifact Registry
-- Cloud Build
-- Secret Manager
-- Cloud SQL for PostgreSQL
 
 ---
 
@@ -109,9 +84,10 @@ Required Google Cloud services:
 
 ### Option A: One-Click Launchers (Windows)
 Double-click **`start-all.bat`** in the project root:
-- Automatically starts backend on port `8080` (Embedded H2 database in PostgreSQL mode, zero setup required).
-- Automatically starts frontend on port `5173`.
-- Launches your default web browser to the dashboard.
+- Starts the Spring Boot backend on port `8080`.
+- Waits for `/actuator/health` to report `UP` with database connectivity.
+- Starts the Vite frontend on port `5173`.
+- Automatically opens the browser to the live console.
 
 ### Option B: Linux / macOS Launcher
 ```bash
@@ -126,68 +102,50 @@ chmod +x start-all.sh
 cd backend
 mvn spring-boot:run
 ```
-*To connect to external PostgreSQL instead of embedded H2:*
+*To seed sample development accounts and units:*
 ```bash
-mvn spring-boot:run -Dspring-boot.run.profiles=postgres
+mvn spring-boot:run -Dspring-boot.run.profiles=dev-seed
 ```
 
 #### 2. Frontend (React 18 / Vite / TypeScript)
 ```bash
 cd frontend
 npm install
-npm run dev -- --host 0.0.0.0
+npm run dev -- --host 0.0.0.0 --port 5173
 ```
 
 ---
 
-## 🌐 Opening on Other Laptops (LAN / Wi-Fi)
+## ⚡ Frontend-Only Deployments (Netlify)
 
-The frontend features dynamic host binding (`frontend/src/config.ts`) and Vite binding (`--host 0.0.0.0`). To open on another laptop on the same local network:
+For frontend-only static hosts (such as Netlify), define `VITE_API_BASE_URL` in the deployment settings pointing to your live backend API. If `VITE_API_BASE_URL` is unconfigured at build time, the frontend displays a clear **"Backend Not Configured"** screen rather than showing synthetic data.
 
-1. Obtain the host machine's Wi-Fi / Ethernet IPv4 address (e.g., `172.20.10.2` or `192.168.1.50`).
-2. On any other laptop, tablet, or phone connected to the same Wi-Fi network, navigate to:
-   ```
-   http://<HOST_IP>:5173
-   ```
-   *(Ensure Windows Firewall allows inbound TCP traffic on ports 5173 and 8080).*
+1. Connect your repository to Netlify.
+2. In Site Settings > Build & deploy > Environment variables, specify:
+   - `VITE_API_BASE_URL`: `https://your-backend-domain.com/api`
+   - `VITE_WS_URL`: `wss://your-backend-domain.com/ws`
+   - `VITE_ENABLE_DEMO_BUTTON`: `true` (or `false` to disable demo mode)
+3. Deploy!
 
 ---
 
-## 🏛️ System Architecture
+## 🧪 Automated Testing
 
-```mermaid
-graph TD
-    Client["Browser / Tablet / In-Cab MDT\n(React 18 + Vite)"]
-    Nginx["Nginx Reverse Proxy\n(Port 80 / 5173)"]
-    Backend["Spring Boot 3.5 CAD Engine\n(Port 8080)"]
-    DB[("PostgreSQL 16 + PostGIS\nor Embedded H2")]
-    OSRM["OSRM Road Routing Engine"]
-    Disk[("CAD Snapshot & Backup Storage\n./data/backups/")]
-
-    Client -->|HTTPS / WSS| Nginx
-    Nginx -->|Proxy Pass| Backend
-    Backend -->|JPA / JDBC| DB
-    Backend -->|Road Waypoints & ETAs| OSRM
-    Backend -->|JSON & CSV Snapshots| Disk
+### Playwright End-to-End Suite
+Runs full browser multi-context scenarios verifying Live mode, Demo mode isolation, unreachable backend screens, and cross-terminal incident dispatch:
+```bash
+cd frontend
+npx playwright test e2e/live-and-demo-modes.spec.ts
 ```
 
----
-
-## 🗺️ Product Roadmap
-
-The following advanced emergency response capabilities were evaluated during the platform audit and are deferred to future production milestones:
-
-- **Mass Casualty Incident (MCI) Triage Matrix**: START/SALT field triage tag scanning (Red/Yellow/Green/Black), multi-patient transport tracking, and automated casualty distribution across regional trauma networks.
-- **Drone First Responder (DFR)**: Autonomous UAV dispatch for early pre-arrival payload delivery (Automated External Defibrillator, Naloxone/Narcan, Epinephrine) ahead of ground ambulances.
-- **Next-Gen 112 Live Video (WebRTC)**: Direct caller camera video stream ingestion for dispatcher-guided CPR and bystander emergency coaching.
-- **Predictive Surge Staging**: Machine-learning driven ambulance prepositioning based on historical weather, traffic density, and call volume patterns.
-- **IoT Fleet Diagnostics**: Real-time vehicle OBD-II telemetry, oxygen cylinder pressure monitoring, and automated defibrillator self-test reporting.
-- **Automated Clinical QA/QI Scorecard**: Post-incident chart audit and protocol adherence evaluation against AHA/ATLS guidelines.
-
-For the active feature matrix and implementation status of all current modules, see [FEATURES.md](FEATURES.md).
+### Backend JUnit Test Suite
+Runs auth, RBAC, state machine, and administrator bootstrap tests:
+```bash
+cd backend
+mvn test
+```
 
 ---
 
 ## 🤝 Contributing & License
-
 Pull requests and issues are welcome on [GitHub](https://github.com/Manish-k07/aegis-dispatch). Distributed under the MIT License.

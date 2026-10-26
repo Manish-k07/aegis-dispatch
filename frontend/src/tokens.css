@@ -1007,6 +1007,7 @@ select:focus-visible,
 .m3-leaflet-div-icon {
   background: transparent !important;
   border: none !important;
+  overflow: visible !important;
 }
 
 .m3-marker-container {
