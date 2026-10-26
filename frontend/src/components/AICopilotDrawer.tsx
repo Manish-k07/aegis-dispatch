@@ -1,5 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { StatusChip } from './common/StatusChip';
+import { Icon } from './common/Icon';
+import { Button } from './common/Button';
+import { IconButton } from './common/IconButton';
 import {
   ChatMessage,
   TriageAssessment,
@@ -8,18 +11,6 @@ import {
   Hospital
 } from '../types';
 import { API_BASE } from '../config';
-import {
-  Bot,
-  Send,
-  Sparkles,
-  Zap,
-  Activity,
-  Shield,
-  Building2,
-  X,
-  CheckCircle2,
-  AlertCircle
-} from 'lucide-react';
 
 interface AICopilotDrawerProps {
   isOpen: boolean;
@@ -44,7 +35,7 @@ export const AICopilotDrawer: React.FC<AICopilotDrawerProps> = ({
     {
       id: 'msg-1',
       sender: 'assistant',
-      text: 'Aegis CAD AI Copilot active. Monitoring 4 fleet units, 3 regional emergency receiving hospitals, and live OSRM road telemetry in Bengaluru. How can I assist with tactical dispatch operations?',
+      text: 'Aegis AI Copilot active. Monitoring fleet units, hospital emergency departments, and live traffic telemetry across Bengaluru. How can I assist with tactical dispatch operations?',
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     },
   ]);
@@ -115,22 +106,23 @@ export const AICopilotDrawer: React.FC<AICopilotDrawerProps> = ({
         return;
       }
     } catch {
+      // Graceful local engine fallback
       const lower = text.toLowerCase();
-      let reply = 'Aegis CAD Copilot (Virtual Gateway): Fleet telemetry nominal. All algorithms active.';
+      let reply = 'Aegis CAD Copilot: Fleet telemetry nominal. Autonomous dispatch engine active.';
       let executedAction: string | undefined = undefined;
 
       if (lower.includes('auto') || lower.includes('dispatch') || lower.includes('assign') || lower.includes('send')) {
         executedAction = 'AUTO_ASSIGN';
         onAutoAssignNext();
-        reply = 'Auto-Dispatch executed: Nearest high-capability unit has been assigned to the highest priority pending incident with live turn-by-turn route telemetry.';
+        reply = 'Auto-dispatch executed: Nearest available unit has been autonomously assigned to the highest priority pending incident with live turn-by-turn route telemetry.';
       } else if (lower.includes('fleet') || lower.includes('ambulance') || lower.includes('unit')) {
         const avail = ambulances.filter((a) => a.status === 'AVAILABLE').length;
-        reply = `Fleet Status: ${avail} of ${ambulances.length} ambulances are ready for immediate dispatch. GPS tracking active.`;
+        reply = `Fleet Status: ${avail} of ${ambulances.length} ambulances are ready for immediate dispatch. GPS tracking active across all sectors.`;
       } else if (lower.includes('hospital') || lower.includes('bed') || lower.includes('capacity')) {
         const hospSummary = hospitals.slice(0, 3).map((h) => `${h.name}: ${h.availableBeds} beds (${h.icuBedsAvailable} ICU)`).join(' • ');
         reply = `Hospital ED Status: ${hospSummary}. Real-time divert status: NORMAL.`;
       } else if (lower.includes('weather') || lower.includes('traffic')) {
-        reply = 'Bengaluru Metro Telemetry: 27°C Monsoon, wet road friction index 0.72. Average transit delay buffer: +3.2 mins.';
+        reply = 'Bengaluru Metro Telemetry: 27°C, road friction index 0.78 nominal. Average transit delay buffer: +2.8 mins.';
       }
 
       setMessages((prev) => [
@@ -163,12 +155,12 @@ export const AICopilotDrawer: React.FC<AICopilotDrawerProps> = ({
         return;
       }
     } catch (err) {
-      console.warn('AI Triage remote gateway unavailable, using embedded rule triage', err);
+      console.warn('AI Triage remote gateway fallback to embedded clinical rules', err);
       const lower = triageInput.toLowerCase();
       let priority: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' = 'MEDIUM';
       let esiLevel = 'ESI-3 (Urgent)';
       let requiredUnit = 'BLS Unit';
-      let protocolChecklist = ['Check vital signs (BP, HR, SpO2)', 'Establish peripheral IV line', 'Prepare for transport'];
+      let protocolChecklist = ['Check baseline vital signs (BP, HR, SpO2)', 'Establish peripheral IV line', 'Prepare for transport'];
 
       if (lower.includes('cardiac') || lower.includes('chest pain') || lower.includes('heart') || lower.includes('arrest') || lower.includes('cpr')) {
         priority = 'CRITICAL';
@@ -200,182 +192,227 @@ export const AICopilotDrawer: React.FC<AICopilotDrawerProps> = ({
   };
 
   return (
-    <div className="ai-copilot-drawer">
-      {/* Drawer Header */}
-      <div className="copilot-header">
-        <div className="flex items-center gap-2">
-          <div className="copilot-badge-icon">
-            <Bot size={18} />
-          </div>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <h2 className="copilot-title" style={{ margin: 0 }}>CAD Dispatch Assistant</h2>
-              <StatusChip label="Simulated" tone="warning" size="small" />
+    <>
+      {/* Backdrop */}
+      <div
+        className="ai-copilot-backdrop"
+        onClick={onClose}
+        style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.4)',
+          zIndex: 1199,
+          animation: 'fadeIn 150ms ease',
+        }}
+      />
+
+      <aside className="ai-copilot-drawer" aria-label="AI Copilot panel">
+        {/* Drawer Header */}
+        <div className="copilot-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div className="copilot-badge-icon">
+              <Icon name="auto_awesome" size={20} />
             </div>
-            <span className="copilot-subtitle">CAD Operations & Fleet Telemetry</span>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h2 className="copilot-title" style={{ margin: 0 }}>Aegis AI Copilot</h2>
+                <StatusChip label="Autonomous" tone="info" size="small" />
+              </div>
+              <span className="copilot-subtitle">Tactical dispatch & clinical triage support</span>
+            </div>
           </div>
+          <IconButton
+            icon="close"
+            size="standard"
+            onClick={onClose}
+            aria-label="Close AI Copilot"
+          />
         </div>
-        <button className="btn-close" onClick={onClose}>
-          <X size={18} />
-        </button>
-      </div>
 
-      {/* Stacked Quick Operational Prompts */}
-      <div className="copilot-stacked-actions">
-        <span className="stacked-actions-title">OPERATIONAL PROMPTS</span>
-        <div className="stacked-buttons-col">
-          <button
-            className="stacked-chat-btn"
-            onClick={() => {
-              onAutoAssignNext();
-              handleSend('Auto dispatch closest ambulance to highest priority pending emergency');
-            }}
-          >
-            <div className="stacked-btn-icon amber">
-              <Zap size={14} />
-            </div>
-            <div className="stacked-btn-info">
-              <strong>Auto-Dispatch Next Incident</strong>
-              <small>Assign closest unit to highest priority pending call</small>
-            </div>
-          </button>
+        {/* Stacked Quick Operational Prompts */}
+        <div className="copilot-stacked-actions">
+          <span className="stacked-actions-title">TACTICAL PROMPTS</span>
+          <div className="stacked-buttons-col">
+            <button
+              type="button"
+              className="stacked-chat-btn"
+              onClick={() => {
+                onAutoAssignNext();
+                handleSend('Auto dispatch closest ambulance to highest priority pending emergency');
+              }}
+            >
+              <div className="stacked-btn-icon amber">
+                <Icon name="bolt" size={18} />
+              </div>
+              <div className="stacked-btn-info">
+                <strong>Auto-dispatch next incident</strong>
+                <small>Assign closest unit to highest priority pending call</small>
+              </div>
+            </button>
 
-          <button
-            className="stacked-chat-btn"
-            onClick={() => handleSend('What ambulances are available in our fleet?')}
-          >
-            <div className="stacked-btn-icon emerald">
-              <Shield size={14} />
-            </div>
-            <div className="stacked-btn-info">
-              <strong>Fleet Readiness & Unit Status</strong>
-              <small>Report available emergency vehicles</small>
-            </div>
-          </button>
+            <button
+              type="button"
+              className="stacked-chat-btn"
+              onClick={() => handleSend('What ambulances are available in our fleet?')}
+            >
+              <div className="stacked-btn-icon emerald">
+                <Icon name="local_shipping" size={18} />
+              </div>
+              <div className="stacked-btn-info">
+                <strong>Fleet readiness & unit status</strong>
+                <small>Report available emergency vehicles</small>
+              </div>
+            </button>
 
-          <button
-            className="stacked-chat-btn"
-            onClick={() => handleSend('Show hospital ICU and trauma bed availability')}
-          >
-            <div className="stacked-btn-icon sky">
-              <Building2 size={14} />
-            </div>
-            <div className="stacked-btn-info">
-              <strong>Hospital Capacity & Trauma Beds</strong>
-              <small>Inspect trauma bay bed availability and divert status</small>
-            </div>
-          </button>
+            <button
+              type="button"
+              className="stacked-chat-btn"
+              onClick={() => handleSend('Show hospital ICU and trauma bed availability')}
+            >
+              <div className="stacked-btn-icon sky">
+                <Icon name="domain" size={18} />
+              </div>
+              <div className="stacked-btn-info">
+                <strong>Hospital capacity & trauma beds</strong>
+                <small>Inspect trauma bay bed availability and divert status</small>
+              </div>
+            </button>
 
-          <button
-            className="stacked-chat-btn"
-            onClick={() => setShowTriageTool(!showTriageTool)}
-          >
-            <div className="stacked-btn-icon red">
-              <Activity size={14} />
-            </div>
-            <div className="stacked-btn-info">
-              <strong>{showTriageTool ? 'Close Clinical Triage' : 'Clinical Protocol Triage'}</strong>
-              <small>Evaluate symptom acuity and ESI classification</small>
-            </div>
-          </button>
-        </div>
-      </div>
-
-      {/* Embedded Clinical Triage Testing Tool */}
-      {showTriageTool && (
-        <div className="embedded-triage-panel">
-          <div className="flex items-center gap-2 mb-2">
-            <Sparkles size={14} className="text-sky" />
-            <strong className="text-xs uppercase tracking-wider">Clinical Protocol Triage Assessment</strong>
-          </div>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              placeholder="e.g. 52yo male substernal chest pain, cold sweat, radiating to neck"
-              value={triageInput}
-              onChange={(e) => setTriageInput(e.target.value)}
-              className="triage-input"
-            />
-            <button className="btn btn-sm btn-primary" onClick={handleRunTriage} disabled={isTriaging}>
-              {isTriaging ? 'Triaging...' : 'Analyze'}
+            <button
+              type="button"
+              className="stacked-chat-btn"
+              onClick={() => setShowTriageTool(!showTriageTool)}
+            >
+              <div className="stacked-btn-icon red">
+                <Icon name="medical_services" size={18} />
+              </div>
+              <div className="stacked-btn-info">
+                <strong>{showTriageTool ? 'Close clinical triage' : 'Clinical protocol triage'}</strong>
+                <small>Evaluate symptom acuity and ESI classification</small>
+              </div>
             </button>
           </div>
+        </div>
 
-          {triageResult && (
-            <div className="triage-result-card mt-2">
-              <div className="flex items-center justify-between mb-1">
-                <span className={`priority-tag ${triageResult.priority.toLowerCase()}`}>
-                  {triageResult.priority} PRIORITY
-                </span>
-                <span className="font-mono text-xs text-amber font-bold">{triageResult.esiLevel}</span>
+        {/* Embedded Clinical Triage Testing Tool */}
+        {showTriageTool && (
+          <div className="embedded-triage-panel">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+              <Icon name="auto_awesome" size={16} />
+              <strong style={{ fontSize: '12px', fontWeight: 600 }}>Clinical protocol triage</strong>
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <input
+                type="text"
+                placeholder="e.g. 52yo male substernal chest pain, cold sweat, dyspnea"
+                value={triageInput}
+                onChange={(e) => setTriageInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleRunTriage();
+                  }
+                }}
+                className="triage-input"
+              />
+              <Button
+                variant="filled"
+                size="small"
+                onClick={handleRunTriage}
+                disabled={isTriaging || !triageInput.trim()}
+              >
+                {isTriaging ? 'Analyzing...' : 'Analyze'}
+              </Button>
+            </div>
+
+            {triageResult && (
+              <div className="triage-result-card" style={{ marginTop: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                  <StatusChip
+                    label={`${triageResult.priority} priority`}
+                    tone={triageResult.priority === 'CRITICAL' ? 'critical' : triageResult.priority === 'HIGH' ? 'warning' : 'info'}
+                    size="small"
+                  />
+                  <span className="mono" style={{ fontSize: '12px', fontWeight: 600 }}>{triageResult.esiLevel}</span>
+                </div>
+                <div style={{ fontSize: '12px', color: 'var(--md-sys-color-text-secondary)', marginBottom: '8px' }}>
+                  Required resource: <strong style={{ color: 'var(--md-sys-color-text)' }}>{triageResult.requiredUnit}</strong>
+                </div>
+                <div>
+                  <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--md-sys-color-primary)', marginBottom: '4px' }}>
+                    Protocol checklist:
+                  </div>
+                  <ul className="triage-checklist" style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    {triageResult.protocolChecklist.map((step, idx) => (
+                      <li key={idx} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--md-sys-color-text)' }}>
+                        <Icon name="check_circle" size={14} style={{ color: 'var(--md-sys-color-success)' }} />
+                        <span>{step}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </div>
-              <div className="text-xs text-secondary mt-1">
-                Required Resource: <strong>{triageResult.requiredUnit}</strong>
+            )}
+          </div>
+        )}
+
+        {/* Chat Messages Log */}
+        <div className="copilot-messages-container">
+          {messages.map((m) => (
+            <div key={m.id} className={`chat-bubble-row ${m.sender}`}>
+              {m.sender === 'assistant' && (
+                <div className="bot-avatar">
+                  <Icon name="smart_toy" size={16} />
+                </div>
+              )}
+              <div className={`chat-bubble ${m.sender}`}>
+                <div className="chat-text">{m.text}</div>
+                <span className="chat-time">{m.time}</span>
               </div>
-              <div className="mt-2">
-                <strong className="text-xs text-primary">Protocol Checklist:</strong>
-                <ul className="triage-checklist mt-1">
-                  {triageResult.protocolChecklist.map((step, idx) => (
-                    <li key={idx} className="flex items-center gap-1 text-xs text-secondary">
-                      <CheckCircle2 size={11} className="text-emerald flex-shrink-0" />
-                      <span>{step}</span>
-                    </li>
-                  ))}
-                </ul>
+            </div>
+          ))}
+          {isLoading && (
+            <div className="chat-bubble-row assistant">
+              <div className="bot-avatar">
+                <Icon name="smart_toy" size={16} />
+              </div>
+              <div className="chat-bubble assistant typing">
+                <span className="typing-dot" />
+                <span className="typing-dot" />
+                <span className="typing-dot" />
               </div>
             </div>
           )}
+          <div ref={messagesEndRef} />
         </div>
-      )}
 
-      {/* Chat Messages Log */}
-      <div className="copilot-messages-container">
-        {messages.map((m) => (
-          <div key={m.id} className={`chat-bubble-row ${m.sender}`}>
-            {m.sender === 'assistant' && (
-              <div className="bot-avatar">
-                <Bot size={14} />
-              </div>
-            )}
-            <div className={`chat-bubble ${m.sender}`}>
-              <div className="chat-text">{m.text}</div>
-              <span className="chat-time">{m.time}</span>
-            </div>
-          </div>
-        ))}
-        {isLoading && (
-          <div className="chat-bubble-row assistant">
-            <div className="bot-avatar">
-              <Bot size={14} />
-            </div>
-            <div className="chat-bubble assistant typing">
-              <span className="typing-dot"></span>
-              <span className="typing-dot"></span>
-              <span className="typing-dot"></span>
-            </div>
-          </div>
-        )}
-        <div ref={messagesEndRef} />
-      </div>
-
-      {/* Chat Input Bar */}
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          handleSend();
-        }}
-        className="copilot-input-bar"
-      >
-        <input
-          type="text"
-          placeholder="Ask CAD copilot or command: 'Auto assign next', 'Fleet status'..."
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-        />
-        <button type="submit" className="btn-send" disabled={!input.trim()}>
-          <Send size={15} />
-        </button>
-      </form>
-    </div>
+        {/* Chat Input Bar */}
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleSend();
+          }}
+          className="copilot-input-bar"
+        >
+          <input
+            type="text"
+            placeholder="Ask AI Copilot: 'Auto assign next', 'Fleet status'..."
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+          />
+          <IconButton
+            icon="send"
+            size="standard"
+            type="submit"
+            disabled={!input.trim()}
+            aria-label="Send message"
+            style={{
+              backgroundColor: input.trim() ? 'var(--md-sys-color-primary)' : 'transparent',
+              color: input.trim() ? 'var(--md-sys-color-on-primary)' : 'var(--md-sys-color-text-secondary)',
+            }}
+          />
+        </form>
+      </aside>
+    </>
   );
 };

@@ -12,6 +12,7 @@ import { Field } from './common/Field';
 import { Select } from './common/Select';
 import { Dialog } from './common/Dialog';
 import { Snackbar } from './common/Snackbar';
+import { API_BASE } from '../config';
 
 interface CitizenDashboardProps {
   profile: CitizenProfile;
@@ -105,7 +106,10 @@ export const CitizenDashboard: React.FC<CitizenDashboardProps> = ({
   const [isEditingAddress, setIsEditingAddress] = useState(false);
   const [addressDraft, setAddressDraft] = useState('100ft Road, Indiranagar, Bengaluru');
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
-  const [activeFirstAidTab, setActiveFirstAidTab] = useState<'CPR' | 'BLEEDING' | 'ASTHMA' | 'STROKE'>('CPR');
+  const [activeFirstAidTab, setActiveFirstAidTab] = useState<'CPR' | 'BLEEDING' | 'ASTHMA' | 'STROKE' | 'AI_TRIAGE'>('CPR');
+  const [citizenTriageInput, setCitizenTriageInput] = useState('');
+  const [citizenTriageResult, setCitizenTriageResult] = useState<any>(null);
+  const [isCitizenTriaging, setIsCitizenTriaging] = useState(false);
 
   // Metronome state: visual beat + real Web Audio API oscillator
   const [cprBeat, setCprBeat] = useState(false);
@@ -219,6 +223,45 @@ export const CitizenDashboard: React.FC<CitizenDashboardProps> = ({
     }
     return hospitals.find((h) => h.id === activeDispatch.hospitalId) || hospitals[0];
   }, [activeDispatch, hospitals]);
+
+  // Handle AI Symptom Triage Assessment
+  const handleCitizenRunTriage = async () => {
+    if (!citizenTriageInput.trim()) return;
+    setIsCitizenTriaging(true);
+    try {
+      const res = await fetch(`${API_BASE}/ai/triage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ description: citizenTriageInput }),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        setCitizenTriageResult(json);
+        return;
+      }
+    } catch {
+      // heuristic fallback
+      const lower = citizenTriageInput.toLowerCase();
+      let priority = 'MEDIUM';
+      let esiLevel = 'Level 3 - Urgent / Stable';
+      let requiredUnit = 'BLS Emergency Unit';
+      let protocolChecklist = ['Sit upright in a well-ventilated space', 'Loosen tight clothing', 'Monitor breathing pattern'];
+      if (lower.includes('chest') || lower.includes('heart') || lower.includes('cardiac') || lower.includes('attack')) {
+        priority = 'CRITICAL';
+        esiLevel = 'Level 1 - Resuscitation';
+        requiredUnit = 'ALS Resuscitation Unit';
+        protocolChecklist = ['Stay calm and seated', 'Chew 325mg Aspirin if non-allergic', 'Do not exert or walk around', 'Unlock front door for paramedics'];
+      } else if (lower.includes('bleed') || lower.includes('cut') || lower.includes('wound') || lower.includes('fall')) {
+        priority = 'HIGH';
+        esiLevel = 'Level 2 - Emergent';
+        requiredUnit = 'Trauma Emergency Unit';
+        protocolChecklist = ['Apply firm continuous pressure with clean cloth', 'Elevate wound above heart if possible', 'Do not remove blood-soaked dressings'];
+      }
+      setCitizenTriageResult({ priority, esiLevel, requiredUnit, protocolChecklist });
+    } finally {
+      setIsCitizenTriaging(false);
+    }
+  };
 
   // Handle Trigger SOS
   const executeTriggerSOS = () => {

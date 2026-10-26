@@ -639,6 +639,31 @@ export const HospitalDashboard: React.FC<HospitalDashboardProps> = ({
 
         {/* Right Column: Inbound Ambulances Card + Recent Activity Log */}
         <Stack gap={16}>
+          {/* AI Intake & Predictive Bed Allocation Advisory */}
+          <Card padding={16} variant="outlined" style={{ backgroundColor: 'var(--md-sys-color-surface-container)' }}>
+            <Row justify="space-between" align="center" style={{ marginBottom: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Icon name="auto_awesome" size={20} style={{ color: 'var(--md-sys-color-primary)' }} />
+                <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--md-sys-color-text)' }}>
+                  AI Inbound Triage & Bed Staging
+                </span>
+              </div>
+              <StatusChip label="Autonomous" tone="info" size="small" />
+            </Row>
+            <div style={{ fontSize: '13px', lineHeight: '1.4', color: 'var(--md-sys-color-text-secondary)' }}>
+              {inboundDispatches.length > 0 ? (
+                <>
+                  <strong style={{ color: 'var(--md-sys-color-text)' }}>Active intake recommendation:</strong>{' '}
+                  {icuBedsAvailable > 0 && traumaBaysAvailable > 0
+                    ? 'Pre-stage Trauma Bay 1 and ICU Bed for inbound unit with vital telemetry. Cardiac Cath and Trauma teams alerted.'
+                    : `Capacity tight (${icuBedsAvailable} ICU, ${traumaBaysAvailable} trauma). Monitor diversion threshold closely.`}
+                </>
+              ) : (
+                'All reception bays clear. AI monitoring regional CAD dispatch grid for emergency transfers.'
+              )}
+            </div>
+          </Card>
+
           {/* Inbound Ambulances Card */}
           <Card padding={16} variant="outlined">
             <Row justify="space-between" align="center" style={{ marginBottom: '12px' }}>

@@ -23,6 +23,7 @@ interface NavbarProps {
   onAutoAssignNext?: () => void;
   autoDispatchEnabled?: boolean;
   onToggleAutoDispatch?: (enabled: boolean) => void;
+  onOpenAICopilot?: () => void;
   onExportData?: () => void;
   theme?: 'light' | 'dark';
   onToggleTheme?: () => void;
@@ -42,6 +43,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onAutoAssignNext,
   autoDispatchEnabled = false,
   onToggleAutoDispatch,
+  onOpenAICopilot,
   onExportData,
   theme = 'dark',
   onToggleTheme,
@@ -257,6 +259,20 @@ export const Navbar: React.FC<NavbarProps> = ({
                 label="Auto-dispatch"
               />
             </div>
+          )}
+
+          {/* AI Copilot Button (40px tonal with auto_awesome icon) */}
+          {currentRole === 'DISPATCHER' && onOpenAICopilot && (
+            <Button
+              variant="tonal"
+              size="standard"
+              icon="auto_awesome"
+              onClick={onOpenAICopilot}
+              style={{ height: '40px' }}
+              title="Open Aegis AI Copilot and tactical triage assistant"
+            >
+              <span className="m3-hide-tablet">AI Copilot</span>
+            </Button>
           )}
 
           {/* "New incident" filled button (40px, solid primary) */}

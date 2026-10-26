@@ -3378,13 +3378,13 @@ html, body {
   right: 20px;
   width: 440px;
   max-width: calc(100vw - 40px);
-  background: var(--bg-panel, #292a2d);
-  border: 1px solid var(--border, #3c4043);
+  background: var(--md-sys-color-surface, #292a2d);
+  border: 1px solid var(--md-sys-color-outline, #3c4043);
   border-radius: 16px;
   z-index: 1200;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
   overflow: hidden;
   animation: drawerSlideIn 0.2s cubic-bezier(0.2, 0, 0, 1);
 }
@@ -3416,49 +3416,49 @@ html, body {
   justify-content: space-between;
   align-items: center;
   padding: 14px 18px;
-  border-bottom: 1px solid var(--border, #3c4043);
-  background: var(--bg-card, #303134);
+  border-bottom: 1px solid var(--md-sys-color-outline, #3c4043);
+  background: var(--md-sys-color-surface-container, #303134);
 }
 
 .copilot-badge-icon {
   width: 36px;
   height: 36px;
-  border-radius: 10px;
-  background: rgba(138, 180, 248, 0.12);
-  border: 1px solid rgba(138, 180, 248, 0.25);
+  border-radius: 18px;
+  background: var(--md-sys-color-primary-container, rgba(138, 180, 248, 0.12));
+  border: 1px solid var(--md-sys-color-primary, #8ab4f8);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--blue, #8ab4f8);
+  color: var(--md-sys-color-primary, #8ab4f8);
 }
 
 .copilot-title {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--text-primary, #e8eaed);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--md-sys-color-text, #e8eaed);
   margin: 0;
 }
 
 .copilot-subtitle {
-  font-size: 11px;
-  color: var(--text-muted, #9aa0a6);
+  font-size: 12px;
+  color: var(--md-sys-color-text-secondary, #9aa0a6);
 }
 
 /* Stacked Chat Action Buttons */
 .copilot-stacked-actions {
   padding: 12px 16px;
-  border-bottom: 1px solid var(--border, #3c4043);
-  background: var(--bg-main, #202124);
+  border-bottom: 1px solid var(--md-sys-color-outline, #3c4043);
+  background: var(--md-sys-color-background, #202124);
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
 .stacked-actions-title {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.8px;
-  color: var(--text-secondary, #9aa0a6);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: var(--md-sys-color-text-secondary, #9aa0a6);
   text-transform: uppercase;
 }
 
@@ -3471,27 +3471,28 @@ html, body {
 .stacked-chat-btn {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  background: var(--bg-card, #303134);
-  border: 1px solid var(--border, #3c4043);
-  border-radius: 10px;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--md-sys-color-surface-container, #303134);
+  border: 1px solid var(--md-sys-color-outline, #3c4043);
+  border-radius: 12px;
   cursor: pointer;
   text-align: left;
   transition: background-color 0.15s ease, border-color 0.15s ease;
   width: 100%;
   font-family: inherit;
+  color: var(--md-sys-color-text, #e8eaed);
 }
 
 .stacked-chat-btn:hover {
-  background: var(--bg-card-hover, #3c4043);
-  border-color: var(--border-light, #5f6368);
+  background: var(--md-sys-color-surface-container-high, #3c4043);
+  border-color: var(--md-sys-color-primary, #8ab4f8);
 }
 
 .stacked-btn-icon {
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
+  width: 32px;
+  height: 32px;
+  border-radius: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3499,69 +3500,69 @@ html, body {
 }
 
 .stacked-btn-icon.amber {
-  background: rgba(253, 214, 99, 0.12);
-  color: var(--amber, #fdd663);
+  background: var(--md-sys-color-warning-container, rgba(253, 214, 99, 0.12));
+  color: var(--md-sys-color-warning, #fdd663);
 }
 
 .stacked-btn-icon.emerald {
-  background: rgba(129, 201, 149, 0.12);
-  color: var(--emerald, #81c995);
+  background: var(--md-sys-color-success-container, rgba(129, 201, 149, 0.12));
+  color: var(--md-sys-color-success, #81c995);
 }
 
 .stacked-btn-icon.sky {
-  background: rgba(138, 180, 248, 0.12);
-  color: var(--blue, #8ab4f8);
+  background: var(--md-sys-color-primary-container, rgba(138, 180, 248, 0.12));
+  color: var(--md-sys-color-primary, #8ab4f8);
 }
 
 .stacked-btn-icon.red {
-  background: rgba(242, 139, 130, 0.12);
-  color: var(--red, #f28b82);
+  background: var(--md-sys-color-error-container, rgba(242, 139, 130, 0.12));
+  color: var(--md-sys-color-error, #f28b82);
 }
 
 .stacked-btn-info {
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 2px;
 }
 
 .stacked-btn-info strong {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-primary, #e8eaed);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--md-sys-color-text, #e8eaed);
 }
 
 .stacked-btn-info small {
   font-size: 11px;
-  color: var(--text-muted, #9aa0a6);
+  color: var(--md-sys-color-text-secondary, #9aa0a6);
 }
 
 .embedded-triage-panel {
-  background: var(--bg-card, #303134);
-  border-bottom: 1px solid var(--border, #3c4043);
+  background: var(--md-sys-color-surface-container, #303134);
+  border-bottom: 1px solid var(--md-sys-color-outline, #3c4043);
   padding: 12px 16px;
 }
 
 .triage-input {
   flex: 1;
-  background: var(--bg-main, #202124);
-  border: 1px solid var(--border-light, #5f6368);
+  background: var(--md-sys-color-background, #202124);
+  border: 1px solid var(--md-sys-color-outline, #5f6368);
   border-radius: 8px;
-  padding: 7px 12px;
-  font-size: 12px;
-  color: var(--text-primary, #e8eaed);
+  padding: 8px 12px;
+  font-size: 13px;
+  color: var(--md-sys-color-text, #e8eaed);
   outline: none;
   font-family: inherit;
 }
 
 .triage-input:focus {
-  border-color: var(--blue, #8ab4f8);
+  border-color: var(--md-sys-color-primary, #8ab4f8);
 }
 
 .triage-result-card {
-  background: var(--bg-main, #202124);
-  border: 1px solid var(--border, #3c4043);
+  background: var(--md-sys-color-background, #202124);
+  border: 1px solid var(--md-sys-color-outline, #3c4043);
   border-radius: 8px;
-  padding: 10px;
+  padding: 12px;
 }
 
 .copilot-messages-container {
@@ -3571,6 +3572,7 @@ html, body {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  background: var(--md-sys-color-surface, #292a2d);
 }
 
 .chat-bubble-row {
@@ -3586,25 +3588,25 @@ html, body {
   max-width: 85%;
   padding: 10px 14px;
   border-radius: 12px;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.45;
 }
 
 .chat-bubble.assistant {
-  background: var(--bg-card, #303134);
-  border: 1px solid var(--border, #3c4043);
-  color: var(--text-primary, #e8eaed);
+  background: var(--md-sys-color-surface-container, #303134);
+  border: 1px solid var(--md-sys-color-outline, #3c4043);
+  color: var(--md-sys-color-text, #e8eaed);
 }
 
 .chat-bubble.user {
-  background: #394457;
-  border: 1px solid rgba(138, 180, 248, 0.25);
-  color: var(--text-primary, #e8eaed);
+  background: var(--md-sys-color-primary-container, #174ea6);
+  border: 1px solid var(--md-sys-color-primary, rgba(138, 180, 248, 0.25));
+  color: var(--md-sys-color-on-primary-container, #d2e3fc);
 }
 
 .chat-time {
-  font-size: 10px;
-  color: var(--text-muted, #9aa0a6);
+  font-size: 11px;
+  color: var(--md-sys-color-text-secondary, #9aa0a6);
   display: block;
   margin-top: 4px;
   text-align: right;
@@ -3613,26 +3615,26 @@ html, body {
 .copilot-input-bar {
   display: flex;
   padding: 12px 16px;
-  border-top: 1px solid var(--border, #3c4043);
-  background: var(--bg-card, #303134);
+  border-top: 1px solid var(--md-sys-color-outline, #3c4043);
+  background: var(--md-sys-color-surface-container, #303134);
   gap: 8px;
   align-items: center;
 }
 
 .copilot-input-bar input {
   flex: 1;
-  background: var(--bg-main, #202124);
-  border: 1px solid var(--border-light, #5f6368);
+  background: var(--md-sys-color-background, #202124);
+  border: 1px solid var(--md-sys-color-outline, #5f6368);
   border-radius: 20px;
   padding: 9px 16px;
-  font-size: 12px;
-  color: var(--text-primary, #e8eaed);
+  font-size: 13px;
+  color: var(--md-sys-color-text, #e8eaed);
   outline: none;
   font-family: inherit;
 }
 
 .copilot-input-bar input:focus {
-  border-color: var(--blue, #8ab4f8);
+  border-color: var(--md-sys-color-primary, #8ab4f8);
 }
 
 .btn-send {

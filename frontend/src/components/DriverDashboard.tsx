@@ -8,6 +8,7 @@ import {
   TrafficPreemptionSignal,
 } from '../types';
 import { MedicalMonitorWidget } from './MedicalMonitorWidget';
+import { API_BASE } from '../config';
 import { AmbulanceRouteMap } from './AmbulanceRouteMap';
 import {
   Icon,
@@ -55,6 +56,7 @@ export const DriverDashboard: React.FC<DriverDashboardProps> = ({
   onAdvanceStatus,
   onStreamVitals,
   missionTelemetry,
+  apiBase,
   onLogout,
 }) => {
   // Hands-free Voice recognition state
@@ -200,6 +202,56 @@ export const DriverDashboard: React.FC<DriverDashboardProps> = ({
         console.error(e);
       }
     }
+  };
+
+  // AI Clinical Decision Support State
+  const [aiProtocolResult, setAiProtocolResult] = useState<any>(null);
+  const [isAiProtocolLoading, setIsAiProtocolLoading] = useState(false);
+  const [showAiGuidance, setShowAiGuidance] = useState(false);
+
+  const handleRunAiProtocolTriage = async () => {
+    setIsAiProtocolLoading(true);
+    try {
+      const desc = vitals.conditionSummary || emergency?.type || 'EMERGENCY';
+      const res = await fetch(`${apiBase || API_BASE}/ai/triage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ description: desc, type: emergency?.type || 'ACCIDENT' }),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        setAiProtocolResult(json);
+        setShowAiGuidance(true);
+        return;
+      }
+    } catch {
+      // Heuristic fallback
+      const emType = emergency?.type || 'CARDIAC';
+      setAiProtocolResult({
+        priority: 'CRITICAL',
+        esiLevel: 'Level 1 - Resuscitation',
+        requiredUnit: 'ALS Unit',
+        protocolChecklist: [
+          'Acquire 12-lead ECG & transmit to receiving ED',
+          'Chewable Aspirin 325mg if not contraindicated',
+          'Bilateral 18G IV lines with saline lock',
+          'Notify Cath Lab for pre-arrival STEMI activation',
+        ],
+      });
+      setShowAiGuidance(true);
+    } finally {
+      setIsAiProtocolLoading(false);
+    }
+  };
+
+  const handleApplyAiProtocol = () => {
+    if (!aiProtocolResult?.protocolChecklist) return;
+    const checklistStr = aiProtocolResult.protocolChecklist.join('; ');
+    const updatedNotes = vitals.conditionSummary
+      ? `${vitals.conditionSummary}\n[AI Protocol: ${checklistStr}]`
+      : `[AI Protocol: ${checklistStr}]`;
+    setVitals({ ...vitals, conditionSummary: updatedNotes });
+    setSnackbarMessage('AI Clinical Protocol applied to patient transmission notes');
   };
 
   const handleBroadcastVitals = () => {

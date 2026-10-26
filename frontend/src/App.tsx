@@ -7,6 +7,7 @@ import { FleetList } from './components/FleetList';
 import { CandidateModal } from './components/CandidateModal';
 import { HospitalModal } from './components/HospitalModal';
 import { NewEmergencyModal } from './components/NewEmergencyModal';
+import { AICopilotDrawer } from './components/AICopilotDrawer';
 import { DriverDashboard } from './components/DriverDashboard';
 import { HospitalDashboard } from './components/HospitalDashboard';
 import { HospitalList } from './components/HospitalList';
@@ -1098,7 +1099,20 @@ export const App: React.FC = () => {
     const pendingList = data.emergencies.filter(
       (e) => e.status === 'PENDING_DISPATCH' || e.status === 'CREATED'
     );
-    if (pendingList.length === 0) return;
+    if (pendingList.length === 0) {
+      setToastMessage('Queue clear: No pending emergency calls awaiting dispatch.');
+      setTimeout(() => setToastMessage(null), 3000);
+      return;
+    }
+
+    const availableAmbulances = (data.ambulances || []).filter(
+      (a) => a.status === 'AVAILABLE'
+    );
+    if (availableAmbulances.length === 0) {
+      setToastMessage('All fleet units currently assigned. Standing by for unit availability.');
+      setTimeout(() => setToastMessage(null), 3000);
+      return;
+    }
 
     // Prioritize CRITICAL > HIGH > MEDIUM > LOW
     const priorityWeight: Record<string, number> = {
@@ -1113,6 +1127,61 @@ export const App: React.FC = () => {
 
     await handleAutoAssign(highest.id);
   };
+
+  const handleToggleAutoDispatch = (enabled: boolean) => {
+    setAutoDispatchEnabled(enabled);
+    if (enabled) {
+      audioSystem.playMissionCompleteChime();
+      setToastMessage('AI Auto-dispatch ACTIVE: Continuously assigning nearest units to priority incidents.');
+      setTimeout(() => setToastMessage(null), 4000);
+      setLiveEvents((prev) => [
+        `${new Date().toLocaleTimeString()} · [AI AUTO-DISPATCH] Autonomous engine ACTIVE · Monitoring emergency queue`,
+        ...prev.slice(0, 19),
+      ]);
+      // Immediately run auto-dispatch on current queue
+      setTimeout(() => {
+        handleAutoAssignNext();
+      }, 250);
+    } else {
+      setToastMessage('Auto-dispatch PAUSED: Manual dispatcher confirmation required.');
+      setTimeout(() => setToastMessage(null), 3500);
+      setLiveEvents((prev) => [
+        `${new Date().toLocaleTimeString()} · [AI AUTO-DISPATCH] Paused by dispatcher`,
+        ...prev.slice(0, 19),
+      ]);
+    }
+  };
+
+  // Autonomous continuous AI Auto-Dispatch loop:
+  // When enabled, automatically scans for any unassigned emergencies and dispatches available fleet
+  useEffect(() => {
+    if (!autoDispatchEnabled || role !== 'DISPATCHER') return;
+
+    const timer = setInterval(() => {
+      const pendingList = (data.emergencies || []).filter(
+        (e) => e.status === 'PENDING_DISPATCH' || e.status === 'CREATED'
+      );
+      const availableAmbulances = (data.ambulances || []).filter(
+        (a) => a.status === 'AVAILABLE'
+      );
+
+      if (pendingList.length > 0 && availableAmbulances.length > 0) {
+        const priorityWeight: Record<string, number> = {
+          CRITICAL: 4,
+          HIGH: 3,
+          MEDIUM: 2,
+          LOW: 1,
+        };
+        const highest = pendingList.slice().sort((a, b) => {
+          return (priorityWeight[b.priority] || 1) - (priorityWeight[a.priority] || 1);
+        })[0];
+
+        handleAutoAssign(highest.id);
+      }
+    }, 2500);
+
+    return () => clearInterval(timer);
+  }, [autoDispatchEnabled, role, data.emergencies, data.ambulances]);
 
   const handleAdvanceStatus = async (dispatch: Dispatch, nextStatus: string) => {
     try {
@@ -1300,9 +1369,15 @@ export const App: React.FC = () => {
         setIsNewEmergencyOpen(false);
         setMapClickCoords(null);
         audioSystem.playCriticalIncidentChime();
+        const created = await res.json().catch(() => null);
         fetchDashboard();
         fetchAuditLogs();
         setActiveTab('QUEUE');
+        if (autoDispatchEnabled && created?.id) {
+          setTimeout(() => {
+            handleAutoAssign(created.id);
+          }, 350);
+        }
         return;
       }
     } catch {
@@ -1354,6 +1429,12 @@ export const App: React.FC = () => {
       `${new Date().toLocaleTimeString()} · [INCOMING CALL] #${newEmergency.id.slice(-6)} · ${newEmergency.type} [${newEmergency.priority}]`,
       ...prev.slice(0, 19),
     ]);
+
+    if (autoDispatchEnabled) {
+      setTimeout(() => {
+        handleAutoAssign(newEmergency.id);
+      }, 350);
+    }
   };
 
   const handleMapClick = (lat: number, lon: number) => {
@@ -1650,7 +1731,8 @@ export const App: React.FC = () => {
         }}
         onAutoAssignNext={handleAutoAssignNext}
         autoDispatchEnabled={autoDispatchEnabled}
-        onToggleAutoDispatch={setAutoDispatchEnabled}
+        onToggleAutoDispatch={handleToggleAutoDispatch}
+        onOpenAICopilot={() => setIsAICopilotOpen(true)}
         onExportData={handleExportAnalyticsCsv}
         theme={effectiveTheme}
         onToggleTheme={handleToggleTheme}
@@ -1827,6 +1909,17 @@ export const App: React.FC = () => {
           onSubmit={handleCreateEmergency}
         />
       )}
+
+      {/* AI Tactical Copilot & Clinical Triage Drawer */}
+      <AICopilotDrawer
+        isOpen={isAICopilotOpen}
+        onClose={() => setIsAICopilotOpen(false)}
+        emergencies={data.emergencies}
+        ambulances={data.ambulances}
+        hospitals={data.hospitals}
+        onAutoAssignNext={handleAutoAssignNext}
+        onRefreshData={fetchDashboard}
+      />
 
       {/* Floating System Toast Alert */}
       {toastMessage && (

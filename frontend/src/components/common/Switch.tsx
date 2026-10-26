@@ -15,9 +15,18 @@ export const Switch: React.FC<SwitchProps> = ({
   disabled = false,
   className = '',
 }) => {
+  const handleToggle = (e: React.SyntheticEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!disabled) {
+      onChange(!checked);
+    }
+  };
+
   return (
     <label
       className={`m3-switch-wrapper ${disabled ? 'is-disabled' : ''} ${className}`}
+      onClick={handleToggle}
       style={{
         display: 'inline-flex',
         alignItems: 'center',
@@ -32,14 +41,9 @@ export const Switch: React.FC<SwitchProps> = ({
         role="switch"
         aria-checked={checked}
         tabIndex={disabled ? -1 : 0}
-        onClick={(e) => {
-          e.preventDefault();
-          if (!disabled) onChange(!checked);
-        }}
         onKeyDown={(e) => {
           if (e.key === ' ' || e.key === 'Enter') {
-            e.preventDefault();
-            if (!disabled) onChange(!checked);
+            handleToggle(e);
           }
         }}
         style={{
