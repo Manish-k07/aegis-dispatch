@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { StatusChip } from './common/StatusChip';
 import {
   ChatMessage,
   TriageAssessment,
@@ -207,7 +208,10 @@ export const AICopilotDrawer: React.FC<AICopilotDrawerProps> = ({
             <Bot size={18} />
           </div>
           <div>
-            <h2 className="copilot-title">CAD Dispatch Assistant</h2>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <h2 className="copilot-title" style={{ margin: 0 }}>CAD Dispatch Assistant</h2>
+              <StatusChip label="Simulated" tone="warning" size="small" />
+            </div>
             <span className="copilot-subtitle">CAD Operations & Fleet Telemetry</span>
           </div>
         </div>

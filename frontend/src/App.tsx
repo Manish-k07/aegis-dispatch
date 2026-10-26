@@ -10,7 +10,6 @@ import { NewEmergencyModal } from './components/NewEmergencyModal';
 import { AuditLogDrawer } from './components/AuditLogDrawer';
 import { DriverDashboard } from './components/DriverDashboard';
 import { HospitalDashboard } from './components/HospitalDashboard';
-import { SaveToFileModal } from './components/SaveToFileModal';
 import { HospitalList } from './components/HospitalList';
 import { Footer } from './components/Footer';
 import { LoginGateway } from './components/LoginGateway';
@@ -213,33 +212,19 @@ export const App: React.FC = () => {
 
   // Tools & Dialogs
   const [isAICopilotOpen, setIsAICopilotOpen] = useState(false);
-  const [isMaintenanceOpen, setIsMaintenanceOpen] = useState(false);
-  const [isPredictiveOpen, setIsPredictiveOpen] = useState(false);
-  const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
-  const [isLegalModalOpen, setIsLegalModalOpen] = useState(false);
-  const [legalModalTab, setLegalModalTab] = useState<'privacy' | 'terms' | 'security'>('privacy');
-  const [isCapacityHudOpen, setIsCapacityHudOpen] = useState(false);
-  const [isMciActive, setIsMciActive] = useState(false);
+  const [isV2XOpen, setIsV2XOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Advanced Master Plan Modals State
-  const [isNG911Open, setIsNG911Open] = useState(false);
-  const [isV2XOpen, setIsV2XOpen] = useState(false);
-  const [isMciTriageOpen, setIsMciTriageOpen] = useState(false);
-  const [isClinicalQaOpen, setIsClinicalQaOpen] = useState(false);
-  const [isDroneDispatchOpen, setIsDroneDispatchOpen] = useState(false);
-  const [activeDroneMission, setActiveDroneMission] = useState<{
-    id: string;
-    payload: string;
-    startCoords: [number, number];
-    targetCoords: [number, number];
-    etaMinutes: number;
-    altitudeMeters: number;
-  } | null>(null);
-
-  const handleOpenLegal = (tab: 'privacy' | 'terms' | 'security' = 'privacy') => {
-    setLegalModalTab(tab);
-    setIsLegalModalOpen(true);
+  const handleExportAnalyticsCsv = () => {
+    const url = `${API_BASE}/analytics/export.csv`;
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `aegis_analytics_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setToastMessage('Exporting analytics CSV report...');
+    setTimeout(() => setToastMessage(null), 4000);
   };
 
   // Live Streamed Patient Vitals by dispatch ID
@@ -1476,7 +1461,6 @@ export const App: React.FC = () => {
             onToggleSimulation={handleToggleSimulation}
             onAdvanceStatus={handleAdvanceStatus}
             onStreamVitals={handleStreamVitals}
-            onSaveToFile={() => setIsSaveModalOpen(true)}
             missionTelemetry={missionTelemetry}
             apiBase={API_BASE}
             onLogout={handleLogout}
@@ -1486,17 +1470,6 @@ export const App: React.FC = () => {
             <h3>Vehicle unit not selected</h3>
             <button className="btn btn-primary mt-4" onClick={handleLogout}>Return to Login Gateway</button>
           </div>
-        )}
-        {isSaveModalOpen && (
-          <SaveToFileModal
-            isOpen={isSaveModalOpen}
-            onClose={() => setIsSaveModalOpen(false)}
-            data={data}
-            onSaveSuccess={(res) => {
-              setToastMessage(`MDT snapshot saved: ${res.snapshotFile}`);
-              setTimeout(() => setToastMessage(null), 5000);
-            }}
-          />
         )}
         {toastMessage && (
           <div className="system-toast-banner">
@@ -1523,7 +1496,6 @@ export const App: React.FC = () => {
             liveVitalsByDispatch={liveVitalsByDispatch}
             onUpdateCapacity={handleUpdateHospitalCapacity}
             onAdvanceStatus={handleAdvanceStatus}
-            onSaveToFile={() => setIsSaveModalOpen(true)}
             onLogout={handleLogout}
           />
         ) : (
@@ -1531,17 +1503,6 @@ export const App: React.FC = () => {
             <h3>Hospital facility not selected</h3>
             <button className="btn btn-primary mt-4" onClick={handleLogout}>Return to Login Gateway</button>
           </div>
-        )}
-        {isSaveModalOpen && (
-          <SaveToFileModal
-            isOpen={isSaveModalOpen}
-            onClose={() => setIsSaveModalOpen(false)}
-            data={data}
-            onSaveSuccess={(res) => {
-              setToastMessage(`Hospital log saved: ${res.snapshotFile}`);
-              setTimeout(() => setToastMessage(null), 5000);
-            }}
-          />
         )}
         {toastMessage && (
           <div className="system-toast-banner">
@@ -1573,7 +1534,7 @@ export const App: React.FC = () => {
         onAutoAssignNext={handleAutoAssignNext}
         autoDispatchEnabled={autoDispatchEnabled}
         onToggleAutoDispatch={setAutoDispatchEnabled}
-        onExportData={() => setIsSaveModalOpen(true)}
+        onExportData={handleExportAnalyticsCsv}
         theme={effectiveTheme}
         onToggleTheme={handleToggleTheme}
       />
@@ -1646,7 +1607,6 @@ export const App: React.FC = () => {
               onSelectEmergency={handleSelectEmergency}
               onMapClick={handleMapClick}
               onStopSimulation={handleToggleSimulation}
-              activeDroneMission={activeDroneMission}
             />
           </section>
 
@@ -1765,17 +1725,6 @@ export const App: React.FC = () => {
           onSubmit={handleCreateEmergency}
         />
       )}
-
-      {/* Save CAD State to File Modal */}
-      <SaveToFileModal
-        isOpen={isSaveModalOpen}
-        onClose={() => setIsSaveModalOpen(false)}
-        data={data}
-        onSaveSuccess={(res) => {
-          setToastMessage(`CAD snapshot saved to file: ${res.snapshotFile} (${res.fileSizeFormatted})`);
-          setTimeout(() => setToastMessage(null), 5000);
-        }}
-      />
 
       {/* Floating System Toast Alert */}
       {toastMessage && (

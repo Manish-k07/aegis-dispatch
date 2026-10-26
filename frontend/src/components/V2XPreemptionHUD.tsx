@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Radio, ShieldAlert, CheckCircle2, AlertTriangle, Navigation, Zap, X, MapPin } from 'lucide-react';
+import { StatusChip } from './common/StatusChip';
 
 interface V2XPreemptionHUDProps {
   isOpen: boolean;
@@ -59,12 +60,10 @@ export const V2XPreemptionHUD: React.FC<V2XPreemptionHUDProps> = ({
             </div>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <strong style={{ fontSize: '16px', color: '#f8fafc', letterSpacing: '0.5px' }}>
-                  V2X Emergency Vehicle Preemption (EVP) HUD
+                <strong style={{ fontSize: '16px', color: '#f8fafc' }}>
+                  V2X Emergency Vehicle Preemption HUD
                 </strong>
-                <span style={{ fontSize: '10px', background: '#10b981', color: '#ffffff', padding: '2px 8px', borderRadius: '4px', fontWeight: 800, letterSpacing: '0.8px' }}>
-                  NTCIP 1202 ACTIVE
-                </span>
+                <StatusChip label="Simulated" tone="warning" size="small" />
               </div>
               <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px' }}>
                 Municipal Traffic Management Center Link · Preempting Signals for {ambulanceRegistration}

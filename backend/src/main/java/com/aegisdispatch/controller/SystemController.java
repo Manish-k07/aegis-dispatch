@@ -1,17 +1,17 @@
 package com.aegisdispatch.controller;
 
 import com.aegisdispatch.service.CadFileService;
+import org.springframework.core.env.Environment;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.io.IOException;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
-import java.util.List;
+import java.util.Arrays;
 import java.util.Map;
 
 @RestController
@@ -19,25 +19,27 @@ import java.util.Map;
 public class SystemController {
 
     private final CadFileService fileService;
+    private final Environment environment;
+    private final DispatchController dispatchController;
 
-    public SystemController(CadFileService fileService) {
+    public SystemController(CadFileService fileService, Environment environment, DispatchController dispatchController) {
         this.fileService = fileService;
+        this.environment = environment;
+        this.dispatchController = dispatchController;
     }
 
     /**
-     * Explicitly saves all system state (emergencies, dispatches, fleet, hospitals, audit logs)
-     * into a JSON file on the server disk.
+     * Resets simulation data - ONLY allowed when Spring profile is "demo".
      */
-    @PostMapping("/save")
-    public ResponseEntity<?> saveToFile(@RequestBody(required = false) Map<String, String> body) {
-        try {
-            String reason = body != null && body.containsKey("reason") ? body.get("reason") : "OPERATOR_MANUAL_SAVE";
-            Map<String, Object> result = fileService.saveSnapshotToFile(reason);
-            return ResponseEntity.ok(result);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Failed to save system state to file: " + e.getMessage()));
+    @PostMapping("/reset")
+    public ResponseEntity<?> resetSystem() {
+        boolean isDemo = Arrays.asList(environment.getActiveProfiles()).contains("demo") ||
+                         Arrays.asList(environment.getDefaultProfiles()).contains("demo");
+        if (!isDemo) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "System reset is only available when running with the 'demo' profile."));
         }
+        return ResponseEntity.ok(dispatchController.reset());
     }
 
     /**
@@ -88,13 +90,5 @@ public class SystemController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
-    }
-
-    /**
-     * Returns list of saved snapshot and backup files currently on the server disk.
-     */
-    @GetMapping("/files")
-    public ResponseEntity<List<Map<String, Object>>> listFiles() {
-        return ResponseEntity.ok(fileService.listSavedFiles());
     }
 }

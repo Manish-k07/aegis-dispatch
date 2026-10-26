@@ -5,30 +5,14 @@ import com.aegisdispatch.repository.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
-import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 
-import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.Instant;
-import java.time.ZoneOffset;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 @Service
 public class CadFileService {
-
-    private static final Logger log = LoggerFactory.getLogger(CadFileService.class);
-    private static final String DATA_DIR = "./data";
-    private static final String BACKUP_DIR = "./data/backups";
-    private static final String SNAPSHOT_FILE = "./data/aegis_cad_snapshot.json";
 
     private final EmergencyRepository emergencyRepo;
     private final AmbulanceRepository ambulanceRepo;
@@ -52,31 +36,10 @@ public class CadFileService {
         this.objectMapper.registerModule(new JavaTimeModule());
         this.objectMapper.enable(SerializationFeature.INDENT_OUTPUT);
         this.objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-
-        ensureDirectories();
-    }
-
-    private void ensureDirectories() {
-        try {
-            Files.createDirectories(Paths.get(DATA_DIR));
-            Files.createDirectories(Paths.get(BACKUP_DIR));
-        } catch (IOException e) {
-            log.error("Failed to create CAD data directories: {}", e.getMessage());
-        }
-    }
-
-    @EventListener(ApplicationReadyEvent.class)
-    public void onStartup() {
-        try {
-            saveSnapshotToFile("SYSTEM_STARTUP");
-            log.info("Initial CAD operational snapshot saved to file.");
-        } catch (Exception e) {
-            log.warn("Could not save initial snapshot: {}", e.getMessage());
-        }
     }
 
     /**
-     * Builds complete system snapshot object.
+     * Builds complete system snapshot object in memory.
      */
     public Map<String, Object> buildSystemSnapshot(String reason) {
         List<Emergency> emergencies = emergencyRepo.findAllByOrderByCreatedAtDesc();
@@ -86,12 +49,10 @@ public class CadFileService {
         List<AuditLog> auditLogs = auditLogRepo.findAll();
 
         Map<String, Object> metadata = new LinkedHashMap<>();
-        metadata.put("systemName", "AEGIS DISPATCH CAD");
-        metadata.put("version", "v2.5 PRO");
-        metadata.put("snapshotReason", reason != null ? reason : "MANUAL_SAVE");
+        metadata.put("systemName", "Aegis CAD");
+        metadata.put("snapshotReason", reason != null ? reason : "MANUAL_EXPORT");
         metadata.put("exportedAt", Instant.now().toString());
         metadata.put("systemStatus", "OPERATIONAL");
-        metadata.put("archiveSignature", UUID.randomUUID().toString());
         metadata.put("totalEmergencies", emergencies.size());
         metadata.put("totalDispatches", dispatches.size());
         metadata.put("totalAmbulances", ambulances.size());
@@ -110,47 +71,7 @@ public class CadFileService {
     }
 
     /**
-     * Writes snapshot to ./data/aegis_cad_snapshot.json and timestamped archive in ./data/backups/
-     */
-    public synchronized Map<String, Object> saveSnapshotToFile(String reason) throws IOException {
-        ensureDirectories();
-        Map<String, Object> snapshot = buildSystemSnapshot(reason);
-
-        // 1. Write latest snapshot
-        File latestFile = new File(SNAPSHOT_FILE);
-        objectMapper.writeValue(latestFile, snapshot);
-
-        // 2. Write timestamped archive
-        String timestamp = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")
-                .withZone(ZoneOffset.UTC)
-                .format(Instant.now());
-        String backupPath = BACKUP_DIR + "/aegis_cad_backup_" + timestamp + ".json";
-        File backupFile = new File(backupPath);
-        objectMapper.writeValue(backupFile, snapshot);
-
-        Map<String, Object> result = new LinkedHashMap<>();
-        result.put("status", "SUCCESS");
-        result.put("message", "All emergency incidents, dispatches, fleet telemetry, hospital capacities, and audit logs successfully saved to file.");
-        result.put("snapshotFile", latestFile.getName());
-        result.put("backupFile", backupFile.getName());
-        result.put("storagePath", "./data/" + latestFile.getName());
-        result.put("fileSizeBytes", latestFile.length());
-        result.put("fileSizeFormatted", String.format("%.2f KB", latestFile.length() / 1024.0));
-        result.put("timestamp", Instant.now().toString());
-        result.put("recordsSaved", Map.of(
-                "emergencies", ((List<?>) snapshot.get("emergencies")).size(),
-                "dispatches", ((List<?>) snapshot.get("dispatches")).size(),
-                "ambulances", ((List<?>) snapshot.get("ambulances")).size(),
-                "hospitals", ((List<?>) snapshot.get("hospitals")).size(),
-                "auditLogs", ((List<?>) snapshot.get("auditLogs")).size()
-        ));
-
-        log.info("CAD snapshot saved to {} ({} KB)", latestFile.getCanonicalPath(), result.get("fileSizeFormatted"));
-        return result;
-    }
-
-    /**
-     * Exports pretty-printed JSON string for browser file download.
+     * Exports pretty-printed JSON string for browser file download (in-memory streaming).
      */
     public String exportFullArchiveJson() throws IOException {
         Map<String, Object> snapshot = buildSystemSnapshot("USER_EXPORT");
@@ -158,7 +79,7 @@ public class CadFileService {
     }
 
     /**
-     * Generates CSV format for tabular incident analysis.
+     * Generates CSV format for tabular incident analytics analysis (in-memory streaming).
      */
     public String exportEmergenciesCsv() {
         List<Emergency> list = emergencyRepo.findAllByOrderByCreatedAtDesc();
@@ -183,43 +104,5 @@ public class CadFileService {
     private String escapeCsv(String val) {
         if (val == null) return "\"\"";
         return "\"" + val.replace("\"", "\"\"") + "\"";
-    }
-
-    /**
-     * Lists all saved snapshot and backup files on server disk.
-     */
-    public List<Map<String, Object>> listSavedFiles() {
-        ensureDirectories();
-        List<Map<String, Object>> filesList = new ArrayList<>();
-
-        File dataFolder = new File(DATA_DIR);
-        File[] topFiles = dataFolder.listFiles((dir, name) -> name.endsWith(".json") || name.endsWith(".db"));
-        if (topFiles != null) {
-            for (File f : topFiles) {
-                filesList.add(fileToMap(f, "LATEST_SNAPSHOT"));
-            }
-        }
-
-        File backupFolder = new File(BACKUP_DIR);
-        File[] backupFiles = backupFolder.listFiles((dir, name) -> name.endsWith(".json"));
-        if (backupFiles != null) {
-            Arrays.sort(backupFiles, (a, b) -> Long.compare(b.lastModified(), a.lastModified()));
-            for (File f : backupFiles) {
-                filesList.add(fileToMap(f, "HISTORICAL_BACKUP"));
-            }
-        }
-
-        return filesList;
-    }
-
-    private Map<String, Object> fileToMap(File f, String category) {
-        Map<String, Object> m = new LinkedHashMap<>();
-        m.put("fileName", f.getName());
-        m.put("category", category);
-        m.put("path", "LATEST_SNAPSHOT".equals(category) ? "./data/" + f.getName() : "./data/backups/" + f.getName());
-        m.put("sizeBytes", f.length());
-        m.put("sizeFormatted", String.format("%.2f KB", f.length() / 1024.0));
-        m.put("lastModified", Instant.ofEpochMilli(f.lastModified()).toString());
-        return m;
     }
 }

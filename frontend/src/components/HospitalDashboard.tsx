@@ -31,7 +31,6 @@ interface HospitalDashboardProps {
   liveVitalsByDispatch?: { [dispatchId: string]: PatientVitals };
   onUpdateCapacity: (hospitalId: string, capacity: Partial<Hospital>) => void;
   onAdvanceStatus: (dispatch: Dispatch, nextStatus: string) => void;
-  onSaveToFile?: () => void;
   onLogout?: () => void;
 }
 

@@ -33,7 +33,6 @@ interface DriverDashboardProps {
   onToggleSimulation: (dispatchId: string) => void;
   onAdvanceStatus: (dispatch: Dispatch, nextStatus: string) => void;
   onStreamVitals: (dispatchId: string, vitals: PatientVitals) => void;
-  onSaveToFile?: () => void;
   missionTelemetry?: {
     maneuver?: string;
     etaRemaining?: number;

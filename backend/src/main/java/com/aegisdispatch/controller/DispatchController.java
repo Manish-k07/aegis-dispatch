@@ -34,6 +34,7 @@ public class DispatchController {
     private final com.aegisdispatch.service.SmsService smsService;
     private final com.aegisdispatch.service.HospitalCapacityService hospitalCapacityService;
     private final com.aegisdispatch.service.PredictiveStagingService predictiveStagingService;
+    private final org.springframework.core.env.Environment environment;
 
     public DispatchController(
             EmergencyRepository emergencies,
@@ -50,7 +51,8 @@ public class DispatchController {
             com.aegisdispatch.service.CadFileService cadFileService,
             com.aegisdispatch.service.SmsService smsService,
             com.aegisdispatch.service.HospitalCapacityService hospitalCapacityService,
-            com.aegisdispatch.service.PredictiveStagingService predictiveStagingService
+            com.aegisdispatch.service.PredictiveStagingService predictiveStagingService,
+            org.springframework.core.env.Environment environment
     ) {
         this.emergencies = emergencies;
         this.ambulances = ambulances;
@@ -67,13 +69,11 @@ public class DispatchController {
         this.smsService = smsService;
         this.hospitalCapacityService = hospitalCapacityService;
         this.predictiveStagingService = predictiveStagingService;
+        this.environment = environment;
     }
 
     private void triggerAutoSave(String reason) {
-        try {
-            cadFileService.saveSnapshotToFile(reason);
-        } catch (Exception ignored) {
-        }
+        // Disk snapshots removed per feature audit
     }
 
     @GetMapping("/dashboard")
@@ -665,6 +665,11 @@ public class DispatchController {
     @PostMapping("/simulation/reset")
     @Transactional
     public Map<String, Object> reset() {
+        boolean isDemo = java.util.Arrays.asList(environment.getActiveProfiles()).contains("demo") ||
+                         java.util.Arrays.asList(environment.getDefaultProfiles()).contains("demo");
+        if (!isDemo) {
+            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.FORBIDDEN, "Simulation reset is only available in demo mode.");
+        }
         // 1. Stop all active simulation runners
         simulationService.stopAllSimulations();
 
@@ -887,31 +892,4 @@ public class DispatchController {
         ));
     }
 
-    @GetMapping("/qa/scorecard")
-    public ResponseEntity<?> getClinicalQaScorecard() {
-        return ResponseEntity.ok(Map.of(
-                "overallScore", 98.4,
-                "aclsProtocolCompliance", 100.0,
-                "timeToFirstEcgMin", 4.2,
-                "targetTimeToFirstEcgMin", 10.0,
-                "cathLabPreActivationMin", 14.5,
-                "supervisorApproved", true,
-                "auditStatus", "PASSED"
-        ));
-    }
-
-    @PostMapping("/drones/launch")
-    public ResponseEntity<?> launchDrone(@RequestBody Map<String, Object> body) {
-        String payload = (String) body.getOrDefault("payload", "AED");
-        String droneId = "UAV-AERO-" + (int)(Math.random() * 90 + 10);
-        ws.broadcast(String.format("{\"event\":\"DRONE_LAUNCHED\",\"droneId\":\"%s\",\"payload\":\"%s\"}", droneId, payload));
-        return ResponseEntity.ok(Map.of(
-                "status", "LAUNCHED",
-                "droneId", droneId,
-                "payload", payload,
-                "etaMinutes", 2.8,
-                "cruisingSpeedKmh", 95,
-                "batteryPercent", 98
-        ));
-    }
 }

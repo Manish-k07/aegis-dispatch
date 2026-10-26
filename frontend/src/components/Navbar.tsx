@@ -384,7 +384,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               onClose={() => setIsOverflowOpen(false)}
               width={200}
             >
-            {/* 1. Export data */}
+            {/* 1. Export analytics (CSV) */}
             <button
               type="button"
               className="m3-menu-item"
@@ -407,7 +407,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               }}
             >
               <Icon name="file_download" size={20} />
-              <span>Export data</span>
+              <span>Export analytics (CSV)</span>
             </button>
 
             {/* 2. Mute alerts */}
@@ -436,33 +436,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <span>{isAudioEnabled ? 'Mute alerts' : 'Unmute alerts'}</span>
             </button>
 
-            {/* 3. Settings */}
-            <button
-              type="button"
-              className="m3-menu-item"
-              onClick={() => {
-                setIsOverflowOpen(false);
-                setIsSettingsOpen(true);
-              }}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                width: '100%',
-                padding: '10px 16px',
-                border: 'none',
-                background: 'none',
-                color: 'var(--md-sys-color-text)',
-                fontSize: '14px',
-                cursor: 'pointer',
-                textAlign: 'left',
-              }}
-            >
-              <Icon name="settings" size={20} />
-              <span>Settings</span>
-            </button>
-
-            {/* 4. About */}
+            {/* 3. About / Prototype */}
             <button
               type="button"
               className="m3-menu-item"
@@ -485,7 +459,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               }}
             >
               <Icon name="info" size={20} />
-              <span>About</span>
+              <span>About / Prototype</span>
             </button>
 
             {/* 5. Sign out */}
