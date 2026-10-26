@@ -1141,3 +1141,31 @@ select:focus-visible,
 }
 
 
+
+/* Material Design 3 Leaflet Map Popups */
+.m3-map-popup.leaflet-popup {
+  margin-bottom: 24px !important;
+}
+
+.m3-map-popup .leaflet-popup-content-wrapper {
+  background: transparent !important;
+  color: var(--md-sys-color-text) !important;
+  border: none !important;
+  border-radius: 16px !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+}
+
+.m3-map-popup .leaflet-popup-content {
+  margin: 0 !important;
+  line-height: normal !important;
+}
+
+.m3-map-popup .leaflet-popup-tip {
+  background: var(--md-sys-color-surface) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+.m3-map-popup .leaflet-popup-close-button {
+  display: none !important;
+}

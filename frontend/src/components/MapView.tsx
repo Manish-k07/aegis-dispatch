@@ -24,7 +24,7 @@ import {
 import { Ambulance, Emergency, Hospital, Dispatch } from '../types';
 import { getAmbulanceIcon, getEmergencyIcon, getHospitalIcon } from '../utils/mapIcons';
 import { MissionHUD } from './MissionHUD';
-import { FilterChip, Tooltip as M3Tooltip, Icon } from './common';
+import { FilterChip, Tooltip as M3Tooltip, Icon, Dialog, Button } from './common';
 
 export type MapTileLayer = 'OSM_CLEAN' | 'SATELLITE' | 'TERRAIN';
 
@@ -762,20 +762,117 @@ export const MapView: React.FC<MapViewProps> = ({
               position={[h.latitude, h.longitude]}
               icon={getHospitalIcon(h)}
             >
-              <Popup className="custom-popup">
-                <div className="popup-card">
-                  <div className="popup-badge bg-sky">HOSPITAL FACILITY</div>
-                  <h3>{h.name}</h3>
-                  <p className="popup-address">{h.address}</p>
-                  <div className="popup-chips">
-                    {h.emergencyDepartment && <span className="chip">24/7 ED</span>}
-                    {h.icuAvailable && <span className="chip">ICU ({h.icuBedsAvailable ?? 5} Avail)</span>}
-                    {h.cathLabOperational && <span className="chip chip-als">CATH LAB</span>}
+              <Popup className="m3-map-popup" closeButton={false}>
+                <div
+                  style={{
+                    backgroundColor: 'var(--md-sys-color-surface)',
+                    color: 'var(--md-sys-color-text)',
+                    padding: '16px',
+                    borderRadius: '16px',
+                    border: '1px solid var(--md-sys-color-outline)',
+                    boxShadow: 'var(--elevation-2)',
+                    minWidth: '240px',
+                    boxSizing: 'border-box',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                    <span
+                      style={{
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        padding: '2px 8px',
+                        borderRadius: '12px',
+                        backgroundColor: 'var(--md-sys-color-primary-container)',
+                        color: 'var(--md-sys-color-on-primary-container)',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                      }}
+                    >
+                      <Icon name="local_hospital" size={14} />
+                      Hospital facility
+                    </span>
+                    <span
+                      style={{
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        color: (h.availableBeds ?? 0) > 10 ? 'var(--md-sys-color-success)' : 'var(--md-sys-color-warning)',
+                      }}
+                    >
+                      {h.availableBeds ?? 0} beds free
+                    </span>
                   </div>
-                  <div style={{ fontSize: '11px', marginTop: '6px', color: '#94a3b8' }}>
-                    ER Beds: <strong>{h.availableBeds ?? 30} / {h.totalBeds ?? 120}</strong>
-                    <br />
-                    ED Phone: <strong>{h.phone}</strong>
+
+                  <div>
+                    <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--md-sys-color-text)' }}>
+                      {h.name}
+                    </div>
+                    <div style={{ fontSize: '12px', color: 'var(--md-sys-color-text-secondary)', marginTop: '2px' }}>
+                      {h.address}
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                    {h.emergencyDepartment && (
+                      <span
+                        style={{
+                          fontSize: '11px',
+                          padding: '2px 8px',
+                          borderRadius: '8px',
+                          backgroundColor: 'var(--md-sys-color-surface-container)',
+                          border: '1px solid var(--md-sys-color-outline-variant)',
+                          color: 'var(--md-sys-color-text)',
+                        }}
+                      >
+                        24/7 ED
+                      </span>
+                    )}
+                    {h.icuAvailable && (
+                      <span
+                        style={{
+                          fontSize: '11px',
+                          padding: '2px 8px',
+                          borderRadius: '8px',
+                          backgroundColor: 'var(--md-sys-color-surface-container)',
+                          border: '1px solid var(--md-sys-color-outline-variant)',
+                          color: 'var(--md-sys-color-text)',
+                        }}
+                      >
+                        ICU ({h.icuBedsAvailable ?? 5})
+                      </span>
+                    )}
+                    {h.cathLabOperational && (
+                      <span
+                        style={{
+                          fontSize: '11px',
+                          padding: '2px 8px',
+                          borderRadius: '8px',
+                          backgroundColor: 'var(--md-sys-color-primary-container)',
+                          color: 'var(--md-sys-color-on-primary-container)',
+                          fontWeight: 500,
+                        }}
+                      >
+                        Cath Lab
+                      </span>
+                    )}
+                  </div>
+
+                  <div
+                    style={{
+                      fontSize: '11px',
+                      color: 'var(--md-sys-color-text-secondary)',
+                      paddingTop: '6px',
+                      borderTop: '1px solid var(--md-sys-color-outline-variant)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                    }}
+                  >
+                    <span>ED: <strong>{h.phone}</strong></span>
+                    <span>Total: {h.totalBeds ?? 120}</span>
                   </div>
                 </div>
               </Popup>
@@ -790,21 +887,67 @@ export const MapView: React.FC<MapViewProps> = ({
               position={[em.latitude, em.longitude]}
               icon={getEmergencyIcon(em, selectedEmergency?.id === em.id)}
             >
-              <Popup className="custom-popup">
-                <div className="popup-card">
-                  <div className="popup-badge bg-red">EMERGENCY INCIDENT</div>
-                  <h3>{em.type}</h3>
-                  <p className="popup-address">{em.address}</p>
-                  <p className="popup-caller">
-                    Caller: {em.callerName} ({em.phone}) · Priority: <strong>{em.priority}</strong>
-                  </p>
-                  {selectedEmergency?.id !== em.id && (
-                    <button
-                      className="btn btn-xs btn-primary mt-2"
-                      onClick={() => onSelectEmergency(em)}
+              <Popup className="m3-map-popup" closeButton={false}>
+                <div
+                  style={{
+                    backgroundColor: 'var(--md-sys-color-surface)',
+                    color: 'var(--md-sys-color-text)',
+                    padding: '16px',
+                    borderRadius: '16px',
+                    border: '1px solid var(--md-sys-color-outline)',
+                    boxShadow: 'var(--elevation-2)',
+                    minWidth: '240px',
+                    boxSizing: 'border-box',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                    <span
+                      style={{
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        padding: '2px 8px',
+                        borderRadius: '12px',
+                        backgroundColor: 'var(--md-sys-color-error-container)',
+                        color: 'var(--md-sys-color-on-error-container)',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                      }}
                     >
-                      Select for Dispatch
-                    </button>
+                      <Icon name="warning" size={14} />
+                      {em.priority}
+                    </span>
+                    <span style={{ fontSize: '11px', color: 'var(--md-sys-color-text-secondary)', fontFamily: 'var(--md-sys-font-mono, monospace)' }}>
+                      {em.id.startsWith('em-') ? em.id : `INC-${em.id.slice(0, 6)}`}
+                    </span>
+                  </div>
+
+                  <div>
+                    <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--md-sys-color-text)' }}>
+                      {em.type} Incident
+                    </div>
+                    <div style={{ fontSize: '12px', color: 'var(--md-sys-color-text-secondary)', marginTop: '2px' }}>
+                      {em.address}
+                    </div>
+                  </div>
+
+                  <div style={{ fontSize: '11px', color: 'var(--md-sys-color-text-secondary)' }}>
+                    Caller: <strong style={{ color: 'var(--md-sys-color-text)' }}>{em.callerName}</strong> ({em.phone})
+                  </div>
+
+                  {selectedEmergency?.id !== em.id && (
+                    <Button
+                      variant="filled"
+                      size="small"
+                      icon="send"
+                      onClick={() => onSelectEmergency(em)}
+                      style={{ marginTop: '4px' }}
+                    >
+                      Select for dispatch
+                    </Button>
                   )}
                 </div>
               </Popup>
@@ -825,16 +968,53 @@ export const MapView: React.FC<MapViewProps> = ({
                 position={[amb.latitude, amb.longitude]}
                 icon={getAmbulanceIcon(amb, isSim)}
               >
-                <Popup className="custom-popup">
-                  <div className="popup-card">
-                    <div className="popup-badge bg-emerald">AMBULANCE {amb.type}</div>
-                    <h3>{amb.registrationNumber}</h3>
-                    <div className="popup-meta">
-                      Status: <strong className="text-emerald">{amb.status.replace(/_/g, ' ')}</strong>
-                      <br />
-                      Driver: <strong>{amb.driverName || 'N/A'}</strong> | EMT: <strong>{amb.emtName || 'N/A'}</strong>
-                      <br />
-                      Speed: <strong>{amb.speed} km/h</strong> | Heading: <strong>{amb.heading}°</strong>
+                <Popup className="m3-map-popup" closeButton={false}>
+                  <div
+                    style={{
+                      backgroundColor: 'var(--md-sys-color-surface)',
+                      color: 'var(--md-sys-color-text)',
+                      padding: '16px',
+                      borderRadius: '16px',
+                      border: '1px solid var(--md-sys-color-outline)',
+                      boxShadow: 'var(--elevation-2)',
+                      minWidth: '220px',
+                      boxSizing: 'border-box',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '8px',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                      <span
+                        style={{
+                          fontSize: '11px',
+                          fontWeight: 600,
+                          padding: '2px 8px',
+                          borderRadius: '12px',
+                          backgroundColor: 'var(--md-sys-color-primary-container)',
+                          color: 'var(--md-sys-color-on-primary-container)',
+                        }}
+                      >
+                        Unit {amb.type}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: '11px',
+                          fontWeight: 600,
+                          color: amb.status === 'AVAILABLE' ? 'var(--md-sys-color-success)' : 'var(--md-sys-color-warning)',
+                        }}
+                      >
+                        {amb.status.replace(/_/g, ' ')}
+                      </span>
+                    </div>
+
+                    <div>
+                      <div style={{ fontSize: '15px', fontWeight: 700, fontFamily: 'var(--md-sys-font-mono, monospace)', color: 'var(--md-sys-color-text)' }}>
+                        {amb.registrationNumber}
+                      </div>
+                      <div style={{ fontSize: '12px', color: 'var(--md-sys-color-text-secondary)', marginTop: '2px' }}>
+                        Driver: {amb.driverName || 'Paramedic'} &bull; Speed: {amb.speed} km/h
+                      </div>
                     </div>
                   </div>
                 </Popup>
@@ -857,62 +1037,24 @@ export const MapView: React.FC<MapViewProps> = ({
         />
       )}
 
-            {/* M3 Live CCTV Traffic Camera Modal */}
+            {/* M3 Live CCTV Traffic Camera Dialog */}
       {activeCctv && (
-        <div className="modal-overlay" style={{ zIndex: 2100 }} onClick={() => setActiveCctv(null)}>
-          <div
-            className="modal-content"
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              maxWidth: '560px',
-              width: '92%',
-              backgroundColor: 'var(--md-sys-color-surface)',
-              border: '1px solid var(--md-sys-color-outline)',
-              borderRadius: '16px',
-              overflow: 'hidden',
-              boxShadow: '0 16px 40px rgba(0, 0, 0, 0.24)',
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '14px 18px',
-                backgroundColor: 'var(--md-sys-color-surface-container)',
-                borderBottom: '1px solid var(--md-sys-color-outline-variant)',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Camera size={18} style={{ color: 'var(--md-sys-color-primary)' }} />
-                <span style={{ color: 'var(--md-sys-color-text)', fontSize: '14px', fontWeight: 600 }}>
-                  Live Junction CCTV · {activeCctv.id}
-                </span>
-                <span
-                  style={{
-                    width: '8px',
-                    height: '8px',
-                    borderRadius: '50%',
-                    backgroundColor: 'var(--md-sys-color-error)',
-                    display: 'inline-block',
-                  }}
-                />
-              </div>
-              <button
-                className="btn-close"
-                onClick={() => setActiveCctv(null)}
-                aria-label="Close CCTV feed"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            {/* Simulated Live Video Screen */}
+        <Dialog
+          isOpen={true}
+          onClose={() => setActiveCctv(null)}
+          title={`Live junction CCTV · ${activeCctv.id}`}
+          icon="videocam"
+          maxWidth="560px"
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            {/* Live Video Viewport */}
             <div
               style={{
                 position: 'relative',
-                height: '240px',
+                height: '220px',
                 backgroundColor: 'var(--md-sys-color-surface-container-high)',
+                borderRadius: '12px',
+                border: '1px solid var(--md-sys-color-outline-variant)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -920,16 +1062,16 @@ export const MapView: React.FC<MapViewProps> = ({
               }}
             >
               <div style={{ textAlign: 'center', zIndex: 2 }}>
-                <Camera size={44} style={{ color: 'var(--md-sys-color-primary)', opacity: 0.6, margin: '0 auto 8px auto' }} />
-                <div style={{ color: 'var(--md-sys-color-text)', fontSize: '13px', fontWeight: 600 }}>
+                <Icon name="videocam" size={48} style={{ color: 'var(--md-sys-color-primary)', opacity: 0.6, margin: '0 auto 8px auto' }} />
+                <div style={{ color: 'var(--md-sys-color-text)', fontSize: '14px', fontWeight: 600 }}>
                   {activeCctv.name}
                 </div>
-                <div style={{ color: 'var(--md-sys-color-text-secondary)', fontSize: '11px', marginTop: '4px' }}>
-                  Live stream · 1080p · {activeCctv.fps} FPS · Encrypted feed
+                <div style={{ color: 'var(--md-sys-color-text-secondary)', fontSize: '12px', marginTop: '4px' }}>
+                  Live stream &bull; 1080p &bull; {activeCctv.fps} FPS &bull; Encrypted feed
                 </div>
               </div>
 
-              {/* HUD Telemetry Overlay on Video */}
+              {/* Status badges */}
               <div
                 style={{
                   position: 'absolute',
@@ -937,14 +1079,19 @@ export const MapView: React.FC<MapViewProps> = ({
                   left: '12px',
                   fontFamily: 'var(--md-sys-font-mono, monospace)',
                   fontSize: '11px',
+                  fontWeight: 600,
                   color: 'var(--md-sys-color-success)',
                   backgroundColor: 'var(--md-sys-color-surface)',
                   padding: '3px 8px',
-                  borderRadius: '4px',
+                  borderRadius: '6px',
                   border: '1px solid var(--md-sys-color-outline-variant)',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                  boxShadow: 'var(--elevation-1)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
                 }}
               >
+                <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--md-sys-color-error)', display: 'inline-block' }} />
                 REC ● {new Date().toLocaleTimeString()}
               </div>
 
@@ -958,45 +1105,39 @@ export const MapView: React.FC<MapViewProps> = ({
                   color: 'var(--md-sys-color-text)',
                   backgroundColor: 'var(--md-sys-color-surface)',
                   padding: '3px 8px',
-                  borderRadius: '4px',
+                  borderRadius: '6px',
                   border: '1px solid var(--md-sys-color-outline-variant)',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                  boxShadow: 'var(--elevation-1)',
                 }}
               >
-                Flow: {activeCctv.density} · Speed: {activeCctv.speedAvg}
+                Traffic Flow: {activeCctv.density} &bull; Speed: {activeCctv.speedAvg}
               </div>
             </div>
 
             <div
               style={{
-                padding: '12px 18px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
+                padding: '10px 14px',
+                borderRadius: '8px',
+                backgroundColor: 'var(--md-sys-color-surface-container)',
+                border: '1px solid var(--md-sys-color-outline-variant)',
                 fontSize: '12px',
                 color: 'var(--md-sys-color-text-secondary)',
-                backgroundColor: 'var(--md-sys-color-surface)',
-                borderTop: '1px solid var(--md-sys-color-outline-variant)',
               }}
             >
-              <span>Automated Scene Assessment: <strong style={{ color: 'var(--md-sys-color-text)' }}>Corridor Clear for Inbound EMS</strong></span>
-              <button
-                className="btn btn-xs btn-outline"
-                onClick={() => setActiveCctv(null)}
-                style={{
-                  padding: '4px 12px',
-                  borderRadius: '12px',
-                  border: '1px solid var(--md-sys-color-outline)',
-                  backgroundColor: 'transparent',
-                  color: 'var(--md-sys-color-text)',
-                  cursor: 'pointer',
-                }}
-              >
+              <span>Automated Scene Assessment: <strong style={{ color: 'var(--md-sys-color-text)' }}>Corridor clear for inbound emergency vehicle</strong></span>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '4px' }}>
+              <Button variant="outlined" onClick={() => setActiveCctv(null)}>
                 Dismiss Feed
-              </button>
+              </Button>
             </div>
           </div>
-        </div>      )}
+        </Dialog>
+      )}
     </div>
   );
 };
