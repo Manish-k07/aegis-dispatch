@@ -17,6 +17,7 @@ import {
   TriageAssessment,
 } from '../types';
 import { INITIAL_DEMO_DATA, INITIAL_DEMO_AUDIT_LOGS } from './demoData';
+import { DEMO_ACCOUNTS } from './demoAccounts';
 
 const DEMO_STORAGE_KEY = 'aegis.demo.dashboard';
 const DEMO_AUDIT_KEY = 'aegis.demo.audit';
@@ -128,66 +129,50 @@ export class DemoDataSource implements DataSource {
     ambulanceId?: string;
     hospitalId?: string;
   }): Promise<AuthSession> {
-    const role = (body.role || '').toUpperCase();
-    const badge = (body.badgeNumber || '').trim().toUpperCase();
+    const rawRole = (body.role || '').toUpperCase();
+    const normalizedRole = rawRole === 'DRIVER' ? 'PARAMEDIC' : rawRole === 'HOSPITAL' ? 'HOSPITAL_STAFF' : rawRole;
+    const badge = (body.badgeNumber || '').trim();
     const pin = (body.pin || '').trim();
 
-    let valid = false;
-    let userLabel = 'Demo User';
-    let subLabel = 'Demo Mode Console';
-    let ambulanceId = body.ambulanceId;
-    let hospitalId = body.hospitalId;
+    // Match against single source of truth in DEMO_ACCOUNTS
+    const matchedAccount = DEMO_ACCOUNTS.find(acc => {
+      const roleMatches = acc.role === normalizedRole || (acc.portalTab === rawRole);
+      const idMatches = acc.loginIdentifier.toUpperCase() === badge.toUpperCase() ||
+        (acc.role === 'CITIZEN' && acc.loginIdentifier.replace(/\D/g, '').endsWith(badge.replace(/\D/g, '')));
+      const secretMatches = acc.loginSecret === pin || pin === '1120' || pin === 'Password@123';
+      return roleMatches && idMatches && secretMatches;
+    });
 
-    if (role === 'DISPATCHER') {
-      const validBadges = ['DISPATCH-01', 'CAD-001', 'DISPATCHER', 'ADMIN'];
-      const validPins = ['Dispatch@2026', 'Aegis@2026', '1120', '1234'];
-      valid = (validBadges.includes(badge) || badge === 'DISPATCH-01') && validPins.includes(pin);
-      userLabel = 'A. Sharma (DISPATCHER)';
-      subLabel = 'Demo Central CAD Console';
-    } else if (role === 'DRIVER' || role === 'PARAMEDIC') {
-      const validBadges = ['MEDIC-101', 'MEDIC-01', 'DRIVER', 'DRIVER-01'];
-      const validPins = ['4321', 'Medic@2026', '1120'];
-      valid = (validBadges.includes(badge) || badge.includes('MEDIC')) && validPins.includes(pin);
-      userLabel = 'Paramedic R. Deshmukh';
-      subLabel = 'Unit KA-01-AE-1001 (ALS)';
-      ambulanceId = ambulanceId || '20000000-0000-0000-0000-000000000001';
-    } else if (role === 'HOSPITAL') {
-      const validBadges = ['HOSP-101', 'HOSP-201', 'HOSP-301', 'HOSPITAL', 'HOSP-1'];
-      const validPins = ['Hospital@2001', 'Hospital@2026', '2001', '1120'];
-      valid = (validBadges.includes(badge) || badge.startsWith('HOSP')) && validPins.includes(pin);
-      userLabel = 'Dr. S. Kulkarni (ED Director)';
-      subLabel = 'Aegis City General Emergency Dept';
-      hospitalId = hospitalId || '10000000-0000-0000-0000-000000000001';
-    } else if (role === 'CITIZEN') {
-      const cleanPhone = (body.badgeNumber || '').replace(/[^0-9]/g, '').slice(-10);
-      valid = (cleanPhone === '9845012345' || badge === 'CITIZEN') && (pin === 'Citizen@2026' || pin === '1120' || pin === 'password123');
-      userLabel = 'Priya Sharma';
-      subLabel = 'Citizen Profile · Blood: O+';
+    if (!matchedAccount) {
+      throw new Error('Invalid demo credentials. Please check the demo account list in Demo Mode modal.');
     }
 
-    if (!valid) {
-      throw new Error('Invalid demo credentials. Please check demo account list in Demo Mode modal.');
-    }
-
+    const sessionRole = (rawRole === 'PARAMEDIC' ? 'DRIVER' : rawRole === 'HOSPITAL_STAFF' ? 'HOSPITAL' : rawRole) as any;
     const session: AuthSession = {
-      role: (role === 'PARAMEDIC' ? 'DRIVER' : role) as any,
-      userLabel,
-      subLabel,
-      ambulanceId,
-      hospitalId,
-      dispatcherBadge: badge,
-      citizenProfile: role === 'CITIZEN' ? {
-        id: 'cit-priya-01',
-        name: 'Priya Sharma',
-        gender: 'FEMALE',
-        age: 29,
-        phone: '+91 98450 12345',
-        email: 'priya.sharma@example.com',
-        bloodGroup: 'O+',
-        diseases: ['Severe asthma'],
-        allergies: ['Penicillin / amoxicillin'],
-        emergencyContactName: 'Amit Patel (Spouse)',
-        emergencyContactPhone: '+91 98450 99887',
+      role: sessionRole,
+      userLabel: matchedAccount.displayName,
+      subLabel: matchedAccount.role === 'PARAMEDIC'
+        ? `Unit ${matchedAccount.unitRegistration || 'Ambulance'}`
+        : matchedAccount.role === 'HOSPITAL_STAFF'
+        ? (matchedAccount.facilityName || 'Emergency Department')
+        : matchedAccount.role === 'DISPATCHER'
+        ? 'Demo Central CAD Console'
+        : `Citizen Profile · Blood: ${matchedAccount.hasFilledProfile ? 'O+' : 'Not specified'}`,
+      ambulanceId: body.ambulanceId || matchedAccount.unitId || '20000000-0000-0000-0000-000000000001',
+      hospitalId: body.hospitalId || matchedAccount.facilityId || '10000000-0000-0000-0000-000000000001',
+      dispatcherBadge: matchedAccount.loginIdentifier,
+      citizenProfile: matchedAccount.role === 'CITIZEN' ? {
+        id: `cit-${matchedAccount.id}`,
+        name: matchedAccount.displayName.split(' (')[0],
+        gender: matchedAccount.hasFilledProfile ? 'FEMALE' : 'PREFER_NOT_TO_SAY',
+        age: matchedAccount.hasFilledProfile ? 29 : 30,
+        phone: matchedAccount.loginIdentifier,
+        email: matchedAccount.hasFilledProfile ? 'priya.sharma@example.com' : undefined,
+        bloodGroup: matchedAccount.hasFilledProfile ? 'O+' : undefined,
+        diseases: matchedAccount.hasFilledProfile ? ['Severe asthma'] : [],
+        allergies: matchedAccount.hasFilledProfile ? ['Penicillin / amoxicillin'] : [],
+        emergencyContactName: matchedAccount.hasFilledProfile ? 'Amit Patel (Spouse)' : undefined,
+        emergencyContactPhone: matchedAccount.hasFilledProfile ? '+91 98450 99887' : undefined,
       } : undefined,
       loginTime: new Date().toISOString(),
     };

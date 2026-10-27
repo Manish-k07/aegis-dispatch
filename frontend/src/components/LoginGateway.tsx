@@ -284,6 +284,32 @@ export const LoginGateway: React.FC<LoginGatewayProps> = ({
     setMode('DEMO', true, role);
   };
 
+  const handleFillForm = (
+    terminalRole: 'DISPATCHER' | 'DRIVER' | 'HOSPITAL' | 'CITIZEN',
+    identifier: string,
+    secret: string
+  ) => {
+    handleSelectTerminal(terminalRole);
+    if (terminalRole === 'DISPATCHER') {
+      setDispatcherBadge(identifier);
+      setDispatcherPin(secret);
+    } else if (terminalRole === 'DRIVER') {
+      setDriverBadge(identifier);
+      setDriverPin(secret);
+    } else if (terminalRole === 'HOSPITAL') {
+      setHospitalStaffBadge(identifier);
+      setHospitalPin(secret);
+    } else if (terminalRole === 'CITIZEN') {
+      setCitizenMode('LOGIN');
+      setCitizenLoginId(identifier);
+      setCitizenPassword(secret);
+    }
+  };
+
+  const handleSignInDirect = (account: any) => {
+    setMode('DEMO', true, account.portalTab);
+  };
+
   const terminalTabs: { id: DepartmentalTerminal; label: string; icon: string }[] = [
     { id: 'DISPATCHER', label: 'CAD Dispatch', icon: 'shield' },
     { id: 'DRIVER', label: 'Responder (MDT)', icon: 'ambulance' },
@@ -1071,6 +1097,8 @@ export const LoginGateway: React.FC<LoginGatewayProps> = ({
         isOpen={showDemoModal}
         onClose={() => setShowDemoModal(false)}
         onEnterDemo={handleEnterDemo}
+        onFillForm={handleFillForm}
+        onSignInDirect={handleSignInDirect}
         selectedTabRole={activeTerminal === 'ADMIN' ? 'DISPATCHER' : activeTerminal}
       />
     </div>

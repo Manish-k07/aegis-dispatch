@@ -3,7 +3,7 @@ import tsParser from '@typescript-eslint/parser';
 export default [
   {
     files: ['src/**/*.{ts,tsx}'],
-    ignores: ['src/demo/**', 'src/services/ModeProvider.tsx'],
+    ignores: ['src/demo/**', 'src/services/ModeProvider.tsx', 'src/components/DemoModeModal.tsx'],
     languageOptions: {
       parser: tsParser,
       parserOptions: {

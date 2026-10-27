@@ -10,6 +10,7 @@ import { formatTime } from '../utils/time';
 import { useMode } from '../services/ModeProvider';
 import { DemoBarChip } from './DemoBarChip';
 import { AboutModal } from './AboutModal';
+import { DemoModeModal } from './DemoModeModal';
 
 interface NavbarProps {
   data: DashboardData;
@@ -50,10 +51,11 @@ export const Navbar: React.FC<NavbarProps> = ({
   theme = 'dark',
   onToggleTheme,
 }) => {
-  const { mode, connectionStatus, requestModeSwitch, exitDemo } = useMode();
+  const { mode, connectionStatus, requestModeSwitch, exitDemo, setMode } = useMode();
   const [currentTime, setCurrentTime] = useState<string>(() => formatTime(new Date()));
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isAboutOpen, setIsAboutOpen] = useState(false);
+  const [isDemoModalOpen, setIsDemoModalOpen] = useState(false);
 
   const userMenuAnchorRef = useRef<HTMLButtonElement>(null);
 
@@ -459,31 +461,59 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <span>Switch to demo mode</span>
                 </button>
               ) : (
-                <button
-                  type="button"
-                  className="m3-menu-item"
-                  onClick={() => {
-                    setIsUserMenuOpen(false);
-                    exitDemo();
-                  }}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '10px',
-                    width: '100%',
-                    padding: '10px 16px',
-                    border: 'none',
-                    background: 'none',
-                    color: 'var(--md-sys-color-warning)',
-                    fontSize: '14px',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                  }}
-                >
-                  <Icon name="logout" size={20} />
-                  <span>Exit demo mode</span>
-                </button>
+                <>
+                  <button
+                    type="button"
+                    className="m3-menu-item"
+                    onClick={() => {
+                      setIsUserMenuOpen(false);
+                      setIsDemoModalOpen(true);
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      width: '100%',
+                      padding: '10px 16px',
+                      border: 'none',
+                      background: 'none',
+                      color: 'var(--md-sys-color-primary)',
+                      fontSize: '14px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                    }}
+                  >
+                    <Icon name="switch_account" size={20} />
+                    <span>Demo logins</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className="m3-menu-item"
+                    onClick={() => {
+                      setIsUserMenuOpen(false);
+                      exitDemo();
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      width: '100%',
+                      padding: '10px 16px',
+                      border: 'none',
+                      background: 'none',
+                      color: 'var(--md-sys-color-warning)',
+                      fontSize: '14px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                    }}
+                  >
+                    <Icon name="logout" size={20} />
+                    <span>Exit demo mode</span>
+                  </button>
+                </>
               )}
 
               {/* 4. About Aegis Dispatch */}
@@ -550,6 +580,15 @@ export const Navbar: React.FC<NavbarProps> = ({
 
       {/* About Aegis Dispatch Modal */}
       <AboutModal isOpen={isAboutOpen} onClose={() => setIsAboutOpen(false)} />
+
+      {/* Demo Mode Re-Open Modal for Presenters in Demo Mode */}
+      <DemoModeModal
+        isOpen={isDemoModalOpen}
+        onClose={() => setIsDemoModalOpen(false)}
+        onEnterDemo={(role) => setMode('DEMO', true, role)}
+        onSignInDirect={(account) => setMode('DEMO', true, account.portalTab)}
+        selectedTabRole={currentRole === 'DRIVER' ? 'DRIVER' : currentRole === 'HOSPITAL' ? 'HOSPITAL' : currentRole === 'CITIZEN' ? 'CITIZEN' : 'DISPATCHER'}
+      />
     </>
   );
 };

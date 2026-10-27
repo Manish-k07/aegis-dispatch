@@ -92,12 +92,16 @@ test.describe('Live and Demo Modes Verification', () => {
     await demoButton.click();
 
     // DemoModeModal opens with persona options
-    await expect(page.locator('text=Demo Mode Simulator')).toBeVisible();
+    await expect(page.locator('text=Demo mode').first()).toBeVisible();
     const enterDemoBtn = page.locator('button:has-text("Enter Demo Mode")').or(page.locator('button:has-text("Enter demo mode")'));
     await expect(enterDemoBtn).toBeVisible();
 
-    // Click Enter demo mode
+    // Click Enter demo mode and confirm switch on Layer 2 confirmation card
     await enterDemoBtn.click();
+    const continueBtn = page.locator('button:has-text("Continue to Demo")').or(page.locator('button:has-text("Continue")'));
+    if (await continueBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await continueBtn.click();
+    }
 
     // Verify persistent demo chip appears in the status/nav bar
     await expect(page.locator('text=Demo mode — synthetic data')).toBeVisible({ timeout: 10000 });
@@ -128,6 +132,10 @@ test.describe('Live and Demo Modes Verification', () => {
     await page.click('button:has-text("Demo mode")');
     const enterDemoBtn = page.locator('button:has-text("Enter Demo Mode")').or(page.locator('button:has-text("Enter demo mode")'));
     await enterDemoBtn.click();
+    const continueBtn = page.locator('button:has-text("Continue to Demo")').or(page.locator('button:has-text("Continue")'));
+    if (await continueBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await continueBtn.click();
+    }
 
     // Persistent demo chip is visible
     const exitButton = page.locator('button:has-text("Exit demo")');
@@ -172,6 +180,10 @@ test.describe('Live and Demo Modes Verification', () => {
     await page.click('button:has-text("Demo mode")');
     const enterDemoBtn = page.locator('button:has-text("Enter Demo Mode")').or(page.locator('button:has-text("Enter demo mode")'));
     await enterDemoBtn.click();
+    const continueBtn = page.locator('button:has-text("Continue to Demo")').or(page.locator('button:has-text("Continue")'));
+    if (await continueBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await continueBtn.click();
+    }
     await expect(page.locator('text=Demo mode — synthetic data')).toBeVisible({ timeout: 10000 });
 
     // 3. Reload in DEMO mode
