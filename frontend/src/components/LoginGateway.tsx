@@ -39,36 +39,18 @@ export const LoginGateway: React.FC<LoginGatewayProps> = ({
   // Input states
   const [dispatcherBadge, setDispatcherBadge] = useState('');
   const [dispatcherPin, setDispatcherPin] = useState('');
-  const [showDispatcherPin, setShowDispatcherPin] = useState(false);
   const [dispatcherError, setDispatcherError] = useState<string | null>(null);
 
-  const [driverCallSign, setDriverCallSign] = useState(ambulances[0]?.id || '');
   const [driverBadge, setDriverBadge] = useState('');
   const [driverPin, setDriverPin] = useState('');
-  const [showDriverPin, setShowDriverPin] = useState(false);
   const [driverError, setDriverError] = useState<string | null>(null);
 
-  const [hospitalFacilityCode, setHospitalFacilityCode] = useState(hospitals[0]?.id || '');
   const [hospitalStaffBadge, setHospitalStaffBadge] = useState('');
   const [hospitalPin, setHospitalPin] = useState('');
-  const [showHospitalPin, setShowHospitalPin] = useState(false);
   const [hospitalError, setHospitalError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!driverCallSign && ambulances.length > 0) {
-      setDriverCallSign(ambulances[0].id);
-    }
-  }, [ambulances, driverCallSign]);
-
-  useEffect(() => {
-    if (!hospitalFacilityCode && hospitals.length > 0) {
-      setHospitalFacilityCode(hospitals[0].id);
-    }
-  }, [hospitals, hospitalFacilityCode]);
 
   const [citizenLoginId, setCitizenLoginId] = useState('');
   const [citizenPassword, setCitizenPassword] = useState('');
-  const [showCitizenPassword, setShowCitizenPassword] = useState(false);
   const [citizenLoginError, setCitizenLoginError] = useState<string | null>(null);
 
   const [adminUsername, setAdminUsername] = useState('');
@@ -128,16 +110,13 @@ export const LoginGateway: React.FC<LoginGatewayProps> = ({
   const handleDriverSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setDriverError(null);
-    const vehicleId = driverCallSign.trim() || ambulances[0]?.id || '';
     const badge = driverBadge.trim();
     const pin = driverPin.trim();
 
-    if (!vehicleId || !badge || !pin) {
-      setDriverError('Please fill in vehicle, paramedic badge ID, and ignition PIN.');
+    if (!badge || !pin) {
+      setDriverError('Please fill in paramedic badge ID and security PIN.');
       return;
     }
-
-    const matchedAmb = ambulances.find((a) => a.id === vehicleId) || ambulances[0];
 
     setIsLoading(true);
     try {
@@ -145,7 +124,6 @@ export const LoginGateway: React.FC<LoginGatewayProps> = ({
         role: 'DRIVER',
         badgeNumber: badge,
         pin: pin,
-        ambulanceId: matchedAmb?.registrationNumber || vehicleId,
       });
       setIsLoading(false);
       onLogin(session);
@@ -159,12 +137,11 @@ export const LoginGateway: React.FC<LoginGatewayProps> = ({
   const handleHospitalSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setHospitalError(null);
-    const facilityId = hospitalFacilityCode.trim() || hospitals[0]?.id || '';
     const badge = hospitalStaffBadge.trim();
     const pin = hospitalPin.trim();
 
-    if (!facilityId || !badge || !pin) {
-      setHospitalError('Please select facility, badge ID, and security PIN.');
+    if (!badge || !pin) {
+      setHospitalError('Please enter medical staff badge ID and security PIN.');
       return;
     }
 
@@ -174,7 +151,6 @@ export const LoginGateway: React.FC<LoginGatewayProps> = ({
         role: 'HOSPITAL',
         badgeNumber: badge,
         pin: pin,
-        hospitalId: facilityId,
       });
       setIsLoading(false);
       onLogin(session);
@@ -490,67 +466,26 @@ export const LoginGateway: React.FC<LoginGatewayProps> = ({
                       </div>
                     )}
 
-                    <Field label="Dispatcher Badge / ID">
-                      <input
-                        type="text"
-                        value={dispatcherBadge}
-                        onChange={(e) => setDispatcherBadge(e.target.value)}
-                        placeholder="e.g. DISPATCH-01"
-                        autoComplete="username"
-                        required
-                        style={{
-                          width: '100%',
-                          height: '44px',
-                          padding: '0 12px',
-                          borderRadius: '8px',
-                          border: '1px solid var(--md-sys-color-outline)',
-                          backgroundColor: 'var(--md-sys-color-surface)',
-                          color: 'var(--md-sys-color-text)',
-                          fontSize: '14px',
-                          boxSizing: 'border-box',
-                        }}
-                      />
-                    </Field>
+                    <Field
+                      label="Dispatcher Badge / ID"
+                      placeholder="e.g. DISPATCH-01"
+                      value={dispatcherBadge}
+                      onChange={(e) => setDispatcherBadge(e.target.value)}
+                      autoComplete="username"
+                      required
+                      autoFocus
+                    />
 
-                    <Field label="Security PIN / Password">
-                      <div style={{ position: 'relative' }}>
-                        <input
-                          type={showDispatcherPin ? 'text' : 'password'}
-                          value={dispatcherPin}
-                          onChange={(e) => setDispatcherPin(e.target.value)}
-                          placeholder="Security PIN or Password"
-                          autoComplete="current-password"
-                          required
-                          style={{
-                            width: '100%',
-                            height: '44px',
-                            padding: '0 40px 0 12px',
-                            borderRadius: '8px',
-                            border: '1px solid var(--md-sys-color-outline)',
-                            backgroundColor: 'var(--md-sys-color-surface)',
-                            color: 'var(--md-sys-color-text)',
-                            fontSize: '14px',
-                            boxSizing: 'border-box',
-                          }}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowDispatcherPin(!showDispatcherPin)}
-                          style={{
-                            position: 'absolute',
-                            right: '8px',
-                            top: '50%',
-                            transform: 'translateY(-50%)',
-                            background: 'none',
-                            border: 'none',
-                            cursor: 'pointer',
-                            color: 'var(--md-sys-color-text-secondary)',
-                          }}
-                        >
-                          <Icon name={showDispatcherPin ? 'visibility_off' : 'visibility'} size={18} />
-                        </button>
-                      </div>
-                    </Field>
+                    <Field
+                      label="Security PIN / Password"
+                      placeholder="Security PIN or Password"
+                      type="password"
+                      showPasswordToggle
+                      value={dispatcherPin}
+                      onChange={(e) => setDispatcherPin(e.target.value)}
+                      autoComplete="current-password"
+                      required
+                    />
 
                     <Button
                       type="submit"
@@ -590,89 +525,26 @@ export const LoginGateway: React.FC<LoginGatewayProps> = ({
                       </div>
                     )}
 
-                    <Field label="Select Unit / Call Sign">
-                      <select
-                        value={driverCallSign}
-                        onChange={(e) => setDriverCallSign(e.target.value)}
-                        style={{
-                          width: '100%',
-                          height: '44px',
-                          padding: '0 12px',
-                          borderRadius: '8px',
-                          border: '1px solid var(--md-sys-color-outline)',
-                          backgroundColor: 'var(--md-sys-color-surface)',
-                          color: 'var(--md-sys-color-text)',
-                          fontSize: '14px',
-                          boxSizing: 'border-box',
-                        }}
-                      >
-                        {ambulances.map((amb) => (
-                          <option key={amb.id} value={amb.id}>
-                            {amb.registrationNumber} ({amb.type})
-                          </option>
-                        ))}
-                      </select>
-                    </Field>
+                    <Field
+                      label="Paramedic Staff Badge ID"
+                      placeholder="e.g. MED-702"
+                      value={driverBadge}
+                      onChange={(e) => setDriverBadge(e.target.value)}
+                      autoComplete="username"
+                      required
+                      autoFocus
+                    />
 
-                    <Field label="Paramedic Badge ID">
-                      <input
-                        type="text"
-                        value={driverBadge}
-                        onChange={(e) => setDriverBadge(e.target.value)}
-                        placeholder="e.g. MEDIC-101"
-                        required
-                        style={{
-                          width: '100%',
-                          height: '44px',
-                          padding: '0 12px',
-                          borderRadius: '8px',
-                          border: '1px solid var(--md-sys-color-outline)',
-                          backgroundColor: 'var(--md-sys-color-surface)',
-                          color: 'var(--md-sys-color-text)',
-                          fontSize: '14px',
-                          boxSizing: 'border-box',
-                        }}
-                      />
-                    </Field>
-
-                    <Field label="Ignition Security PIN">
-                      <div style={{ position: 'relative' }}>
-                        <input
-                          type={showDriverPin ? 'text' : 'password'}
-                          value={driverPin}
-                          onChange={(e) => setDriverPin(e.target.value)}
-                          placeholder="Security PIN"
-                          required
-                          style={{
-                            width: '100%',
-                            height: '44px',
-                            padding: '0 40px 0 12px',
-                            borderRadius: '8px',
-                            border: '1px solid var(--md-sys-color-outline)',
-                            backgroundColor: 'var(--md-sys-color-surface)',
-                            color: 'var(--md-sys-color-text)',
-                            fontSize: '14px',
-                            boxSizing: 'border-box',
-                          }}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowDriverPin(!showDriverPin)}
-                          style={{
-                            position: 'absolute',
-                            right: '8px',
-                            top: '50%',
-                            transform: 'translateY(-50%)',
-                            background: 'none',
-                            border: 'none',
-                            cursor: 'pointer',
-                            color: 'var(--md-sys-color-text-secondary)',
-                          }}
-                        >
-                          <Icon name={showDriverPin ? 'visibility_off' : 'visibility'} size={18} />
-                        </button>
-                      </div>
-                    </Field>
+                    <Field
+                      label="Security PIN"
+                      placeholder="Security PIN"
+                      type="password"
+                      showPasswordToggle
+                      value={driverPin}
+                      onChange={(e) => setDriverPin(e.target.value)}
+                      autoComplete="current-password"
+                      required
+                    />
 
                     <Button
                       type="submit"
@@ -712,89 +584,26 @@ export const LoginGateway: React.FC<LoginGatewayProps> = ({
                       </div>
                     )}
 
-                    <Field label="Receiving Hospital Facility">
-                      <select
-                        value={hospitalFacilityCode}
-                        onChange={(e) => setHospitalFacilityCode(e.target.value)}
-                        style={{
-                          width: '100%',
-                          height: '44px',
-                          padding: '0 12px',
-                          borderRadius: '8px',
-                          border: '1px solid var(--md-sys-color-outline)',
-                          backgroundColor: 'var(--md-sys-color-surface)',
-                          color: 'var(--md-sys-color-text)',
-                          fontSize: '14px',
-                          boxSizing: 'border-box',
-                        }}
-                      >
-                        {hospitals.map((hosp) => (
-                          <option key={hosp.id} value={hosp.id}>
-                            {hosp.name}
-                          </option>
-                        ))}
-                      </select>
-                    </Field>
+                    <Field
+                      label="Medical Staff Badge ID"
+                      placeholder="e.g. HOSP-101"
+                      value={hospitalStaffBadge}
+                      onChange={(e) => setHospitalStaffBadge(e.target.value)}
+                      autoComplete="username"
+                      required
+                      autoFocus
+                    />
 
-                    <Field label="Medical Staff Badge ID">
-                      <input
-                        type="text"
-                        value={hospitalStaffBadge}
-                        onChange={(e) => setHospitalStaffBadge(e.target.value)}
-                        placeholder="e.g. HOSP-101"
-                        required
-                        style={{
-                          width: '100%',
-                          height: '44px',
-                          padding: '0 12px',
-                          borderRadius: '8px',
-                          border: '1px solid var(--md-sys-color-outline)',
-                          backgroundColor: 'var(--md-sys-color-surface)',
-                          color: 'var(--md-sys-color-text)',
-                          fontSize: '14px',
-                          boxSizing: 'border-box',
-                        }}
-                      />
-                    </Field>
-
-                    <Field label="Staff Security PIN">
-                      <div style={{ position: 'relative' }}>
-                        <input
-                          type={showHospitalPin ? 'text' : 'password'}
-                          value={hospitalPin}
-                          onChange={(e) => setHospitalPin(e.target.value)}
-                          placeholder="Security PIN"
-                          required
-                          style={{
-                            width: '100%',
-                            height: '44px',
-                            padding: '0 40px 0 12px',
-                            borderRadius: '8px',
-                            border: '1px solid var(--md-sys-color-outline)',
-                            backgroundColor: 'var(--md-sys-color-surface)',
-                            color: 'var(--md-sys-color-text)',
-                            fontSize: '14px',
-                            boxSizing: 'border-box',
-                          }}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowHospitalPin(!showHospitalPin)}
-                          style={{
-                            position: 'absolute',
-                            right: '8px',
-                            top: '50%',
-                            transform: 'translateY(-50%)',
-                            background: 'none',
-                            border: 'none',
-                            cursor: 'pointer',
-                            color: 'var(--md-sys-color-text-secondary)',
-                          }}
-                        >
-                          <Icon name={showHospitalPin ? 'visibility_off' : 'visibility'} size={18} />
-                        </button>
-                      </div>
-                    </Field>
+                    <Field
+                      label="Staff Security PIN"
+                      placeholder="Security PIN"
+                      type="password"
+                      showPasswordToggle
+                      value={hospitalPin}
+                      onChange={(e) => setHospitalPin(e.target.value)}
+                      autoComplete="current-password"
+                      required
+                    />
 
                     <Button
                       type="submit"
@@ -869,65 +678,27 @@ export const LoginGateway: React.FC<LoginGatewayProps> = ({
                           </div>
                         )}
 
-                        <Field label="Mobile Phone Number">
-                          <input
-                            type="tel"
-                            value={citizenLoginId}
-                            onChange={(e) => setCitizenLoginId(e.target.value)}
-                            placeholder="e.g. 9845012345"
-                            required
-                            style={{
-                              width: '100%',
-                              height: '44px',
-                              padding: '0 12px',
-                              borderRadius: '8px',
-                              border: '1px solid var(--md-sys-color-outline)',
-                              backgroundColor: 'var(--md-sys-color-surface)',
-                              color: 'var(--md-sys-color-text)',
-                              fontSize: '14px',
-                              boxSizing: 'border-box',
-                            }}
-                          />
-                        </Field>
+                        <Field
+                          label="Mobile Phone Number"
+                          placeholder="e.g. 9845012345"
+                          type="tel"
+                          value={citizenLoginId}
+                          onChange={(e) => setCitizenLoginId(e.target.value)}
+                          autoComplete="username"
+                          required
+                          autoFocus
+                        />
 
-                        <Field label="Account Password">
-                          <div style={{ position: 'relative' }}>
-                            <input
-                              type={showCitizenPassword ? 'text' : 'password'}
-                              value={citizenPassword}
-                              onChange={(e) => setCitizenPassword(e.target.value)}
-                              placeholder="Account Password"
-                              required
-                              style={{
-                                width: '100%',
-                                height: '44px',
-                                padding: '0 40px 0 12px',
-                                borderRadius: '8px',
-                                border: '1px solid var(--md-sys-color-outline)',
-                                backgroundColor: 'var(--md-sys-color-surface)',
-                                color: 'var(--md-sys-color-text)',
-                                fontSize: '14px',
-                                boxSizing: 'border-box',
-                              }}
-                            />
-                            <button
-                              type="button"
-                              onClick={() => setShowCitizenPassword(!showCitizenPassword)}
-                              style={{
-                                position: 'absolute',
-                                right: '8px',
-                                top: '50%',
-                                transform: 'translateY(-50%)',
-                                background: 'none',
-                                border: 'none',
-                                cursor: 'pointer',
-                                color: 'var(--md-sys-color-text-secondary)',
-                              }}
-                            >
-                              <Icon name={showCitizenPassword ? 'visibility_off' : 'visibility'} size={18} />
-                            </button>
-                          </div>
-                        </Field>
+                        <Field
+                          label="Account Password"
+                          placeholder="Account Password"
+                          type="password"
+                          showPasswordToggle
+                          value={citizenPassword}
+                          onChange={(e) => setCitizenPassword(e.target.value)}
+                          autoComplete="current-password"
+                          required
+                        />
 
                         <Button
                           type="submit"
@@ -947,18 +718,44 @@ export const LoginGateway: React.FC<LoginGatewayProps> = ({
                             {regError}
                           </div>
                         )}
-                        <Field label="Full Name">
-                          <input type="text" value={regName} onChange={(e) => setRegName(e.target.value)} placeholder="Full Name" required style={{ width: '100%', height: '40px', padding: '0 12px', borderRadius: '8px', border: '1px solid var(--md-sys-color-outline)', boxSizing: 'border-box' }} />
-                        </Field>
-                        <Field label="Mobile Phone Number">
-                          <input type="tel" value={regPhone} onChange={(e) => setRegPhone(e.target.value)} placeholder="10-digit phone number" required style={{ width: '100%', height: '40px', padding: '0 12px', borderRadius: '8px', border: '1px solid var(--md-sys-color-outline)', boxSizing: 'border-box' }} />
-                        </Field>
-                        <Field label="Password">
-                          <input type="password" value={regPassword} onChange={(e) => setRegPassword(e.target.value)} placeholder="Min 4 characters" required style={{ width: '100%', height: '40px', padding: '0 12px', borderRadius: '8px', border: '1px solid var(--md-sys-color-outline)', boxSizing: 'border-box' }} />
-                        </Field>
-                        <Field label="Confirm Password">
-                          <input type="password" value={regConfirmPassword} onChange={(e) => setRegConfirmPassword(e.target.value)} placeholder="Re-enter password" required style={{ width: '100%', height: '40px', padding: '0 12px', borderRadius: '8px', border: '1px solid var(--md-sys-color-outline)', boxSizing: 'border-box' }} />
-                        </Field>
+                        <Field
+                          label="Full Name"
+                          placeholder="Full legal name"
+                          value={regName}
+                          onChange={(e) => setRegName(e.target.value)}
+                          autoComplete="name"
+                          required
+                          autoFocus
+                        />
+                        <Field
+                          label="Mobile Phone Number"
+                          placeholder="10-digit mobile number"
+                          type="tel"
+                          value={regPhone}
+                          onChange={(e) => setRegPhone(e.target.value)}
+                          autoComplete="tel"
+                          required
+                        />
+                        <Field
+                          label="Create Password"
+                          placeholder="Minimum 4 characters"
+                          type="password"
+                          showPasswordToggle
+                          value={regPassword}
+                          onChange={(e) => setRegPassword(e.target.value)}
+                          autoComplete="new-password"
+                          required
+                        />
+                        <Field
+                          label="Confirm Password"
+                          placeholder="Re-enter password to verify"
+                          type="password"
+                          showPasswordToggle
+                          value={regConfirmPassword}
+                          onChange={(e) => setRegConfirmPassword(e.target.value)}
+                          autoComplete="new-password"
+                          required
+                        />
                         <Button type="submit" variant="filled" disabled={isLoading} style={{ height: '44px', marginTop: '4px' }}>
                           {isLoading ? 'Creating account...' : 'Create Citizen Account'}
                         </Button>
@@ -994,67 +791,26 @@ export const LoginGateway: React.FC<LoginGatewayProps> = ({
                       </div>
                     )}
 
-                    <Field label="Administrator Username">
-                      <input
-                        type="text"
-                        value={adminUsername}
-                        onChange={(e) => setAdminUsername(e.target.value)}
-                        placeholder="e.g. admin"
-                        autoComplete="username"
-                        required
-                        style={{
-                          width: '100%',
-                          height: '44px',
-                          padding: '0 12px',
-                          borderRadius: '8px',
-                          border: '1px solid var(--md-sys-color-outline)',
-                          backgroundColor: 'var(--md-sys-color-surface)',
-                          color: 'var(--md-sys-color-text)',
-                          fontSize: '14px',
-                          boxSizing: 'border-box',
-                        }}
-                      />
-                    </Field>
+                    <Field
+                      label="Administrator Username"
+                      placeholder="e.g. admin"
+                      value={adminUsername}
+                      onChange={(e) => setAdminUsername(e.target.value)}
+                      autoComplete="username"
+                      required
+                      autoFocus
+                    />
 
-                    <Field label="Administrator Password">
-                      <div style={{ position: 'relative' }}>
-                        <input
-                          type={showAdminPassword ? 'text' : 'password'}
-                          value={adminPassword}
-                          onChange={(e) => setAdminPassword(e.target.value)}
-                          placeholder="Password"
-                          autoComplete="current-password"
-                          required
-                          style={{
-                            width: '100%',
-                            height: '44px',
-                            padding: '0 40px 0 12px',
-                            borderRadius: '8px',
-                            border: '1px solid var(--md-sys-color-outline)',
-                            backgroundColor: 'var(--md-sys-color-surface)',
-                            color: 'var(--md-sys-color-text)',
-                            fontSize: '14px',
-                            boxSizing: 'border-box',
-                          }}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowAdminPassword(!showAdminPassword)}
-                          style={{
-                            position: 'absolute',
-                            right: '8px',
-                            top: '50%',
-                            transform: 'translateY(-50%)',
-                            background: 'none',
-                            border: 'none',
-                            cursor: 'pointer',
-                            color: 'var(--md-sys-color-text-secondary)',
-                          }}
-                        >
-                          <Icon name={showAdminPassword ? 'visibility_off' : 'visibility'} size={18} />
-                        </button>
-                      </div>
-                    </Field>
+                    <Field
+                      label="Administrator Password"
+                      placeholder="Password"
+                      type="password"
+                      showPasswordToggle
+                      value={adminPassword}
+                      onChange={(e) => setAdminPassword(e.target.value)}
+                      autoComplete="current-password"
+                      required
+                    />
 
                     <Button
                       type="submit"

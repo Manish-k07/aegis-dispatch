@@ -255,7 +255,7 @@ test.describe('Live and Demo Modes Verification', () => {
     });
 
     await paramedicPage.click('button:has-text("Responder (MDT)")');
-    await paramedicPage.fill('input[placeholder="e.g. MEDIC-101"]', 'paramedic1');
+    await paramedicPage.fill('input[placeholder="e.g. MED-702"]', 'paramedic1');
     await paramedicPage.fill('input[placeholder="Security PIN"]', 'Password@123');
     await paramedicPage.click('button:has-text("Launch MDT Navigation")');
 
