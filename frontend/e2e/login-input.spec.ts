@@ -17,13 +17,13 @@ const loginViews: {
     fields: [
       {
         name: 'Dispatcher Badge',
-        tabButtonText: 'CAD Dispatch',
+        tabButtonText: 'Dispatcher',
         containerSelector: '.m3-field-container:has(input[placeholder="e.g. DISPATCH-01"])',
         inputSelector: 'input[placeholder="e.g. DISPATCH-01"]',
       },
       {
         name: 'Dispatcher Security PIN',
-        tabButtonText: 'CAD Dispatch',
+        tabButtonText: 'Dispatcher',
         containerSelector: '.m3-field-container:has(input[placeholder="Security PIN or Password"])',
         inputSelector: 'input[placeholder="Security PIN or Password"]',
       },
@@ -34,13 +34,13 @@ const loginViews: {
     fields: [
       {
         name: 'Paramedic Badge',
-        tabButtonText: 'Responder (MDT)',
+        tabButtonText: 'Responder',
         containerSelector: '.m3-field-container:has(input[placeholder="e.g. MED-702"])',
         inputSelector: 'input[placeholder="e.g. MED-702"]',
       },
       {
         name: 'Responder PIN',
-        tabButtonText: 'Responder (MDT)',
+        tabButtonText: 'Responder',
         containerSelector: '.m3-field-container:has(input[placeholder="Security PIN"])',
         inputSelector: 'input[placeholder="Security PIN"]',
       },
@@ -51,13 +51,13 @@ const loginViews: {
     fields: [
       {
         name: 'Hospital Staff Badge',
-        tabButtonText: 'Hospital ED',
+        tabButtonText: 'Hospital',
         containerSelector: '.m3-field-container:has(input[placeholder="e.g. HOSP-101"])',
         inputSelector: 'input[placeholder="e.g. HOSP-101"]',
       },
       {
         name: 'Hospital PIN',
-        tabButtonText: 'Hospital ED',
+        tabButtonText: 'Hospital',
         containerSelector: '.m3-field-container:has(input[placeholder="Security PIN"])',
         inputSelector: 'input[placeholder="Security PIN"]',
       },
@@ -68,13 +68,13 @@ const loginViews: {
     fields: [
       {
         name: 'Citizen Phone',
-        tabButtonText: 'Citizen SOS',
+        tabButtonText: 'Citizen',
         containerSelector: '.m3-field-container:has(input[placeholder="e.g. 9845012345"])',
         inputSelector: 'input[placeholder="e.g. 9845012345"]',
       },
       {
         name: 'Citizen Password',
-        tabButtonText: 'Citizen SOS',
+        tabButtonText: 'Citizen',
         containerSelector: '.m3-field-container:has(input[placeholder="Account Password"])',
         inputSelector: 'input[placeholder="Account Password"]',
       },
@@ -85,7 +85,7 @@ const loginViews: {
     fields: [
       {
         name: 'Full Name',
-        tabButtonText: 'Citizen SOS',
+        tabButtonText: 'Citizen',
         setupAction: async (page) => {
           const createAcctBtn = page.locator('button:has-text("Self-Register")');
           if (await createAcctBtn.isVisible()) {
@@ -97,19 +97,19 @@ const loginViews: {
       },
       {
         name: 'Mobile Phone',
-        tabButtonText: 'Citizen SOS',
+        tabButtonText: 'Citizen',
         containerSelector: '.m3-field-container:has(input[placeholder="10-digit mobile number"])',
         inputSelector: 'input[placeholder="10-digit mobile number"]',
       },
       {
         name: 'Create Password',
-        tabButtonText: 'Citizen SOS',
+        tabButtonText: 'Citizen',
         containerSelector: '.m3-field-container:has(input[placeholder="Minimum 4 characters"])',
         inputSelector: 'input[placeholder="Minimum 4 characters"]',
       },
       {
         name: 'Confirm Password',
-        tabButtonText: 'Citizen SOS',
+        tabButtonText: 'Citizen',
         containerSelector: '.m3-field-container:has(input[placeholder="Re-enter password to verify"])',
         inputSelector: 'input[placeholder="Re-enter password to verify"]',
       },
@@ -120,13 +120,23 @@ const loginViews: {
     fields: [
       {
         name: 'Admin Username',
-        tabButtonText: 'System Admin',
+        setupAction: async (page) => {
+          const footerLink = page.locator('a:has-text("Administrator sign in")');
+          if (await footerLink.isVisible()) {
+            await footerLink.click();
+          }
+        },
         containerSelector: '.m3-field-container:has(input[placeholder="e.g. admin"])',
         inputSelector: 'input[placeholder="e.g. admin"]',
       },
       {
         name: 'Admin Password',
-        tabButtonText: 'System Admin',
+        setupAction: async (page) => {
+          const footerLink = page.locator('a:has-text("Administrator sign in")');
+          if (await footerLink.isVisible()) {
+            await footerLink.click();
+          }
+        },
         containerSelector: '.m3-field-container:has(input[placeholder="Password"])',
         inputSelector: 'input[placeholder="Password"]',
       },
@@ -279,7 +289,7 @@ test.describe('STEP 4 - Regression Tests & Invariant Verification', () => {
   });
 
   test('Confirm NO two elements share an ID on any tab', async ({ page }) => {
-    const tabs = ['CAD Dispatch', 'Responder (MDT)', 'Hospital ED', 'Citizen SOS', 'System Admin'];
+    const tabs = ['Citizen', 'Dispatcher', 'Responder', 'Hospital'];
     for (const tabName of tabs) {
       const tabBtn = page.locator(`button:has-text("${tabName}")`);
       await tabBtn.click();
@@ -303,6 +313,7 @@ test.describe('STEP 4 - Regression Tests & Invariant Verification', () => {
   });
 
   test('Fast typing 50 characters in 200ms drops no characters and preserves node reference', async ({ page }) => {
+    await page.locator('#login-tab-dispatcher').click();
     const inputLoc = page.locator('input[placeholder="e.g. DISPATCH-01"]');
     await expect(inputLoc).toBeVisible();
     await inputLoc.click();
@@ -322,6 +333,7 @@ test.describe('STEP 4 - Regression Tests & Invariant Verification', () => {
   });
 
   test('Focused field captures all keypresses without global shortcut interference', async ({ page }) => {
+    await page.locator('#login-tab-dispatcher').click();
     const inputLoc = page.locator('input[placeholder="e.g. DISPATCH-01"]');
     await expect(inputLoc).toBeVisible();
     await inputLoc.click();
@@ -363,9 +375,9 @@ test.describe('STEP 4 - Regression Tests & Invariant Verification', () => {
   });
 
   test('Rapid role switching 5 times leaves all forms fully functional and accepting input', async ({ page }) => {
-    const tabs = ['CAD Dispatch', 'Responder (MDT)', 'Hospital ED', 'Citizen SOS', 'System Admin'];
+    const tabs = ['Citizen', 'Dispatcher', 'Responder', 'Hospital'];
 
-    // Rapidly switch between all 5 roles 5 times
+    // Rapidly switch between all 4 roles 5 times
     for (let i = 0; i < 5; i++) {
       for (const tabName of tabs) {
         const tabBtn = page.locator(`button:has-text("${tabName}")`);
@@ -373,9 +385,9 @@ test.describe('STEP 4 - Regression Tests & Invariant Verification', () => {
       }
     }
 
-    // Switch back to CAD Dispatch and verify typing works cleanly
-    const cadTab = page.locator('button:has-text("CAD Dispatch")');
-    await cadTab.click();
+    // Switch back to Dispatcher and verify typing works cleanly
+    const dispTab = page.locator('#login-tab-dispatcher');
+    await dispTab.click();
 
     const badgeInput = page.locator('input[placeholder="e.g. DISPATCH-01"]');
     await expect(badgeInput).toBeVisible();
@@ -384,7 +396,7 @@ test.describe('STEP 4 - Regression Tests & Invariant Verification', () => {
     expect(await badgeInput.inputValue()).toBe('DISPATCH-AFTER-SWITCH');
 
     // Switch to Responder and verify typing works cleanly
-    const responderTab = page.locator('button:has-text("Responder (MDT)")');
+    const responderTab = page.locator('#login-tab-responder');
     await responderTab.click();
 
     const responderBadge = page.locator('input[placeholder="e.g. MED-702"]');

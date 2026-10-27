@@ -57,17 +57,17 @@ test.describe('Admin Console & Multi-Route Field Overlap Audit', () => {
       // 1. Audit Login page fields
       await auditFieldBoxes(page, 'Login Gateway');
 
-      // Switch to System Admin tab
-      const adminTab = page.locator('button:has-text("System Admin")');
-      await expect(adminTab).toBeVisible();
-      await adminTab.click();
+      // Switch to Administrator sign in
+      const footerLink = page.locator('a:has-text("Administrator sign in")');
+      await expect(footerLink).toBeVisible();
+      await footerLink.click();
 
       // Log in as Admin
       const usernameField = page.locator('input[placeholder="e.g. admin"]');
       const passwordField = page.locator('input[placeholder="Password"]');
       await usernameField.fill('admin');
       await passwordField.fill('Admin@Aegis2026');
-      await page.click('button:has-text("Sign in as Administrator")');
+      await page.click('button[type="submit"]:has-text("Sign in")');
 
       // Wait for Admin Console to mount
       await expect(page.locator('h1:has-text("Aegis System Administration")')).toBeVisible();
@@ -143,11 +143,11 @@ test.describe('Admin Console & Multi-Route Field Overlap Audit', () => {
     await page.waitForLoadState('networkidle');
 
     // 1. Dispatcher Route
-    const cadTab = page.locator('button:has-text("CAD Dispatch")');
+    const cadTab = page.locator('#login-tab-dispatcher');
     await cadTab.click();
     await page.locator('input[placeholder="e.g. DISPATCH-01"]').fill('DISPATCH-01');
     await page.locator('input[placeholder="Security PIN or Password"]').fill('Dispatch@2026');
-    await page.locator('button:has-text("Sign in as Dispatcher")').click();
+    await page.locator('button[type="submit"]:has-text("Sign in")').click();
     await page.waitForTimeout(500);
     await auditFieldBoxes(page, 'CAD Dashboard');
 
@@ -156,11 +156,11 @@ test.describe('Admin Console & Multi-Route Field Overlap Audit', () => {
     await page.goto('http://localhost:5173');
 
     // 2. Citizen Route
-    const citizenTab = page.locator('button:has-text("Citizen SOS")');
+    const citizenTab = page.locator('#login-tab-citizen');
     await citizenTab.click();
     await page.locator('input[placeholder="e.g. 9845012345"]').fill('9845012345');
     await page.locator('input[placeholder="Account Password"]').fill('1120');
-    await page.locator('button:has-text("Sign in as Citizen")').click();
+    await page.locator('button[type="submit"]:has-text("Sign in")').click();
     await page.waitForTimeout(500);
     await auditFieldBoxes(page, 'Citizen Portal');
   });
