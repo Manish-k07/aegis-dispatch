@@ -861,23 +861,11 @@ export const CitizenDashboard: React.FC<CitizenDashboardProps> = ({
                   </div>
 
                   {isEditingAddress ? (
-                    <input
-                      type="text"
+                    <Field
+                      label="Delivery Address"
                       value={addressDraft}
                       onChange={(e) => setAddressDraft(e.target.value)}
                       placeholder="Enter street address, building or landmark"
-                      style={{
-                        width: '100%',
-                        padding: '10px 12px',
-                        borderRadius: '6px',
-                        border: '1px solid var(--md-sys-color-primary)',
-                        backgroundColor: 'var(--md-sys-color-surface)',
-                        color: 'var(--md-sys-color-text)',
-                        fontSize: '13px',
-                        outline: 'none',
-                        fontFamily: 'inherit',
-                        boxSizing: 'border-box',
-                      }}
                     />
                   ) : (
                     <div style={{ fontSize: '13px', color: 'var(--md-sys-color-text)', paddingLeft: '28px' }}>

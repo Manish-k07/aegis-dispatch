@@ -29,6 +29,8 @@
   --md-sys-color-surface-container-high: #E8EAED;
   --md-sys-color-surface-container-highest: #E1E3E6;
 
+  --field-bg: var(--md-sys-color-surface, #FFFFFF);
+
   --md-sys-color-outline: #DADCE0;
   --md-sys-color-outline-variant: #E8EAED;
 
@@ -116,6 +118,8 @@
   --md-sys-color-surface-container: #303134;
   --md-sys-color-surface-container-high: #35363A;
   --md-sys-color-surface-container-highest: #3C4043;
+
+  --field-bg: var(--md-sys-color-surface, #292A2D);
 
   --md-sys-color-outline: #3C4043;
   --md-sys-color-outline-variant: #5F6368;
@@ -699,6 +703,65 @@ select:focus-visible,
   color: var(--md-sys-color-error);
 }
 
+/* --- Shared Outlined Field --- */
+.m3-field-container {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.m3-field-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 56px;
+  border-radius: 8px;
+  border: 1px solid var(--md-sys-color-outline);
+  background-color: var(--field-bg, var(--md-sys-color-surface));
+  padding: 0 14px;
+  box-sizing: border-box;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.m3-field-box:focus-within {
+  border-color: var(--md-sys-color-primary);
+  box-shadow: 0 0 0 1px var(--md-sys-color-primary);
+}
+
+.m3-field-has-error .m3-field-box {
+  border-color: var(--md-sys-color-error) !important;
+}
+
+.m3-field-input {
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--md-sys-color-text);
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+/* Placeholder visibility: never visible while floating label is resting in the middle */
+.m3-field-container.has-floating-label .m3-field-box:not(:focus-within):not(.has-value) .m3-field-input::placeholder {
+  opacity: 0;
+  color: transparent;
+}
+
+.m3-field-box:focus-within .m3-field-input::placeholder,
+.m3-field-box.has-value .m3-field-input::placeholder,
+.m3-field-container:not(.has-floating-label) .m3-field-input::placeholder {
+  opacity: 0.6;
+  color: var(--md-sys-color-text-secondary);
+}
+
 /* --- Tabs --- */
 .m3-tabs {
   display: flex;
@@ -1170,3 +1233,28 @@ select:focus-visible,
 .m3-map-popup .leaflet-popup-close-button {
   display: none !important;
 }
+
+/* --- Admin Responsive Grid --- */
+.m3-admin-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.m3-admin-mobile-add-btn {
+  display: none;
+}
+
+@media (max-width: 1000px) {
+  .m3-admin-grid {
+    grid-template-columns: 1fr;
+  }
+  .m3-admin-desktop-form {
+    display: none;
+  }
+  .m3-admin-mobile-add-btn {
+    display: block;
+  }
+}
+

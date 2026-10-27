@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { StatusChip } from './common/StatusChip';
+import { Field } from './common/Field';
 import { Icon } from './common/Icon';
 import { Button } from './common/Button';
 import { IconButton } from './common/IconButton';
@@ -302,19 +303,20 @@ export const AICopilotDrawer: React.FC<AICopilotDrawerProps> = ({
               <strong style={{ fontSize: '12px', fontWeight: 600 }}>Clinical protocol triage</strong>
             </div>
             <div style={{ display: 'flex', gap: '8px' }}>
-              <input
-                type="text"
-                placeholder="e.g. 52yo male substernal chest pain, cold sweat, dyspnea"
-                value={triageInput}
-                onChange={(e) => setTriageInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    handleRunTriage();
-                  }
-                }}
-                className="triage-input"
-              />
+              <div style={{ flex: 1 }}>
+                <Field
+                  fieldSize="compact"
+                  placeholder="e.g. 52yo male substernal chest pain, cold sweat, dyspnea"
+                  value={triageInput}
+                  onChange={(e) => setTriageInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleRunTriage();
+                    }
+                  }}
+                />
+              </div>
               <Button
                 variant="filled"
                 size="small"
@@ -394,12 +396,14 @@ export const AICopilotDrawer: React.FC<AICopilotDrawerProps> = ({
           }}
           className="copilot-input-bar"
         >
-          <input
-            type="text"
-            placeholder="Ask AI Copilot: 'Auto assign next', 'Fleet status'..."
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-          />
+          <div style={{ flex: 1 }}>
+            <Field
+              fieldSize="compact"
+              placeholder="Ask AI Copilot: 'Auto assign next', 'Fleet status'..."
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+            />
+          </div>
           <IconButton
             icon="send"
             size="standard"

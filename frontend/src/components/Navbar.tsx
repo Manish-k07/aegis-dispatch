@@ -4,6 +4,7 @@ import { Icon } from './common/Icon';
 import { Button } from './common/Button';
 import { IconButton } from './common/IconButton';
 import { Switch } from './common/Switch';
+import { Field } from './common/Field';
 import { MenuPopover } from './common/MenuPopover';
 import { Tooltip } from './common/Tooltip';
 import { formatTime } from '../utils/time';
@@ -157,51 +158,18 @@ export const Navbar: React.FC<NavbarProps> = ({
                 width: '100%',
                 minWidth: '320px',
                 maxWidth: '560px',
-                height: '40px',
-                borderRadius: '20px',
-                border: '1px solid var(--md-sys-color-outline)',
-                backgroundColor: 'var(--md-sys-color-surface-container-high)',
-                display: 'flex',
-                alignItems: 'center',
-                padding: '0 16px',
-                boxSizing: 'border-box',
-                gap: '8px',
               }}
             >
-              <Icon name="search" size={20} style={{ color: 'var(--md-sys-color-text-secondary)', flexShrink: 0 }} />
-              <input
-                type="text"
+              <Field
+                fieldSize="compact"
                 placeholder="Search incidents, units, hospitals"
                 value={searchQuery}
                 onChange={(e) => onSearchChange(e.target.value)}
-                style={{
-                  border: 'none',
-                  outline: 'none',
-                  background: 'transparent',
-                  width: '100%',
-                  fontSize: '14px',
-                  color: 'var(--md-sys-color-text)',
-                  fontFamily: 'inherit',
-                }}
+                leadingIcon="search"
+                trailingIcon={searchQuery ? 'close' : undefined}
+                onTrailingIconClick={() => onSearchChange('')}
+                aria-label="Search incidents, units, hospitals"
               />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => onSearchChange('')}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    padding: 0,
-                    display: 'flex',
-                    alignItems: 'center',
-                    color: 'var(--md-sys-color-text-secondary)',
-                  }}
-                  aria-label="Clear search"
-                >
-                  <Icon name="close" size={18} />
-                </button>
-              )}
             </div>
           )}
         </div>

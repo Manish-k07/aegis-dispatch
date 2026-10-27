@@ -66,8 +66,8 @@ public class AuthService {
 
         // Dispatchers
         saveOrUpdateSeedUser("CAD-042", "1120", "DISPATCHER", "A. Sharma", "+919800000001", null, null, Map.of("badge", "CAD-042", "title", "Lead CAD Dispatcher"));
-        saveOrUpdateSeedUser("DISPATCH-01", "Dispatch@2026", "DISPATCHER", "A. Sharma", "+919800000002", null, null, Map.of("badge", "DISPATCH-01", "title", "Lead CAD Dispatcher"));
-        saveOrUpdateSeedUser("CAD-001", "Dispatch@2026", "DISPATCHER", "A. Sharma", "+919800000003", null, null, Map.of("badge", "CAD-001"));
+        saveOrUpdateSeedUser("DISPATCH-01", "Dispatch@2026", "DISPATCHER", "Aditya Sharma", "+919800000002", null, null, Map.of("badge", "DISPATCH-01", "title", "Lead CAD Dispatcher"));
+        saveOrUpdateSeedUser("CAD-001", "Dispatch@2026", "DISPATCHER", "Arjun Sharma", "+919800000003", null, null, Map.of("badge", "CAD-001"));
         saveOrUpdateSeedUser("DISPATCHER", "Dispatch@2026", "DISPATCHER", "Lead Dispatcher", "+919800000004", null, null, Map.of("badge", "DISPATCHER"));
 
         // Paramedics

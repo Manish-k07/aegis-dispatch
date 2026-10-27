@@ -34,6 +34,9 @@ public class User {
     @Column(name = "force_password_change", nullable = false)
     private boolean forcePasswordChange = false;
 
+    @Column(nullable = false)
+    private boolean enabled = true;
+
     @Column(columnDefinition = "TEXT")
     private String metadata;
 
@@ -78,6 +81,9 @@ public class User {
 
     public boolean isForcePasswordChange() { return forcePasswordChange; }
     public void setForcePasswordChange(boolean forcePasswordChange) { this.forcePasswordChange = forcePasswordChange; }
+
+    public boolean isEnabled() { return enabled; }
+    public void setEnabled(boolean enabled) { this.enabled = enabled; }
 
     public String getMetadata() { return metadata; }
     public void setMetadata(String metadata) { this.metadata = metadata; }

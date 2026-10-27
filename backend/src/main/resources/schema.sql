@@ -72,9 +72,12 @@ CREATE TABLE IF NOT EXISTS users (
   assigned_vehicle_id VARCHAR(80),
   assigned_hospital_id VARCHAR(80),
   force_password_change BOOLEAN NOT NULL DEFAULT FALSE,
+  enabled BOOLEAN NOT NULL DEFAULT TRUE,
   metadata TEXT,
   created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS enabled BOOLEAN NOT NULL DEFAULT TRUE;
 
 CREATE TABLE IF NOT EXISTS incident_events (
   id BIGSERIAL PRIMARY KEY,

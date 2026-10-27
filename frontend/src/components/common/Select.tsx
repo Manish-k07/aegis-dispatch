@@ -116,9 +116,9 @@ export const Select: React.FC<SelectProps> = ({
           alignItems: 'center',
           justifyContent: 'space-between',
           height: '56px',
-          borderRadius: '4px',
-          border: `1px solid ${error ? 'var(--md-sys-color-error)' : isOpen ? 'var(--md-sys-color-primary)' : 'var(--md-sys-color-outline)'}`,
-          backgroundColor: 'var(--md-sys-color-surface)',
+          borderRadius: '8px',
+          border: `1px solid ${error ? 'var(--md-sys-color-error, #B3261E)' : isOpen ? 'var(--md-sys-color-primary)' : 'var(--md-sys-color-outline)'}`,
+          backgroundColor: 'var(--field-bg, var(--md-sys-color-surface))',
           padding: '0 16px',
           boxSizing: 'border-box',
           cursor: disabled ? 'not-allowed' : 'pointer',
@@ -132,7 +132,7 @@ export const Select: React.FC<SelectProps> = ({
               name={leadingIcon}
               size={20}
               style={{
-                color: error ? 'var(--md-sys-color-error)' : 'var(--md-sys-color-text-secondary)',
+                color: error ? 'var(--md-sys-color-error, #B3261E)' : 'var(--md-sys-color-text-secondary)',
                 flexShrink: 0,
               }}
             />
@@ -140,10 +140,10 @@ export const Select: React.FC<SelectProps> = ({
 
           <div
             style={{
-              fontFamily: 'var(--md-ref-typeface-plain)',
-              fontSize: '16px',
+              fontFamily: 'inherit',
+              fontSize: '14px',
               color: selectedOption ? 'var(--md-sys-color-text)' : 'transparent',
-              paddingTop: isFloating ? '16px' : '0',
+              paddingTop: '0',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
@@ -160,16 +160,17 @@ export const Select: React.FC<SelectProps> = ({
             top: isFloating ? '0' : '50%',
             transform: isFloating ? 'translateY(-50%) scale(0.75)' : 'translateY(-50%)',
             transformOrigin: 'top left',
-            fontFamily: 'var(--md-ref-typeface-plain)',
-            fontSize: '16px',
-            lineHeight: '24px',
+            fontFamily: 'inherit',
+            fontSize: '14px',
+            fontWeight: isFloating ? 500 : 400,
+            lineHeight: '20px',
             color: error
-              ? 'var(--md-sys-color-error)'
+              ? 'var(--md-sys-color-error, #B3261E)'
               : isOpen
               ? 'var(--md-sys-color-primary)'
               : 'var(--md-sys-color-text-secondary)',
-            backgroundColor: 'var(--md-sys-color-surface)',
-            padding: '0 4px',
+            backgroundColor: isFloating ? 'var(--field-bg, var(--md-sys-color-surface))' : 'transparent',
+            padding: isFloating ? '0 4px' : '0',
             pointerEvents: 'none',
             transition: 'all 180ms ease',
             whiteSpace: 'nowrap',

@@ -41,6 +41,7 @@ public class AdminBootstrapService implements CommandLineRunner {
         String hashedPassword = JwtService.hashPassword(adminPassword);
         User admin = new User(adminId, adminUsername, hashedPassword, "ADMIN", "System Administrator", "+919800000000");
         admin.setForcePasswordChange(true);
+        admin.setEnabled(true);
         userRepository.save(admin);
 
         // NEVER log the password

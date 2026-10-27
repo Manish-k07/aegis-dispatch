@@ -2,7 +2,7 @@ import React, { useState, useId, useRef } from 'react';
 import { Icon } from './Icon';
 
 export interface FieldProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size'> {
-  label: string;
+  label?: string;
   helperText?: string;
   error?: string;
   leadingIcon?: string;
@@ -13,7 +13,7 @@ export interface FieldProps extends Omit<React.InputHTMLAttributes<HTMLInputElem
   multiline?: boolean;
   rows?: number;
   showPasswordToggle?: boolean;
-  children?: React.ReactNode;
+  fieldSize?: 'compact' | 'standard';
 }
 
 export const Field: React.FC<FieldProps> = ({
@@ -28,6 +28,7 @@ export const Field: React.FC<FieldProps> = ({
   multiline = false,
   rows = 3,
   showPasswordToggle = false,
+  fieldSize = 'standard',
   id,
   value,
   defaultValue,
@@ -37,7 +38,6 @@ export const Field: React.FC<FieldProps> = ({
   type = 'text',
   className = '',
   style,
-  children,
   onFocus,
   onBlur,
   onChange,
@@ -57,10 +57,10 @@ export const Field: React.FC<FieldProps> = ({
     value !== undefined && value !== null && value !== ''
       ? true
       : defaultValue !== undefined && defaultValue !== null && defaultValue !== '';
-  const isFloating = isFocused || hasValue || Boolean(placeholder);
+  const isFloating = isFocused || hasValue;
+  const isCompact = fieldSize === 'compact';
 
-  const handleContainerClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    // If the click was not directly on the input, focus the input
+  const handleContainerClick = () => {
     if (inputRef.current && document.activeElement !== inputRef.current) {
       inputRef.current.focus();
     }
@@ -69,7 +69,9 @@ export const Field: React.FC<FieldProps> = ({
   return (
     <div
       ref={containerRef}
-      className={`m3-field-container ${error ? 'm3-field-has-error' : ''} ${disabled ? 'm3-field-disabled' : ''} ${className}`}
+      className={`m3-field-container ${label ? 'has-floating-label' : ''} ${
+        error ? 'm3-field-has-error' : ''
+      } ${disabled ? 'm3-field-disabled' : ''} ${className}`}
       onClick={handleContainerClick}
       style={{
         display: 'flex',
@@ -82,35 +84,66 @@ export const Field: React.FC<FieldProps> = ({
       }}
     >
       <div
-        className="m3-field-box"
+        className={`m3-field-box ${hasValue ? 'has-value' : ''}`}
         style={{
           position: 'relative',
           display: 'flex',
           alignItems: multiline ? 'flex-start' : 'center',
-          minHeight: multiline ? `${rows * 24 + 32}px` : '56px',
-          height: multiline ? 'auto' : '56px',
-          borderRadius: '8px',
+          minHeight: multiline ? `${rows * 24 + 32}px` : isCompact ? '40px' : '56px',
+          height: multiline ? 'auto' : isCompact ? '40px' : '56px',
+          borderRadius: isCompact ? '20px' : '8px',
           border: `1px solid ${
             error
-              ? 'var(--md-sys-color-error, #ef4444)'
+              ? 'var(--md-sys-color-error, #B3261E)'
               : isFocused
               ? 'var(--md-sys-color-primary, #0284c7)'
               : 'var(--md-sys-color-outline, #475569)'
           }`,
-          backgroundColor: 'var(--md-sys-color-surface, #1e293b)',
-          padding: '0 12px',
+          backgroundColor: 'var(--field-bg, var(--md-sys-color-surface, #1e293b))',
+          padding: isCompact ? '0 14px' : '0 12px',
           boxSizing: 'border-box',
           transition: 'border-color 150ms ease, box-shadow 150ms ease',
           boxShadow: isFocused ? '0 0 0 1px var(--md-sys-color-primary, #0284c7)' : 'none',
         }}
       >
+        {/* Floating Label in Notch */}
+        {label && (
+          <label
+            htmlFor={inputId}
+            className="m3-field-floating-label"
+            style={{
+              position: 'absolute',
+              left: leadingIcon ? '40px' : '12px',
+              top: isFloating ? '0' : multiline ? '18px' : '50%',
+              transform: isFloating ? 'translateY(-50%) scale(0.75)' : 'translateY(-50%)',
+              transformOrigin: 'top left',
+              fontFamily: 'inherit',
+              fontSize: '14px',
+              fontWeight: isFloating ? 500 : 400,
+              color: error
+                ? 'var(--md-sys-color-error, #B3261E)'
+                : isFocused
+                ? 'var(--md-sys-color-primary, #0284c7)'
+                : 'var(--md-sys-color-text-secondary, #94a3b8)',
+              backgroundColor: isFloating ? 'var(--field-bg, var(--md-sys-color-surface, #1e293b))' : 'transparent',
+              padding: isFloating ? '0 4px' : '0',
+              cursor: 'text',
+              transition: 'all 150ms cubic-bezier(0.4, 0, 0.2, 1)',
+              whiteSpace: 'nowrap',
+              zIndex: 2,
+            }}
+          >
+            {label} {required && <span style={{ color: 'var(--md-sys-color-error, #B3261E)' }}>*</span>}
+          </label>
+        )}
+
         {leadingIcon && (
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
               marginRight: '8px',
-              color: error ? 'var(--md-sys-color-error)' : 'var(--md-sys-color-text-secondary)',
+              color: error ? 'var(--md-sys-color-error, #B3261E)' : 'var(--md-sys-color-text-secondary)',
               pointerEvents: 'none',
               flexShrink: 0,
             }}
@@ -120,9 +153,7 @@ export const Field: React.FC<FieldProps> = ({
         )}
 
         <div style={{ flex: 1, width: '100%', height: '100%', display: 'flex', alignItems: 'center', position: 'relative' }}>
-          {children ? (
-            children
-          ) : multiline ? (
+          {multiline ? (
             <textarea
               ref={inputRef as React.RefObject<HTMLTextAreaElement>}
               id={inputId}
@@ -149,7 +180,7 @@ export const Field: React.FC<FieldProps> = ({
                 outline: 'none',
                 boxShadow: 'none',
                 resize: 'vertical',
-                paddingTop: isFloating ? '16px' : '8px',
+                paddingTop: '12px',
                 paddingBottom: '8px',
                 paddingLeft: 0,
                 paddingRight: 0,
@@ -187,8 +218,8 @@ export const Field: React.FC<FieldProps> = ({
                 border: 'none',
                 outline: 'none',
                 boxShadow: 'none',
-                paddingTop: isFloating ? '16px' : '0',
-                paddingBottom: '0',
+                paddingTop: 0,
+                paddingBottom: 0,
                 paddingLeft: 0,
                 paddingRight: showPasswordToggle || trailingIcon ? '32px' : '0',
                 fontFamily: 'inherit',
@@ -199,30 +230,6 @@ export const Field: React.FC<FieldProps> = ({
               {...props}
             />
           )}
-
-          {/* Floating Label */}
-          <label
-            htmlFor={inputId}
-            style={{
-              position: 'absolute',
-              left: 0,
-              top: isFloating ? '6px' : '50%',
-              transform: isFloating ? 'none' : 'translateY(-50%)',
-              fontSize: isFloating ? '11px' : '14px',
-              fontWeight: isFloating ? 600 : 400,
-              color: error
-                ? 'var(--md-sys-color-error, #ef4444)'
-                : isFocused
-                ? 'var(--md-sys-color-primary, #0284c7)'
-                : 'var(--md-sys-color-text-secondary, #94a3b8)',
-              pointerEvents: 'none',
-              transition: 'all 120ms ease',
-              whiteSpace: 'nowrap',
-              zIndex: 1,
-            }}
-          >
-            {label} {required && <span style={{ color: 'var(--md-sys-color-error)' }}>*</span>}
-          </label>
         </div>
 
         {/* Password Visibility Toggle */}
@@ -233,6 +240,7 @@ export const Field: React.FC<FieldProps> = ({
               e.stopPropagation();
               setShowPassword(!showPassword);
             }}
+            tabIndex={-1}
             aria-label={showPassword ? 'Hide password' : 'Show password'}
             style={{
               background: 'none',
@@ -259,6 +267,7 @@ export const Field: React.FC<FieldProps> = ({
               onTrailingIconClick?.();
             }}
             disabled={!onTrailingIconClick}
+            aria-label={props['aria-label'] || 'Field action'}
             style={{
               background: 'none',
               border: 'none',
@@ -293,11 +302,12 @@ export const Field: React.FC<FieldProps> = ({
       {/* Helper text / error message */}
       {(error || helperText) && (
         <span
+          className="m3-field-helper-text"
           style={{
-            fontSize: '11px',
-            lineHeight: '14px',
+            fontSize: '12px',
+            lineHeight: '16px',
             paddingLeft: '4px',
-            color: error ? 'var(--md-sys-color-error, #ef4444)' : 'var(--md-sys-color-text-secondary, #94a3b8)',
+            color: error ? 'var(--md-sys-color-error, #B3261E)' : 'var(--md-sys-color-text-secondary, #94a3b8)',
           }}
         >
           {error || helperText}
