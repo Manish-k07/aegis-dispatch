@@ -1,4 +1,4 @@
-# Production image for Google Cloud Run.
+# Production image for Render / Cloud Run.
 # Builds the React UI, copies it into Spring Boot's static resources, then runs one JVM.
 FROM node:20-alpine AS frontend
 WORKDIR /frontend
@@ -16,6 +16,7 @@ RUN mvn -f backend/pom.xml -DskipTests package
 
 FROM eclipse-temurin:21-jre
 WORKDIR /app
+RUN mkdir -p /app/data
 ENV JAVA_OPTS="-XX:MaxRAMPercentage=75 -XX:+ExitOnOutOfMemoryError"
 COPY --from=backend-build /workspace/backend/target/*.jar /app/aegis-dispatch.jar
 EXPOSE 8080
