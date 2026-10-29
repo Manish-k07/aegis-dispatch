@@ -21,11 +21,30 @@ spring:
     init:
       mode: always
       schema-locations: classpath:schema.sql
-      continue-on-error: true
+      continue-on-error: false
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 10MB
+      max-request-size: 10MB
+  mail:
+    host: ${MAIL_HOST:}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${MAIL_AUTH:false}
+          starttls:
+            enable: ${MAIL_STARTTLS:true}
 
 server:
   port: ${PORT:8080}
   forward-headers-strategy: framework
+  tomcat:
+    max-http-form-post-size: 10MB
+    max-swallow-size: 10MB
   error:
     include-message: never
     include-binding-errors: never
@@ -49,6 +68,8 @@ app:
   admin:
     default-username: ${AEGIS_ADMIN_USERNAME:admin}
     default-password: ${AEGIS_ADMIN_PASSWORD:Aegis@Admin2026!}
+    username: ${AEGIS_ADMIN_USERNAME:admin}
+    password: ${AEGIS_ADMIN_PASSWORD:Aegis@Admin2026!}
   cors-allowed-origins: ${CORS_ALLOWED_ORIGINS:${CORS_ORIGIN:http://localhost:5173,http://localhost:8080,http://127.0.0.1:5173,http://127.0.0.1:8080,http://172.20.10.2:5173,http://172.20.10.2:8080}}
   cors-origin: ${CORS_ORIGIN:http://localhost:5173}
   stale-seconds: ${STALE_SECONDS:60}
@@ -58,6 +79,19 @@ app:
     availability-weight: ${AVAILABILITY_WEIGHT:0.15}
     distance-weight: ${DISTANCE_WEIGHT:0.15}
     traffic-weight: ${TRAFFIC_WEIGHT:0.10}
+  google:
+    client-id: ${GOOGLE_CLIENT_ID:}
+  mail:
+    from: ${MAIL_FROM:noreply@aegisdispatch.org}
+  otp:
+    ttl-seconds: ${OTP_TTL_SECONDS:300}
+    resend-seconds: ${OTP_RESEND_SECONDS:30}
+    max-attempts: ${OTP_MAX_ATTEMPTS:5}
+    max-per-hour: ${OTP_MAX_PER_HOUR:5}
+    dev-echo: ${AEGIS_OTP_DEV_ECHO:true}
+    email-ttl-seconds: ${OTP_EMAIL_TTL_SECONDS:600}
+    email-resend-seconds: ${OTP_EMAIL_RESEND_SECONDS:60}
+    email-max-per-hour: ${OTP_EMAIL_MAX_PER_HOUR:5}
 
 ---
 spring:

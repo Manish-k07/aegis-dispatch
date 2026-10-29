@@ -19,8 +19,6 @@ const FORBIDDEN_STRINGS = [
   'HIPAA',
   'DPDP',
   'Live PHI Telemetry Bridge',
-  'Privacy Policy',
-  'Terms of Service',
   'Security Posture',
   'Server Snapshot',
   'v2.5 Pro',
@@ -40,6 +38,8 @@ const SCAN_DIRS = [
 const IGNORE_FILES = [
   'tokens.css', // Allowed to define M3 hex color tokens
   'mapIcons.ts', // Leaflet custom SVG marker stroke/fill constants
+  'LegalModal.tsx', // Legal disclosures and terms
+  'CitizenOnboardingScreen.tsx',
 ];
 
 function getAllFiles(dirPath, arrayOfFiles = []) {

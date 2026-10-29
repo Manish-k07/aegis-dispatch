@@ -154,7 +154,7 @@ export const ActiveDispatches: React.FC<ActiveDispatchesProps> = ({
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--md-sys-color-on-surface)' }}>
                     <Icon name="location_on" size={16} style={{ color: '#D93025', flexShrink: 0 }} />
                     <span>
-                      <strong>{em?.type}:</strong> {em?.address}
+                      <strong>{em?.type === 'OTHER' && em?.otherTypeDescription ? `Other: ${em.otherTypeDescription}` : em?.type}:</strong> {em?.address}
                     </span>
                   </div>
 

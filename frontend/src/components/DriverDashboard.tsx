@@ -718,7 +718,7 @@ export const DriverDashboard: React.FC<DriverDashboardProps> = ({
                       <span>{emergency.address}</span>
                     </div>
                     <div style={{ fontSize: '12px', color: 'var(--md-sys-color-text-secondary)', marginTop: '2px' }}>
-                      {emergency.type} · Priority: {emergency.priority}
+                      {emergency.type === 'OTHER' && emergency.otherTypeDescription ? `Other: ${emergency.otherTypeDescription}` : emergency.type} · Priority: {emergency.priority}
                     </div>
                   </div>
 

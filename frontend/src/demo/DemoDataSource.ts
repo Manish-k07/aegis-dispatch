@@ -14,6 +14,7 @@ import {
   PatientVitals,
   AuditLog,
   AuthSession,
+  CitizenProfile,
   TriageAssessment,
 } from '../types';
 import { INITIAL_DEMO_DATA, INITIAL_DEMO_AUDIT_LOGS } from './demoData';
@@ -100,7 +101,6 @@ export class DemoDataSource implements DataSource {
   }
 
   private startTelemetryLoop() {
-    // Pulse subtle speed and telemetry ping every 5s in demo
     this.telemetryInterval = setInterval(() => {
       if (this.isDestroyed) return;
       this.emit({ event: 'TELEMETRY_PING', time: new Date().toISOString() });
@@ -134,7 +134,6 @@ export class DemoDataSource implements DataSource {
     const badge = (body.badgeNumber || '').trim();
     const pin = (body.pin || '').trim();
 
-    // Match against single source of truth in DEMO_ACCOUNTS
     const matchedAccount = DEMO_ACCOUNTS.find(acc => {
       const roleMatches = acc.role === normalizedRole || (acc.portalTab === rawRole);
       const idMatches = acc.loginIdentifier.toUpperCase() === badge.toUpperCase() ||
@@ -148,6 +147,9 @@ export class DemoDataSource implements DataSource {
     }
 
     const sessionRole = (rawRole === 'PARAMEDIC' ? 'DRIVER' : rawRole === 'HOSPITAL_STAFF' ? 'HOSPITAL' : rawRole) as any;
+    const isCitizen = matchedAccount.role === 'CITIZEN';
+    const isProfileComplete = isCitizen ? !!matchedAccount.hasFilledProfile : true;
+
     const session: AuthSession = {
       role: sessionRole,
       userLabel: matchedAccount.displayName,
@@ -161,7 +163,7 @@ export class DemoDataSource implements DataSource {
       ambulanceId: body.ambulanceId || matchedAccount.unitId || '20000000-0000-0000-0000-000000000001',
       hospitalId: body.hospitalId || matchedAccount.facilityId || '10000000-0000-0000-0000-000000000001',
       dispatcherBadge: matchedAccount.loginIdentifier,
-      citizenProfile: matchedAccount.role === 'CITIZEN' ? {
+      citizenProfile: isCitizen ? {
         id: `cit-${matchedAccount.id}`,
         name: matchedAccount.displayName.split(' (')[0],
         gender: matchedAccount.hasFilledProfile ? 'FEMALE' : 'PREFER_NOT_TO_SAY',
@@ -173,8 +175,10 @@ export class DemoDataSource implements DataSource {
         allergies: matchedAccount.hasFilledProfile ? ['Penicillin / amoxicillin'] : [],
         emergencyContactName: matchedAccount.hasFilledProfile ? 'Amit Patel (Spouse)' : undefined,
         emergencyContactPhone: matchedAccount.hasFilledProfile ? '+91 98450 99887' : undefined,
+        profileComplete: isProfileComplete,
       } : undefined,
       loginTime: new Date().toISOString(),
+      profileComplete: isProfileComplete,
     };
 
     try {
@@ -184,14 +188,264 @@ export class DemoDataSource implements DataSource {
     return session;
   }
 
-  async registerCitizen(body: any): Promise<AuthSession> {
+  async getAuthProviders(): Promise<{ otp: boolean; google: boolean; googleClientId: string; emailOtp: boolean }> {
+    return { otp: true, google: true, googleClientId: 'demo-google-client-id', emailOtp: true };
+  }
+
+  async loginWithGoogle(idToken: string): Promise<any> {
+    const token = (idToken || '').toLowerCase();
+    if (token.includes('priya') || token.includes('existing')) {
+      const existing = DEMO_ACCOUNTS.find(a => a.id === 'demo-cit-01') || DEMO_ACCOUNTS.find(a => a.role === 'CITIZEN');
+      const session: AuthSession = {
+        role: 'CITIZEN',
+        userLabel: existing ? existing.displayName.split(' (')[0] : 'Priya Sharma',
+        subLabel: `Citizen Profile · Blood: O+`,
+        citizenProfile: {
+          id: existing ? `cit-${existing.id}` : 'cit-priya',
+          name: 'Priya Sharma',
+          gender: 'FEMALE',
+          age: 29,
+          phone: existing ? existing.loginIdentifier : '9845012345',
+          email: 'priya.sharma@example.com',
+          bloodGroup: 'O+',
+          diseases: ['Severe asthma'],
+          allergies: ['Penicillin / amoxicillin'],
+          emergencyContactName: 'Amit Patel (Spouse)',
+          emergencyContactPhone: '+91 98450 99887',
+          profileComplete: true,
+          emailVerified: true,
+          phoneVerified: true,
+        },
+        profileComplete: true,
+        loginTime: new Date().toISOString(),
+      };
+      localStorage.setItem(DEMO_AUTH_KEY, JSON.stringify(session));
+      return session;
+    }
+
+    return {
+      status: 'EMAIL_VERIFICATION_REQUIRED',
+      verificationToken: 'demo-google-email-ticket-' + Date.now(),
+      maskedEmail: 'n******r@gmail.com',
+      registrationTicket: 'demo-google-ticket-' + Date.now(),
+      email: 'newuser@gmail.com',
+      name: 'Google Citizen',
+    };
+  }
+
+  async verifyGoogleEmail(verificationToken: string, otp: string): Promise<any> {
+    if (!otp || otp.length < 4) {
+      throw new Error('Invalid OTP');
+    }
+    return {
+      status: 'NEW_USER',
+      registrationToken: 'demo-google-reg-token-' + Date.now(),
+    };
+  }
+
+  async resendGoogleEmailOtp(verificationToken: string): Promise<{ resendInSeconds: number; devOtp?: string; message: string }> {
+    return {
+      resendInSeconds: 60,
+      devOtp: '123456',
+      message: 'Demo email verification code: 123456',
+    };
+  }
+
+  async registerCitizenWithGoogle(body: {
+    registrationToken: string;
+    phone?: string;
+    otp?: string;
+    fullName?: string;
+    profile?: Partial<CitizenProfile>;
+  }): Promise<AuthSession> {
     const session: AuthSession = {
       role: 'CITIZEN',
-      userLabel: body.name,
+      userLabel: body.fullName || 'Google Citizen',
+      subLabel: 'Citizen Profile · Google Auth',
+      citizenProfile: {
+        id: `cit-google-${Date.now()}`,
+        name: body.fullName || 'Google Citizen',
+        gender: 'PREFER_NOT_TO_SAY',
+        age: 28,
+        phone: body.phone || '',
+        email: 'newuser@gmail.com',
+        diseases: [],
+        allergies: [],
+        profileComplete: false,
+        emailVerified: true,
+        phoneVerified: Boolean(body.phone),
+        registeredAt: new Date().toISOString(),
+        ...(body.profile || {}),
+      },
+      profileComplete: false,
+      loginTime: new Date().toISOString(),
+    };
+
+    localStorage.setItem(DEMO_AUTH_KEY, JSON.stringify(session));
+    return session;
+  }
+
+  async completeGoogleRegistration(data: { registrationTicket?: string; registrationToken?: string; phone?: string; otp?: string; fullName?: string }): Promise<AuthSession> {
+    return this.registerCitizenWithGoogle({
+      registrationToken: data.registrationToken || data.registrationTicket || '',
+      phone: data.phone,
+      otp: data.otp,
+      fullName: data.fullName,
+    });
+  }
+
+  async requestCitizenOtp(phone: string): Promise<{ resendInSeconds: number; devOtp?: string; status: string; message: string }> {
+    return { resendInSeconds: 30, devOtp: '1120', status: 'SUCCESS', message: `OTP sent to ${phone}` };
+  }
+
+  async sendOtp(phone: string): Promise<{ success: boolean; status: string; message: string; resendInSeconds?: number; devOtp?: string }> {
+    return { success: true, status: 'SUCCESS', message: `OTP sent to ${phone}`, resendInSeconds: 30, devOtp: '1120' };
+  }
+
+  async verifyCitizenOtp(body: { phone: string; otp: string; name?: string }): Promise<any> {
+    const { phone, otp, name } = body;
+    if (!otp || otp.length < 4) {
+      throw new Error('Invalid OTP');
+    }
+    const normalized = phone.replace(/\D/g, '');
+    const isPriya = normalized.endsWith('9845012345');
+
+    if (isPriya) {
+      const session: AuthSession = {
+        role: 'CITIZEN',
+        userLabel: 'Priya Sharma',
+        subLabel: 'Citizen Profile · Blood: O+',
+        citizenProfile: {
+          id: 'cit-demo-priya',
+          name: 'Priya Sharma',
+          gender: 'FEMALE',
+          age: 29,
+          phone,
+          email: 'priya.sharma@example.com',
+          bloodGroup: 'O+',
+          diseases: ['Severe asthma'],
+          allergies: ['Penicillin / amoxicillin'],
+          emergencyContactName: 'Amit Patel (Spouse)',
+          emergencyContactPhone: '+91 98450 99887',
+          profileComplete: true,
+          phoneVerified: true,
+          emailVerified: true,
+        },
+        profileComplete: true,
+        loginTime: new Date().toISOString(),
+      };
+      localStorage.setItem(DEMO_AUTH_KEY, JSON.stringify(session));
+      return session;
+    }
+
+    if (name) {
+      const session: AuthSession = {
+        role: 'CITIZEN',
+        userLabel: name,
+        subLabel: 'Citizen Profile',
+        citizenProfile: {
+          id: `cit-otp-${Date.now()}`,
+          name,
+          gender: 'PREFER_NOT_TO_SAY',
+          age: 28,
+          phone,
+          diseases: [],
+          allergies: [],
+          profileComplete: false,
+          phoneVerified: true,
+        },
+        profileComplete: false,
+        loginTime: new Date().toISOString(),
+      };
+      localStorage.setItem(DEMO_AUTH_KEY, JSON.stringify(session));
+      return session;
+    }
+
+    return {
+      status: 'NEW_USER',
+      registrationToken: 'demo-phone-reg-token-' + Date.now(),
+    };
+  }
+
+  async verifyOtp(phone: string, otp: string): Promise<any> {
+    const res = await this.verifyCitizenOtp({ phone, otp });
+    if (res.status === 'NEW_USER') {
+      const session: AuthSession = {
+        role: 'CITIZEN',
+        userLabel: 'Verified Citizen',
+        subLabel: 'Citizen Profile',
+        citizenProfile: {
+          id: `cit-otp-${Date.now()}`,
+          name: 'Verified Citizen',
+          gender: 'PREFER_NOT_TO_SAY',
+          age: 28,
+          phone,
+          diseases: [],
+          allergies: [],
+          profileComplete: false,
+          phoneVerified: true,
+        },
+        profileComplete: false,
+        loginTime: new Date().toISOString(),
+      };
+      localStorage.setItem(DEMO_AUTH_KEY, JSON.stringify(session));
+      return session;
+    }
+    return res;
+  }
+
+  async registerCitizenWithOtp(body: { registrationToken: string; fullName: string; profile?: Partial<CitizenProfile> }): Promise<AuthSession> {
+    const session: AuthSession = {
+      role: 'CITIZEN',
+      userLabel: body.fullName,
+      subLabel: 'Citizen Profile',
+      citizenProfile: {
+        id: `cit-otp-${Date.now()}`,
+        name: body.fullName,
+        gender: 'PREFER_NOT_TO_SAY',
+        age: 28,
+        phone: '9845012345',
+        diseases: [],
+        allergies: [],
+        profileComplete: false,
+        phoneVerified: true,
+        ...(body.profile || {}),
+      },
+      profileComplete: false,
+      loginTime: new Date().toISOString(),
+    };
+    localStorage.setItem(DEMO_AUTH_KEY, JSON.stringify(session));
+    return session;
+  }
+
+  async updateCitizenProfile(profile: Partial<CitizenProfile>): Promise<CitizenProfile> {
+    const raw = localStorage.getItem(DEMO_AUTH_KEY);
+    let session: AuthSession = raw ? JSON.parse(raw) : ({} as any);
+    const existing = session.citizenProfile || ({} as CitizenProfile);
+
+    const updated: CitizenProfile = {
+      ...existing,
+      ...profile,
+      profileComplete: true,
+      updatedAt: new Date().toISOString(),
+    };
+
+    session.citizenProfile = updated;
+    session.profileComplete = true;
+    session.userLabel = updated.name || session.userLabel;
+    localStorage.setItem(DEMO_AUTH_KEY, JSON.stringify(session));
+    return updated;
+  }
+
+  async registerCitizen(body: any): Promise<AuthSession> {
+    const rawName = body.name || body.fullName || 'Citizen';
+    const session: AuthSession = {
+      role: 'CITIZEN',
+      userLabel: rawName,
       subLabel: `Citizen Profile · Blood: ${body.bloodGroup || 'O+'}`,
       citizenProfile: {
         id: `cit-demo-${Date.now()}`,
-        name: body.name,
+        name: rawName,
         gender: body.gender || 'PREFER_NOT_TO_SAY',
         age: body.age || 30,
         phone: body.phone,
@@ -201,8 +455,10 @@ export class DemoDataSource implements DataSource {
         emergencyContactName: body.emergencyContactName,
         emergencyContactPhone: body.emergencyContactPhone,
         registeredAt: new Date().toISOString(),
+        phoneVerified: true,
       },
       loginTime: new Date().toISOString(),
+      profileComplete: false,
     };
     try {
       localStorage.setItem(DEMO_AUTH_KEY, JSON.stringify(session));
@@ -226,6 +482,7 @@ export class DemoDataSource implements DataSource {
       callerName: em.callerName || 'Citizen',
       phone: em.phone || '9845012345',
       type: em.type || 'CARDIAC',
+      otherTypeDescription: em.otherTypeDescription,
       patientCount: em.patientCount || 1,
       priority: em.priority || 'CRITICAL',
       description: em.description || 'Simulated Emergency Call',
@@ -233,6 +490,10 @@ export class DemoDataSource implements DataSource {
       longitude: em.longitude || 77.5946,
       address: em.address || 'Demo Location, Bengaluru',
       status: 'PENDING_DISPATCH',
+      sosTriggeredAt: em.sosTriggeredAt,
+      locationAccuracy: em.locationAccuracy,
+      locationSource: em.locationSource,
+      deviceInfo: em.deviceInfo,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -273,6 +534,44 @@ export class DemoDataSource implements DataSource {
     return updated || ({} as Emergency);
   }
 
+  async cancelEmergency(id: string, reason: any, reasonText?: string): Promise<Emergency> {
+    const code = typeof reason === 'object' && reason !== null ? reason.reasonCode : reason;
+    const text = typeof reason === 'object' && reason !== null ? reason.reasonText : reasonText;
+    const actor = typeof reason === 'object' && reason !== null ? (reason.actor || 'CITIZEN') : 'CITIZEN';
+    const data = this.getStoredData();
+    let updated: Emergency | null = null;
+    data.emergencies = data.emergencies.map((e) => {
+      if (e.id === id) {
+        updated = {
+          ...e,
+          status: 'CANCELLED',
+          cancelReasonCode: code,
+          cancelReasonText: text,
+          cancelledAt: new Date().toISOString(),
+          cancelledBy: actor,
+          updatedAt: new Date().toISOString(),
+        };
+        return updated;
+      }
+      return e;
+    });
+
+    data.dispatches = data.dispatches.map((d) => {
+      if (d.emergencyId === id) {
+        data.ambulances = data.ambulances.map((a) =>
+          a.id === d.ambulanceId ? { ...a, status: 'AVAILABLE', speed: 0 } : a
+        );
+        return { ...d, status: 'CANCELLED' };
+      }
+      return d;
+    });
+
+    this.saveStoredData(data);
+    this.logAudit('Citizen', 'EMERGENCY_CANCELLED', 'EMERGENCY', id, `Reason: ${code} ${text || ''}`.trim());
+    this.emit({ event: 'EMERGENCY_CANCELLED', id, reasonCode: code, reasonText: text });
+    return updated || ({} as Emergency);
+  }
+
   async getCandidates(emergencyId: string): Promise<Candidate[]> {
     const data = this.getStoredData();
     const em = data.emergencies.find((e) => e.id === emergencyId);
@@ -295,9 +594,7 @@ export class DemoDataSource implements DataSource {
 
   async autoAssign(emergencyId: string, dispatcher = 'Demo AI Auto-Dispatcher'): Promise<{ dispatch: Dispatch }> {
     const data = this.getStoredData();
-    const em = data.emergencies.find((e) => e.id === emergencyId);
     const available = data.ambulances.find((a) => a.status === 'AVAILABLE') || data.ambulances[0];
-
     const dispatch = await this.createDispatch(emergencyId, available.id, dispatcher);
     return { dispatch };
   }

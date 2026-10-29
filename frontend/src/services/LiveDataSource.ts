@@ -15,6 +15,7 @@ import {
   AuditLog,
   AuthSession,
   TriageAssessment,
+  CitizenProfile,
 } from '../types';
 import { API_BASE, WS_URL } from '../config';
 
@@ -139,7 +140,7 @@ export class LiveDataSource implements DataSource {
 
     if (!res.ok) {
       const errorData = await res.json().catch(() => ({}));
-      const msg = errorData.error || errorData.message || `Request failed with status ${res.status}`;
+      const msg = errorData.message || errorData.error || `Request failed with status ${res.status}`;
       const err = new Error(msg);
       (err as any).status = res.status;
       throw err;
@@ -187,7 +188,8 @@ export class LiveDataSource implements DataSource {
       ambulanceId: res.vehicleId,
       hospitalId: res.hospitalId,
       dispatcherBadge: body.badgeNumber,
-      citizenProfile: res.citizenProfile,
+      citizenProfile: res.citizenProfile ? { ...res.citizenProfile, profileComplete: res.profileComplete ?? false } : undefined,
+      profileComplete: res.profileComplete ?? false,
       loginTime: new Date().toISOString(),
     };
 
@@ -203,10 +205,20 @@ export class LiveDataSource implements DataSource {
     return session;
   }
 
+  async getAuthProviders(): Promise<{ otp: boolean; google: boolean; googleClientId: string; emailOtp: boolean }> {
+    try {
+      return await this.request<{ otp: boolean; google: boolean; googleClientId: string; emailOtp: boolean }>('/auth/providers');
+    } catch {
+      return { otp: true, google: false, googleClientId: '', emailOtp: false };
+    }
+  }
+
   async registerCitizen(body: {
-    name: string;
-    phone: string;
+    name?: string;
+    fullName?: string;
+    phone?: string;
     password: string;
+    registrationToken?: string;
     age?: number;
     gender?: string;
     bloodGroup?: string;
@@ -215,34 +227,40 @@ export class LiveDataSource implements DataSource {
     emergencyContactName?: string;
     emergencyContactPhone?: string;
   }): Promise<AuthSession> {
-    const cleanPhone = body.phone.replace(/[^0-9]/g, '').slice(-10);
+    const rawName = body.name || body.fullName || 'Citizen';
+    const cleanPhone = body.phone ? body.phone.replace(/[^0-9]/g, '').slice(-10) : undefined;
     const res = await this.request<any>('/auth/register', {
       method: 'POST',
       body: JSON.stringify({
         ...body,
+        name: rawName,
         phone: cleanPhone,
+        registrationToken: body.registrationToken,
         role: 'CITIZEN',
       }),
     });
 
     const session: AuthSession = {
       role: 'CITIZEN',
-      userLabel: res.userLabel || body.name,
+      userLabel: res.userLabel || rawName,
       subLabel: `Citizen Profile · Blood: ${body.bloodGroup || 'O+'}`,
       citizenProfile: {
-        id: res.id || `cit-${cleanPhone}`,
-        name: body.name,
+        id: res.id || `cit-${cleanPhone || 'me'}`,
+        name: rawName,
         gender: (body.gender as any) || 'PREFER_NOT_TO_SAY',
         age: body.age || 30,
-        phone: body.phone,
+        phone: body.phone || '',
         bloodGroup: body.bloodGroup,
         diseases: body.diseases || [],
         allergies: body.allergies || [],
         emergencyContactName: body.emergencyContactName,
         emergencyContactPhone: body.emergencyContactPhone,
         registeredAt: new Date().toISOString(),
+        profileComplete: res.profileComplete ?? false,
+        phoneVerified: true,
       },
       loginTime: new Date().toISOString(),
+      profileComplete: res.profileComplete ?? false,
     };
 
     if (res.token) {
@@ -261,6 +279,304 @@ export class LiveDataSource implements DataSource {
     await this.request<void>('/auth/change-password', {
       method: 'POST',
       body: JSON.stringify({ oldPassword, newPassword }),
+    });
+  }
+
+  async resetPassword(body: { phone: string; otp: string; newPassword: string }): Promise<{ success: boolean; message: string }> {
+    return this.request<{ success: boolean; message: string }>('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+  }
+
+  async requestCitizenOtp(phone: string): Promise<{ resendInSeconds: number; devOtp?: string; status: string; message: string }> {
+    return this.request<{ resendInSeconds: number; devOtp?: string; status: string; message: string }>('/auth/otp/send', {
+      method: 'POST',
+      body: JSON.stringify({ phone }),
+    });
+  }
+
+  async sendOtp(phone: string): Promise<{ status: string; message: string; resendInSeconds?: number; devOtp?: string }> {
+    return this.request<{ status: string; message: string; resendInSeconds?: number; devOtp?: string }>('/auth/otp/send', {
+      method: 'POST',
+      body: JSON.stringify({ phone }),
+    });
+  }
+
+  async verifyCitizenOtp(body: { phone: string; otp: string; name?: string }): Promise<AuthSession | { status: 'NEW_USER'; registrationToken: string }> {
+    const res = await this.request<any>('/auth/otp/verify', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+
+    if (res.status === 'NEW_USER') {
+      return { status: 'NEW_USER', registrationToken: res.registrationToken };
+    }
+
+    const session: AuthSession = {
+      role: res.role || 'CITIZEN',
+      userLabel: res.userLabel || body.name || 'Citizen',
+      subLabel: res.subLabel || 'Citizen Medical Profile',
+      citizenProfile: res.citizenProfile ? {
+        ...res.citizenProfile,
+        profileComplete: res.profileComplete ?? false,
+        phoneVerified: true,
+      } : undefined,
+      loginTime: new Date().toISOString(),
+      profileComplete: res.profileComplete ?? false,
+    };
+
+    if (res.token) {
+      try {
+        localStorage.setItem('aegis.live.token', res.token);
+      } catch {}
+    }
+    try {
+      localStorage.setItem('aegis.live.auth_session', JSON.stringify(session));
+    } catch {}
+
+    return session;
+  }
+
+  async verifyOtp(phone: string, otp: string): Promise<any> {
+    return this.verifyCitizenOtp({ phone, otp });
+  }
+
+  async registerCitizenWithOtp(body: { registrationToken: string; fullName: string; profile?: Partial<CitizenProfile> }): Promise<AuthSession> {
+    const res = await this.request<any>('/auth/otp/register', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+
+    const session: AuthSession = {
+      role: res.role || 'CITIZEN',
+      userLabel: res.userLabel || body.fullName,
+      subLabel: res.subLabel || 'Citizen Medical Profile',
+      citizenProfile: res.citizenProfile ? {
+        ...res.citizenProfile,
+        profileComplete: res.profileComplete ?? false,
+        phoneVerified: true,
+      } : undefined,
+      loginTime: new Date().toISOString(),
+      profileComplete: res.profileComplete ?? false,
+    };
+
+    if (res.token) {
+      try {
+        localStorage.setItem('aegis.live.token', res.token);
+      } catch {}
+    }
+    try {
+      localStorage.setItem('aegis.live.auth_session', JSON.stringify(session));
+    } catch {}
+
+    return session;
+  }
+
+  async loginWithGoogle(idToken: string): Promise<
+    | AuthSession
+    | { status: 'EMAIL_VERIFICATION_REQUIRED'; verificationToken: string; maskedEmail: string }
+    | { status: 'NEW_USER'; registrationToken: string }
+  > {
+    const res = await this.request<any>('/auth/google', {
+      method: 'POST',
+      body: JSON.stringify({ idToken }),
+    });
+
+    if (res.status === 'EMAIL_VERIFICATION_REQUIRED') {
+      return {
+        status: 'EMAIL_VERIFICATION_REQUIRED',
+        verificationToken: res.verificationToken,
+        maskedEmail: res.maskedEmail || 'your email',
+      };
+    }
+
+    if (res.status === 'NEW_USER') {
+      return {
+        status: 'NEW_USER',
+        registrationToken: res.registrationToken,
+      };
+    }
+
+    const session: AuthSession = {
+      role: res.role || 'CITIZEN',
+      userLabel: res.userLabel || 'Google Citizen',
+      subLabel: res.subLabel || 'Citizen Medical Profile',
+      citizenProfile: res.citizenProfile ? {
+        ...res.citizenProfile,
+        profileComplete: res.profileComplete ?? false,
+        emailVerified: true,
+      } : undefined,
+      loginTime: new Date().toISOString(),
+      profileComplete: res.profileComplete ?? false,
+    };
+
+    if (res.token) {
+      try {
+        localStorage.setItem('aegis.live.token', res.token);
+      } catch {}
+    }
+    try {
+      localStorage.setItem('aegis.live.auth_session', JSON.stringify(session));
+    } catch {}
+
+    return session;
+  }
+
+  async verifyGoogleEmail(verificationToken: string, otp: string): Promise<AuthSession | { status: 'NEW_USER'; registrationToken: string }> {
+    const res = await this.request<any>('/auth/google/verify-email', {
+      method: 'POST',
+      body: JSON.stringify({ verificationToken, otp }),
+    });
+
+    if (res.status === 'NEW_USER') {
+      return {
+        status: 'NEW_USER',
+        registrationToken: res.registrationToken,
+      };
+    }
+
+    const session: AuthSession = {
+      role: res.role || 'CITIZEN',
+      userLabel: res.userLabel || 'Google Citizen',
+      subLabel: res.subLabel || 'Citizen Medical Profile',
+      citizenProfile: res.citizenProfile ? {
+        ...res.citizenProfile,
+        profileComplete: res.profileComplete ?? false,
+        emailVerified: true,
+      } : undefined,
+      loginTime: new Date().toISOString(),
+      profileComplete: res.profileComplete ?? false,
+    };
+
+    if (res.token) {
+      try {
+        localStorage.setItem('aegis.live.token', res.token);
+      } catch {}
+    }
+    try {
+      localStorage.setItem('aegis.live.auth_session', JSON.stringify(session));
+    } catch {}
+
+    return session;
+  }
+
+  async resendGoogleEmailOtp(verificationToken: string): Promise<{ resendInSeconds: number; devOtp?: string; message: string }> {
+    return this.request<{ resendInSeconds: number; devOtp?: string; message: string }>('/auth/google/email-otp/resend', {
+      method: 'POST',
+      body: JSON.stringify({ verificationToken }),
+    });
+  }
+
+  async registerCitizenWithGoogle(body: {
+    registrationToken: string;
+    phone?: string;
+    otp?: string;
+    fullName?: string;
+    profile?: Partial<CitizenProfile>;
+  }): Promise<AuthSession> {
+    const res = await this.request<any>('/auth/google/register', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+
+    const session: AuthSession = {
+      role: res.role || 'CITIZEN',
+      userLabel: res.userLabel || body.fullName || 'Google Citizen',
+      subLabel: res.subLabel || 'Citizen Medical Profile',
+      citizenProfile: res.citizenProfile ? {
+        ...res.citizenProfile,
+        profileComplete: res.profileComplete ?? false,
+        emailVerified: true,
+      } : undefined,
+      loginTime: new Date().toISOString(),
+      profileComplete: res.profileComplete ?? false,
+    };
+
+    if (res.token) {
+      try {
+        localStorage.setItem('aegis.live.token', res.token);
+      } catch {}
+    }
+    try {
+      localStorage.setItem('aegis.live.auth_session', JSON.stringify(session));
+    } catch {}
+
+    return session;
+  }
+
+  async completeGoogleRegistration(data: {
+    registrationTicket?: string;
+    registrationToken?: string;
+    phone?: string;
+    otp?: string;
+    fullName?: string;
+  }): Promise<AuthSession> {
+    const token = data.registrationToken || data.registrationTicket || '';
+    return this.registerCitizenWithGoogle({
+      registrationToken: token,
+      phone: data.phone,
+      otp: data.otp,
+      fullName: data.fullName,
+    });
+  }
+
+  async updateCitizenProfile(profile: Partial<CitizenProfile>): Promise<CitizenProfile> {
+    const res = await this.request<any>('/citizen/profile', {
+      method: 'PUT',
+      body: JSON.stringify(profile),
+    });
+
+    const updatedProfile: CitizenProfile = {
+      id: profile.id || `cit-${profile.phone || 'me'}`,
+      name: profile.name || res.userLabel || 'Citizen',
+      phone: profile.phone || '',
+      gender: profile.gender || 'PREFER_NOT_TO_SAY',
+      age: profile.age || 30,
+      dob: profile.dob,
+      address: profile.address,
+      landmark: profile.landmark,
+      emergencyContacts: profile.emergencyContacts,
+      emergencyContactName: profile.emergencyContactName,
+      emergencyContactPhone: profile.emergencyContactPhone,
+      bloodGroup: profile.bloodGroup,
+      allergies: profile.allergies || [],
+      medications: profile.medications || [],
+      diseases: profile.diseases || profile.chronicConditions || [],
+      chronicConditions: profile.chronicConditions || profile.diseases || [],
+      pastSurgeries: profile.pastSurgeries || [],
+      disabilityNeeds: profile.disabilityNeeds,
+      pregnancyStatus: profile.pregnancyStatus,
+      insuranceProvider: profile.insuranceProvider,
+      insuranceId: profile.insuranceId,
+      doctorName: profile.doctorName,
+      doctorPhone: profile.doctorPhone,
+      otherMedicalNotes: profile.otherMedicalNotes,
+      profileComplete: true,
+      registeredAt: profile.registeredAt || new Date().toISOString(),
+    };
+
+    try {
+      const savedRaw = localStorage.getItem('aegis.live.auth_session');
+      if (savedRaw) {
+        const session = JSON.parse(savedRaw);
+        session.citizenProfile = updatedProfile;
+        session.profileComplete = true;
+        session.userLabel = updatedProfile.name;
+        localStorage.setItem('aegis.live.auth_session', JSON.stringify(session));
+      }
+    } catch {}
+
+    return updatedProfile;
+  }
+
+  async cancelEmergency(id: string, reason: { reasonCode: string; reasonText?: string; actor?: string }): Promise<Emergency> {
+    return this.request<Emergency>(`/emergencies/${id}/cancel`, {
+      method: 'POST',
+      body: JSON.stringify({
+        ...reason,
+        status: 'CANCELLED',
+      }),
     });
   }
 
@@ -381,6 +697,10 @@ export class LiveDataSource implements DataSource {
 
   async getV2xCorridor(): Promise<V2xCorridorData> {
     return this.request<V2xCorridorData>('/v2x/corridor');
+  }
+
+  async getAnalyticsSummary(): Promise<any> {
+    return this.request<any>('/analytics/summary');
   }
 
   getAnalyticsExportCsvUrl(): string {

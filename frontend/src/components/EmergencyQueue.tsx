@@ -260,7 +260,7 @@ export const EmergencyQueue: React.FC<EmergencyQueueProps> = ({
                     color: 'var(--md-sys-color-text)',
                   }}
                 >
-                  {toSentenceCase(em.type)}
+                  {em.type === 'OTHER' && em.otherTypeDescription ? `Other: ${em.otherTypeDescription}` : toSentenceCase(em.type)}
                 </div>
 
                 {/* 3. Address with 20px 'place' icon */}
@@ -284,6 +284,9 @@ export const EmergencyQueue: React.FC<EmergencyQueueProps> = ({
                     <StatusChip tone="warning" label="Unassigned" icon="schedule" />
                   ) : (
                     <StatusChip tone="success" label="Unit assigned" icon="check_circle" />
+                  )}
+                  {Boolean(em.description && em.description.includes('[Phone unverified')) && (
+                    <StatusChip tone="warning" label="Phone Unverified" icon="phone_missed" />
                   )}
                   {em.patientCount && em.patientCount > 1 && (
                     <span style={{ fontSize: '12px', color: 'var(--md-sys-color-text-secondary)' }}>

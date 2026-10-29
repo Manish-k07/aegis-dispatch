@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, minimum-scale=1.0, viewport-fit=cover, user-scalable=yes" />
+  <title>Download Aegis Dispatch App</title>
+  <link rel="icon" type="image/svg+xml" href="../icons/icon.svg" />
+  <link rel="manifest" href="../manifest.webmanifest" />
+  <meta name="theme-color" content="#0284c7" />
+  <style>
+    :root {
+      --bg: #0b1329;
+      --card-bg: #132247;
+      --card-border: #1e3a8a;
+      --primary: #0284c7;
+      --primary-hover: #0369a1;
+      --accent: #38bdf8;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --success: #10b981;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: env(safe-area-inset-top, 24px) 16px env(safe-area-inset-bottom, 32px);
+    }
+    .container {
+      width: 100%;
+      max-width: 680px;
+      margin: 0 auto;
+    }
+    .header {
+      text-align: center;
+      margin-top: 24px;
+      margin-bottom: 28px;
+    }
+    .app-icon {
+      width: 88px;
+      height: 88px;
+      border-radius: 20px;
+      box-shadow: 0 10px 25px rgba(2, 132, 199, 0.4);
+      margin-bottom: 16px;
+    }
+    h1 {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      margin-bottom: 8px;
+    }
+    .tagline {
+      color: var(--text-muted);
+      font-size: 15px;
+      max-width: 480px;
+      margin: 0 auto;
+      line-height: 1.5;
+    }
+    .badge-standalone {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 4px 12px;
+      border-radius: 20px;
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      font-size: 12px;
+      font-weight: 600;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    .download-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+    .card-top {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .card-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      background: rgba(2, 132, 199, 0.15);
+      border: 1px solid var(--primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      color: var(--accent);
+      flex-shrink: 0;
+    }
+    .card-info h2 {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .card-info p {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 14px 24px;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 600;
+      text-decoration: none;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s ease;
+      width: 100%;
+    }
+    .btn-primary {
+      background: var(--primary);
+      color: #ffffff;
+      box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);
+    }
+    .btn-primary:hover {
+      background: var(--primary-hover);
+      transform: translateY(-1px);
+    }
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.15);
+    }
+    .instructions {
+      background: rgba(0, 0, 0, 0.25);
+      border-radius: 10px;
+      padding: 14px 16px;
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+    .instructions ol {
+      padding-left: 20px;
+      margin-top: 8px;
+    }
+    .instructions li {
+      margin-bottom: 6px;
+    }
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--accent);
+      font-size: 14px;
+      text-decoration: none;
+      margin-top: 16px;
+      font-weight: 500;
+    }
+    .back-link:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <img src="../icons/icon-192.png" alt="Aegis Dispatch Logo" class="app-icon" onerror="this.src='/icons/icon-192.png'" />
+      <h1>Aegis Dispatch App</h1>
+      <p class="tagline">Install or download the official Aegis Dispatch application on any smartphone, tablet, or desktop.</p>
+      <div class="badge-standalone">✨ 100% Self-Contained — Runs on Any Device</div>
+    </div>
+
+    <div class="download-grid">
+      <!-- Direct Android APK Download -->
+      <div class="card">
+        <div class="card-top">
+          <div class="card-icon">📱</div>
+          <div class="card-info">
+            <h2>Android App (.APK Package)</h2>
+            <p>Direct native application file for all Android phones and tablets. Self-contained with built-in emergency simulations, dispatch console, and citizen portal.</p>
+          </div>
+        </div>
+        <a href="./AegisDispatch.apk" download="AegisDispatch.apk" class="btn btn-primary" id="apkDownloadBtn">
+          <span>⬇️ Download AegisDispatch.apk (4.3 MB)</span>
+        </a>
+        <div class="instructions">
+          <strong>Installation steps for Android:</strong>
+          <ol>
+            <li>Tap the button above to download <code>AegisDispatch.apk</code>.</li>
+            <li>Open the downloaded APK from your browser or <strong>Files / Downloads</strong> app.</li>
+            <li>When Android prompts "Install unknown apps", allow it and tap <strong>Install</strong>.</li>
+            <li>Open Aegis Dispatch from your home screen or app drawer!</li>
+          </ol>
+        </div>
+      </div>
+
+      <!-- Progressive Web App 1-Click Install -->
+      <div class="card">
+        <div class="card-top">
+          <div class="card-icon">⚡</div>
+          <div class="card-info">
+            <h2>Instant App (Apple iOS & All Devices)</h2>
+            <p>Instant standalone installation for iPhones, iPads, Windows, Mac, and Chromebooks with zero store downloads.</p>
+          </div>
+        </div>
+        <button id="pwaInstallBtn" class="btn btn-secondary" style="display: none;">
+          <span>📲 Install App to Home Screen</span>
+        </button>
+        <div class="instructions">
+          <strong>How to install on other devices:</strong>
+          <ol>
+            <li><strong>Apple iPhone / iPad (iOS):</strong> In Safari, tap the <strong>Share</strong> icon (box with up arrow), scroll down, and tap <strong>Add to Home Screen</strong>.</li>
+            <li><strong>Android (Chrome):</strong> Tap the <strong>⋮ (Menu)</strong> at the top right, then tap <strong>Install App</strong> or <strong>Add to Home screen</strong>.</li>
+            <li><strong>PC & Mac (Chrome/Edge):</strong> Click the install icon in the URL bar (top right) or Menu → <strong>Install Aegis Dispatch</strong>.</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+
+    <div style="text-align: center; margin-bottom: 24px;">
+      <a href="../" class="back-link">← Open Aegis Dispatch Web Portal</a>
+    </div>
+  </div>
+
+  <script>
+    let deferredPrompt;
+    const pwaBtn = document.getElementById('pwaInstallBtn');
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      if (pwaBtn) {
+        pwaBtn.style.display = 'inline-flex';
+        pwaBtn.className = 'btn btn-primary';
+      }
+    });
+
+    if (pwaBtn) {
+      pwaBtn.addEventListener('click', async () => {
+        if (deferredPrompt) {
+          deferredPrompt.prompt();
+          const { outcome } = await deferredPrompt.userChoice;
+          if (outcome === 'accepted') {
+            pwaBtn.style.display = 'none';
+          }
+          deferredPrompt = null;
+        } else {
+          alert("To install on iOS / Safari, tap Share and select 'Add to Home Screen'. On Android, tap Menu (⋮) and select 'Install app'.");
+        }
+      });
+    }
+  </script>
+</body>
+</html>

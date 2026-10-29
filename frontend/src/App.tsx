@@ -14,6 +14,7 @@ import { HospitalList } from './components/HospitalList';
 import { Footer } from './components/Footer';
 import { LoginGateway } from './components/LoginGateway';
 import { CitizenDashboard } from './components/CitizenDashboard';
+import { CitizenOnboardingScreen } from './components/CitizenOnboardingScreen';
 import { AdminDashboard } from './components/AdminDashboard';
 import { BackendNotConfiguredScreen } from './components/BackendNotConfiguredScreen';
 import { BackendUnreachableScreen } from './components/BackendUnreachableScreen';
@@ -30,7 +31,7 @@ import {
   UserRole,
   PatientVitals,
   AuthSession,
-  CitizenProfile
+  CitizenProfile,
 } from './types';
 import { audioSystem } from './utils/audio';
 import { API_BASE, IS_BACKEND_CONFIGURED } from './config';
@@ -226,7 +227,7 @@ const AppContent: React.FC = () => {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const handleExportAnalyticsCsv = () => {
-    const url = dataSource.getAnalyticsExportCsvUrl();
+    const url = (dataSource.getAnalyticsExportCsvUrl ? dataSource.getAnalyticsExportCsvUrl() : '/analytics/export.csv');
     const link = document.createElement('a');
     link.href = url;
     link.setAttribute('download', `aegis_analytics_${new Date().toISOString().slice(0, 10)}.csv`);
@@ -729,6 +730,35 @@ const AppContent: React.FC = () => {
       allergies: [],
       registeredAt: new Date().toISOString(),
     };
+
+    if (authSession?.profileComplete === false) {
+      return (
+        <CitizenOnboardingScreen
+          profile={effectiveCitizenProfile}
+          dataSource={dataSource}
+          onComplete={(updated) => {
+            setCitizenProfile(updated);
+            if (authSession) {
+              const nextSession = {
+                ...authSession,
+                profileComplete: true,
+                userLabel: updated.name,
+                citizenProfile: updated,
+                subLabel: `Citizen Profile · Blood: ${updated.bloodGroup || 'O+'}`,
+              };
+              setAuthSession(nextSession);
+              try {
+                localStorage.setItem(`aegis.${mode.toLowerCase()}.auth_session`, JSON.stringify(nextSession));
+              } catch {}
+            }
+            setToastMessage('Profile completed! Welcome to Aegis Dispatch.');
+            setTimeout(() => setToastMessage(null), 3500);
+          }}
+          onLogout={handleLogout}
+        />
+      );
+    }
+
     return (
       <div className="aegis-app" data-theme={effectiveTheme}>
         <CitizenDashboard
@@ -737,10 +767,11 @@ const AppContent: React.FC = () => {
           ambulances={data.ambulances}
           hospitals={data.hospitals}
           dispatches={data.dispatches}
-          onRequestSOS={async (sosData) => {
+          onRequestSOS={async (sosData: any) => {
             try {
               const created = await dataSource.createEmergency({
                 type: sosData.type,
+                otherTypeDescription: sosData.otherTypeDescription,
                 priority: 'CRITICAL',
                 status: 'PENDING_DISPATCH',
                 address: sosData.address,
@@ -750,6 +781,10 @@ const AppContent: React.FC = () => {
                 phone: sosData.phone,
                 description: sosData.description,
                 patientCount: 1,
+                sosTriggeredAt: sosData.sosTriggeredAt,
+                locationAccuracy: sosData.locationAccuracy,
+                locationSource: sosData.locationSource,
+                deviceInfo: sosData.deviceInfo,
               });
               audioSystem.playCriticalIncidentChime();
               setToastMessage('Emergency SOS registered in CAD database. Dispatching nearest first responder...');
@@ -764,11 +799,14 @@ const AppContent: React.FC = () => {
               setTimeout(() => setToastMessage(null), 5000);
             }
           }}
-          onCancelSOS={async (emgId) => {
-            const activeDispatch = (data.dispatches || []).find((d) => d.emergencyId === emgId);
-            if (activeDispatch) {
-              await handleAdvanceStatus(activeDispatch, 'CANCELLED');
-            } else {
+          onCancelSOS={async (emgId, reasonCode, reasonText) => {
+            try {
+              if (dataSource.cancelEmergency) {
+                await dataSource.cancelEmergency(emgId, reasonCode || 'HELP_ARRIVED_ANOTHER_WAY', reasonText);
+              } else {
+                await dataSource.updateEmergencyStatus(emgId, 'CANCELLED', 'Citizen SOS Cancel');
+              }
+            } catch {
               try {
                 await dataSource.updateEmergencyStatus(emgId, 'CANCELLED', 'Citizen SOS Cancel');
               } catch {}

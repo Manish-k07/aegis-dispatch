@@ -31,7 +31,7 @@ public class SmsService {
     private static final Logger log = LoggerFactory.getLogger(SmsService.class);
 
     private final AuditService auditService;
-    private final HttpClient httpClient;
+    private HttpClient httpClient;
 
     @Value("${twilio.account.sid:}")
     private String twilioAccountSid;
@@ -42,11 +42,32 @@ public class SmsService {
     @Value("${twilio.phone.number:}")
     private String twilioFromNumber;
 
+    public enum SmsDeliveryStatus {
+        SUCCESS,
+        NOT_CONFIGURED,
+        TWILIO_ERROR
+    }
+
+    public record SmsDeliveryResult(
+            SmsDeliveryStatus status,
+            String errorDetail
+    ) {}
+
     public SmsService(AuditService auditService) {
         this.auditService = auditService;
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(8))
                 .build();
+    }
+
+    public void setHttpClient(HttpClient httpClient) {
+        this.httpClient = httpClient;
+    }
+
+    public void setTwilioConfig(String sid, String token, String from) {
+        this.twilioAccountSid = sid;
+        this.twilioAuthToken = token;
+        this.twilioFromNumber = from;
     }
 
     /**
@@ -144,7 +165,38 @@ public class SmsService {
         return result;
     }
 
-    private boolean isTwilioConfigured() {
+    public static String maskPhone(String phone) {
+        if (phone == null || phone.length() < 6) return "***";
+        int len = phone.length();
+        return phone.substring(0, Math.min(5, len - 4)) + "****" + phone.substring(len - 4);
+    }
+
+    public SmsDeliveryResult sendOtpSmsResult(String toPhone, String code) {
+        if (!isTwilioConfigured()) {
+            return new SmsDeliveryResult(SmsDeliveryStatus.NOT_CONFIGURED, "SMS service is not configured");
+        }
+
+        String body = "Your Aegis Dispatch verification code is: " + code + ". Valid for 5 minutes. Do not share this code.";
+        try {
+            boolean ok = dispatchTwilioSms(toPhone, body);
+            if (ok) {
+                return new SmsDeliveryResult(SmsDeliveryStatus.SUCCESS, null);
+            } else {
+                log.error("Twilio SMS delivery returned non-2xx response for recipient {}", maskPhone(toPhone));
+                return new SmsDeliveryResult(SmsDeliveryStatus.TWILIO_ERROR, "Twilio returned non-success response");
+            }
+        } catch (Exception e) {
+            log.error("Twilio SMS delivery exception for recipient {}: {}", maskPhone(toPhone), e.getMessage());
+            return new SmsDeliveryResult(SmsDeliveryStatus.TWILIO_ERROR, e.getMessage());
+        }
+    }
+
+    public boolean sendOtpSms(String toPhone, String code) {
+        SmsDeliveryResult res = sendOtpSmsResult(toPhone, code);
+        return res.status() == SmsDeliveryStatus.SUCCESS;
+    }
+
+    public boolean isTwilioConfigured() {
         return twilioAccountSid != null && !twilioAccountSid.isBlank()
                 && twilioAuthToken != null && !twilioAuthToken.isBlank()
                 && twilioFromNumber != null && !twilioFromNumber.isBlank();

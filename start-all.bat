@@ -1,13 +1,13 @@
 @echo off
 title AEGIS DISPATCH - Launcher
 echo ===================================================
-echo Launching AEGIS DISPATCH Backend & Frontend...
+echo Launching AEGIS DISPATCH Backend ^& Frontend...
 echo ===================================================
 start "AEGIS Backend" cmd.exe /k ""%~dp0start-backend.bat""
 
 echo Waiting for Backend health check at http://localhost:8080/actuator/health/readiness...
 :health_loop
-powershell -Command "try { $r = Invoke-RestMethod -Uri 'http://localhost:8080/actuator/health/readiness' -TimeoutSec 2; if ($r.status -eq 'UP') { exit 0 } else { exit 1 } } catch { exit 1 }"
+curl -s -f http://localhost:8080/actuator/health/readiness >nul 2>&1
 if %ERRORLEVEL% equ 0 goto backend_up
 timeout /t 1 /nobreak >nul
 goto health_loop

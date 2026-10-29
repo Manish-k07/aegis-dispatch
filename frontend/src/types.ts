@@ -24,6 +24,48 @@ export interface Emergency {
     | 'CANCELLED';
   createdAt: string;
   updatedAt: string;
+  otherTypeDescription?: string;
+  typeOther?: string;
+  cancelReasonCode?: string;
+  cancelReasonText?: string;
+  cancelReason?: string;
+  cancelNote?: string;
+  cancelledAt?: string;
+  cancelledBy?: string;
+  sosTriggeredAt?: string;
+  locationAccuracy?: number;
+  locationAccuracyM?: number;
+  locationSource?: string;
+  sosSource?: string;
+  deviceInfo?: any;
+  deviceContext?: any;
+}
+
+export interface SosDeviceContext {
+  capturedAt: string;
+  timeZone: string;
+  deviceTime: string;
+  latitude?: number;
+  longitude?: number;
+  accuracyMeters?: number;
+  altitude?: number | null;
+  speed?: number | null;
+  heading?: number | null;
+  positionTimestamp?: number;
+  batteryLevel?: number;
+  batteryCharging?: boolean;
+  onLine?: boolean;
+  connectionType?: string;
+  downlink?: number;
+  rtt?: number;
+  saveData?: boolean;
+  userAgent?: string;
+  platform?: string;
+  language?: string;
+  screenResolution?: string;
+  isTouch?: boolean;
+  orientation?: string;
+  geolocationPermission?: string;
 }
 
 export interface Ambulance {
@@ -132,6 +174,27 @@ export interface CitizenProfile {
   emergencyContactName?: string;
   emergencyContactPhone?: string;
   registeredAt?: string;
+  dob?: string;
+  address?: string;
+  homeAddress?: string;
+  landmark?: string;
+  emergencyContacts?: Array<{ name: string; relationship: string; phone: string }>;
+  medications?: string[];
+  chronicConditions?: string[];
+  pastSurgeries?: string[];
+  disabilityNeeds?: string;
+  pregnancyStatus?: string;
+  insuranceProvider?: string;
+  insuranceId?: string;
+  doctorName?: string;
+  doctorPhone?: string;
+  otherMedicalNotes?: string;
+  medicalNotes?: string;
+  profileComplete?: boolean;
+  phoneVerified?: boolean;
+  emailVerified?: boolean;
+  updatedAt?: string;
+  version?: number;
 }
 
 export interface AuthSession {
@@ -143,6 +206,8 @@ export interface AuthSession {
   dispatcherBadge?: string;
   citizenProfile?: CitizenProfile;
   loginTime: string;
+  profileComplete?: boolean;
+  updatedAt?: string;
 }
 
 export interface PatientVitals {
@@ -171,60 +236,44 @@ export interface MaintenanceDiagnostic {
   isElectric: boolean;
   odometerKm: number;
   oxygenTankPsi: number;
-  defibrillatorStatus: string;
-  nextServiceDueKm: number;
-  alert?: string;
+  tirePressurePsi: number;
+  engineTemperatureC: number;
+  batteryHealthPercent: number;
+  brakePadWearPercent: number;
+  oilLifePercent: number;
+  defLevelPercent: number;
+  transmissionTempC: number;
+  alertLevel: 'NORMAL' | 'WARNING' | 'CRITICAL';
 }
 
-export interface WeatherReport {
-  location: string;
-  condition: string;
-  tempC: number;
-  roadCondition: 'DRY' | 'WET' | 'WATERLOGGED';
-  speedMultiplier: number;
-  windKmh: number;
+export interface RouteStep {
+  instruction: string;
+  distanceMeters: number;
+  durationSeconds: number;
+  name: string;
+}
+
+export interface TriageAssessment {
+  acuity?: 'CRITICAL' | 'EMERGENCY' | 'URGENT' | 'STANDARD' | 'NON_URGENT';
+  category?: 'CARDIAC' | 'TRAUMA' | 'RESPIRATORY' | 'NEUROLOGICAL' | 'PEDIATRIC' | 'GENERAL';
+  confidenceScore?: number;
+  recommendedCareLevel?: 'ALS' | 'BLS' | 'MICU';
+  suggestedAction?: string;
+  differentialDiagnoses?: string[];
+  timestamp?: string;
+  priority?: string;
+  esiLevel?: string;
+  suggestedType?: string;
+  requiredUnit?: string;
+  protocolChecklist?: string[];
 }
 
 export interface ChatMessage {
   id: string;
   sender: 'user' | 'assistant' | 'system';
   text: string;
-  time: string;
+  time?: string;
+  timestamp?: string;
   actionExecuted?: string;
   data?: any;
 }
-
-export interface TriageAssessment {
-  priority: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
-  esiLevel: string;
-  suggestedType: string;
-  requiredUnit: string;
-  protocolChecklist: string[];
-}
-
-export interface SavedFileInfo {
-  fileName: string;
-  category: 'LATEST_SNAPSHOT' | 'HISTORICAL_BACKUP';
-  path: string;
-  sizeBytes: number;
-  sizeFormatted: string;
-  lastModified: string;
-}
-
-export interface SaveResult {
-  status: string;
-  message: string;
-  snapshotFile: string;
-  backupFile: string;
-  fileSizeBytes: number;
-  fileSizeFormatted: string;
-  timestamp: string;
-  recordsSaved: {
-    emergencies: number;
-    dispatches: number;
-    ambulances: number;
-    hospitals: number;
-    auditLogs: number;
-  };
-}
-

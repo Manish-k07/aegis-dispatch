@@ -9,6 +9,9 @@ import java.util.List;
 public interface UserRepository extends JpaRepository<User, UUID> {
     Optional<User> findByUsername(String username);
     Optional<User> findByPhone(String phone);
+    Optional<User> findByGoogleSub(String googleSub);
+    Optional<User> findByEmail(String email);
+    Optional<User> findByEmailIgnoreCase(String email);
     List<User> findByRole(String role);
     boolean existsByRole(String role);
 }

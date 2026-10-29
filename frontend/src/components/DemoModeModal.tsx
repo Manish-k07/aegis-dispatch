@@ -115,10 +115,10 @@ export const DemoModeModal: React.FC<DemoModeModalProps> = ({
 
   const getRoleIcon = (role: string) => {
     switch (role) {
-      case 'DISPATCHER': return 'shield';
+      case 'DISPATCHER': return 'cad_operator';
       case 'PARAMEDIC': return 'ambulance';
       case 'HOSPITAL_STAFF': return 'local_hospital';
-      case 'CITIZEN': return 'emergency';
+      case 'CITIZEN': return 'person';
       default: return 'person';
     }
   };

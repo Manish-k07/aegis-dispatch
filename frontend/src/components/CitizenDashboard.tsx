@@ -29,8 +29,13 @@ interface CitizenDashboardProps {
     latitude: number;
     longitude: number;
     description: string;
+    otherTypeDescription?: string;
+    sosTriggeredAt?: string;
+    locationAccuracy?: number;
+    locationSource?: string;
+    deviceInfo?: string;
   }) => void;
-  onCancelSOS?: (emergencyId: string) => void;
+  onCancelSOS?: (emergencyId: string, reasonCode?: string, reasonText?: string) => void;
   onUpdateProfile?: (updated: CitizenProfile) => void;
   onLogout: () => void;
 }
@@ -49,6 +54,7 @@ const EMERGENCY_TYPES: EmergencyTypeOption[] = [
   { id: 'ACCIDENT', label: 'Road traffic accident', icon: 'car_crash' },
   { id: 'MATERNITY', label: 'Maternity emergency', icon: 'pregnant_woman' },
   { id: 'UNCONSCIOUS', label: 'Unconscious or stroke', icon: 'personal_injury' },
+  { id: 'OTHER', label: 'Other (type to describe)', icon: 'more_horiz' },
 ];
 
 const PRESET_DISEASES = [
@@ -98,6 +104,27 @@ export const CitizenDashboard: React.FC<CitizenDashboardProps> = ({
   onLogout,
 }) => {
   const [selectedEmergencyType, setSelectedEmergencyType] = useState('CARDIAC');
+  const [otherTypeDescription, setOtherTypeDescription] = useState('');
+  const [otherTypeError, setOtherTypeError] = useState<string | null>(null);
+  const [unverifiedCallbackPhone, setUnverifiedCallbackPhone] = useState(profile?.phone || '');
+
+  const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
+  const [cancelReasonCode, setCancelReasonCode] = useState('');
+  const [cancelReasonText, setCancelReasonText] = useState('');
+  const [cancelError, setCancelError] = useState<string | null>(null);
+
+  const [isSosCountingDown, setIsSosCountingDown] = useState(false);
+  const [sosCountdownSeconds, setSosCountdownSeconds] = useState(5);
+  const countdownTimerRef = useRef<any>(null);
+  const watchPositionIdRef = useRef<number | null>(null);
+  const [isOfflineQueued, setIsOfflineQueued] = useState(false);
+  const [privacyConsentAccepted, setPrivacyConsentAccepted] = useState(() => {
+    try {
+      return localStorage.getItem('aegis_sos_privacy_consent') === 'true';
+    } catch {
+      return false;
+    }
+  });
   const [userAddress, setUserAddress] = useState('100ft Road, Indiranagar, Bengaluru');
   const [userCoords, setUserCoords] = useState<{ lat: number; lon: number }>({
     lat: 12.9716,
@@ -264,7 +291,181 @@ export const CitizenDashboard: React.FC<CitizenDashboardProps> = ({
   };
 
   // Handle Trigger SOS
-  const executeTriggerSOS = () => {
+  // Start 5-second countdown on SOS trigger
+  const handleStartSosCountdown = () => {
+    if (selectedEmergencyType === 'OTHER') {
+      const cleanDesc = otherTypeDescription.trim();
+      if (cleanDesc.length < 3) {
+        setOtherTypeError('Please describe the emergency (minimum 3 characters).');
+        return;
+      }
+      if (cleanDesc.length > 200) {
+        setOtherTypeError('Description must not exceed 200 characters.');
+        return;
+      }
+    }
+    setOtherTypeError(null);
+    setIsSosCountingDown(true);
+    setSosCountdownSeconds(5);
+
+    if (countdownTimerRef.current) clearInterval(countdownTimerRef.current);
+
+    let remaining = 5;
+    countdownTimerRef.current = setInterval(() => {
+      remaining -= 1;
+      setSosCountdownSeconds(remaining);
+      if (remaining <= 0) {
+        clearInterval(countdownTimerRef.current);
+        countdownTimerRef.current = null;
+        setIsSosCountingDown(false);
+        executeTriggerSOS();
+      }
+    }, 1000);
+  };
+
+  const handleCancelSosCountdown = () => {
+    if (countdownTimerRef.current) {
+      clearInterval(countdownTimerRef.current);
+      countdownTimerRef.current = null;
+    }
+    setIsSosCountingDown(false);
+    setSosCountdownSeconds(5);
+  };
+
+  const handleImmediateSosTrigger = () => {
+    if (countdownTimerRef.current) {
+      clearInterval(countdownTimerRef.current);
+      countdownTimerRef.current = null;
+    }
+    setIsSosCountingDown(false);
+    executeTriggerSOS();
+  };
+
+  // Handle Trigger SOS with automatic device telemetry
+  const executeTriggerSOS = async () => {
+    setIsConfirmSosOpen(false);
+    setIsSosCountingDown(false);
+
+    const emgTypeObj = EMERGENCY_TYPES.find((t) => t.id === selectedEmergencyType) || EMERGENCY_TYPES[0];
+    const isOther = emgTypeObj.id === 'OTHER';
+    const cleanOtherDesc = isOther ? otherTypeDescription.trim().slice(0, 200) : undefined;
+
+    // Collect device telemetry
+    const sosTriggeredAt = new Date().toISOString();
+    let currentLat = userCoords.lat;
+    let currentLon = userCoords.lon;
+    let locationAccuracy: number | undefined = undefined;
+    let locationSource = 'UNAVAILABLE';
+
+    if (typeof navigator !== 'undefined' && navigator.geolocation) {
+      try {
+        const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 5000,
+          });
+        });
+        currentLat = pos.coords.latitude;
+        currentLon = pos.coords.longitude;
+        locationAccuracy = Math.round(pos.coords.accuracy);
+        locationSource = 'GPS';
+        setUserCoords({ lat: currentLat, lon: currentLon });
+      } catch (err) {
+        locationSource = 'UNAVAILABLE';
+      }
+
+      // Continuous watchPosition refresh while active
+      try {
+        if (watchPositionIdRef.current) {
+          navigator.geolocation.clearWatch(watchPositionIdRef.current);
+        }
+        watchPositionIdRef.current = navigator.geolocation.watchPosition(
+          (pos) => {
+            setUserCoords({ lat: pos.coords.latitude, lon: pos.coords.longitude });
+          },
+          () => {},
+          { enableHighAccuracy: true, maximumAge: 10000 }
+        );
+      } catch {}
+    }
+
+    // Best effort device context
+    let batteryLevel: number | undefined = undefined;
+    if (typeof navigator !== 'undefined' && (navigator as any).getBattery) {
+      try {
+        const b = await (navigator as any).getBattery();
+        batteryLevel = Math.round(b.level * 100);
+      } catch {}
+    }
+
+    const conn = typeof navigator !== 'undefined' ? (navigator as any).connection : null;
+    const connectionType = conn ? (conn.effectiveType || conn.type || 'unknown') : 'unknown';
+    const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
+    const userAgent = typeof navigator !== 'undefined' ? navigator.userAgent.slice(0, 200) : 'unknown';
+    const platform = typeof navigator !== 'undefined' ? ((navigator as any).userAgentData?.platform || navigator.platform || 'unknown') : 'unknown';
+
+    const deviceInfoStr = JSON.stringify({
+      onLine: isOnline,
+      connectionType,
+      batteryLevel,
+      platform,
+      userAgent,
+    });
+
+    const clinicalNotes = `[CITIZEN EMERGENCY DISPATCH]:
+• Citizen name: ${toTitleCase(profile.name)} (${profile.age}y, ${formatGender(profile.gender)})
+• Contact phone: ${profile.phone}${profile.email ? ` | Email: ${profile.email}` : ''}
+• Blood group: ${profile.bloodGroup && profile.bloodGroup !== 'Not Specified' ? profile.bloodGroup : 'Not reported'}
+• Known diseases/history: ${profile.diseases.join(', ') || 'None reported'}
+• Known allergies: ${profile.allergies.join(', ') || 'No known drug allergies (NKDA)'}
+• Emergency contact: ${profile.emergencyContactName || 'N/A'} (${profile.emergencyContactPhone || 'N/A'})${
+      cleanOtherDesc ? `\n• Emergency details: ${cleanOtherDesc}` : ''
+    }`;
+
+    const sosPayload = {
+      type: emgTypeObj.id,
+      otherTypeDescription: cleanOtherDesc,
+      priority: 'CRITICAL' as const,
+      callerName: profile.name,
+      phone: profile.phone,
+      address: userAddress,
+      latitude: currentLat,
+      longitude: currentLon,
+      description: clinicalNotes,
+      sosTriggeredAt,
+      locationAccuracy,
+      locationSource,
+      deviceInfo: deviceInfoStr,
+    };
+
+    if (!isOnline) {
+      try {
+        localStorage.setItem('aegis_offline_sos_queue', JSON.stringify(sosPayload));
+      } catch {}
+      setIsOfflineQueued(true);
+
+      const handleReconnect = () => {
+        window.removeEventListener('online', handleReconnect);
+        setIsOfflineQueued(false);
+        try {
+          const raw = localStorage.getItem('aegis_offline_sos_queue');
+          if (raw) {
+            localStorage.removeItem('aegis_offline_sos_queue');
+            onRequestSOS(JSON.parse(raw));
+          }
+        } catch {}
+      };
+      window.addEventListener('online', handleReconnect);
+      return;
+    }
+
+    onRequestSOS(sosPayload);
+    setUndoSnackbarOpen(true);
+    return;
+  };
+
+  const _legacyTriggerSOS = () => {
     setIsConfirmSosOpen(false);
     const emgTypeObj = EMERGENCY_TYPES.find((t) => t.id === selectedEmergencyType) || EMERGENCY_TYPES[0];
 
@@ -453,6 +654,19 @@ export const CitizenDashboard: React.FC<CitizenDashboardProps> = ({
                       Emergency assistance dispatched
                     </span>
                   </div>
+                  <div
+                    id="active-emergency-type-display"
+                    style={{
+                      fontSize: '13px',
+                      color: 'var(--md-sys-color-text-secondary)',
+                      marginTop: '4px',
+                      paddingLeft: '18px',
+                    }}
+                  >
+                    {activeEmergency.type === 'OTHER' && activeEmergency.otherTypeDescription
+                      ? `Other: ${activeEmergency.otherTypeDescription}`
+                      : `Emergency Type: ${activeEmergency.type}`}
+                  </div>
                   <span
                     className="mono"
                     style={{
@@ -596,6 +810,8 @@ export const CitizenDashboard: React.FC<CitizenDashboardProps> = ({
                     }}
                   >
                     <div>
+
+
                       <div style={{ fontSize: '11px', color: 'var(--md-sys-color-text-secondary)' }}>
                         Destination hospital
                       </div>
@@ -706,9 +922,10 @@ export const CitizenDashboard: React.FC<CitizenDashboardProps> = ({
                       variant="outlined"
                       size="small"
                       onClick={() => {
-                        if (window.confirm('Are you sure you want to cancel this emergency request?')) {
-                          onCancelSOS(activeEmergency.id);
-                        }
+                        setIsCancelDialogOpen(true);
+                        setCancelReasonCode('');
+                        setCancelReasonText('');
+                        setCancelError(null);
                       }}
                     >
                       Cancel emergency request
@@ -804,6 +1021,26 @@ export const CitizenDashboard: React.FC<CitizenDashboardProps> = ({
                   </div>
                 </div>
 
+                {selectedEmergencyType === 'OTHER' && (
+                  <div style={{ marginBottom: '20px' }}>
+                    <Field
+                      id="citizen-other-description"
+                      label="Describe emergency *"
+                      value={otherTypeDescription}
+                      onChange={(e) => {
+                        setOtherTypeDescription(e.target.value);
+                        if (e.target.value.trim().length >= 3) setOtherTypeError(null);
+                      }}
+                      placeholder="Please describe the emergency (min 3, max 200 characters)"
+                      helperText="Required plain text description"
+                      error={otherTypeError || undefined}
+                      fullWidth
+                      required
+                      autoFocus
+                    />
+                  </div>
+                )}
+
                 {/* Incident Location Box: Single row with Use my location, accuracy chip, address, change button */}
                 <div
                   style={{
@@ -895,7 +1132,8 @@ export const CitizenDashboard: React.FC<CitizenDashboardProps> = ({
                   variant="emergency"
                   size="large"
                   fullWidth
-                  onClick={() => setIsConfirmSosOpen(true)}
+                  id="btn-request-ambulance"
+                  onClick={handleStartSosCountdown}
                   startIcon={<Icon name="e911_emergency" size={24} />}
                   style={{
                     height: '56px',
@@ -1049,6 +1287,8 @@ export const CitizenDashboard: React.FC<CitizenDashboardProps> = ({
                   <Icon name="person" size={22} />
                 </div>
                 <div>
+
+
                   <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--md-sys-color-text)' }}>
                     {toTitleCase(profile.name)}
                   </div>
@@ -1062,6 +1302,8 @@ export const CitizenDashboard: React.FC<CitizenDashboardProps> = ({
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 {/* Row 1: Allergies */}
                 <div>
+
+
                   <div
                     style={{
                       fontSize: '12px',
@@ -1087,6 +1329,8 @@ export const CitizenDashboard: React.FC<CitizenDashboardProps> = ({
 
                 {/* Row 2: Conditions */}
                 <div>
+
+
                   <div
                     style={{
                       fontSize: '12px',
@@ -1112,6 +1356,8 @@ export const CitizenDashboard: React.FC<CitizenDashboardProps> = ({
 
                 {/* Row 3: Emergency Contact */}
                 <div>
+
+
                   <div
                     style={{
                       fontSize: '12px',
@@ -1132,6 +1378,8 @@ export const CitizenDashboard: React.FC<CitizenDashboardProps> = ({
                     }}
                   >
                     <div>
+
+
                       <div style={{ fontWeight: 500 }}>
                         {profile.emergencyContactName || 'Amit Patel (Spouse)'}
                       </div>
@@ -1228,8 +1476,12 @@ export const CitizenDashboard: React.FC<CitizenDashboardProps> = ({
 
               {/* Protocol Content */}
               <div>
+
+
                 {activeFirstAidTab === 'CPR' && (
                   <div>
+
+
                     {/* CPR Metronome Box with 110 BPM visual pulse + AudioContext Oscillator */}
                     <div
                       style={{
@@ -1377,6 +1629,20 @@ export const CitizenDashboard: React.FC<CitizenDashboardProps> = ({
         cancelLabel="Cancel"
         onConfirm={executeTriggerSOS}
       >
+        {!profile.phone || profile.phoneVerified === false ? (
+          <div style={{ marginBottom: '14px', padding: '10px 12px', borderRadius: '8px', backgroundColor: 'var(--md-sys-color-error-container)', color: 'var(--md-sys-color-on-error-container)' }}>
+            <div style={{ fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>⚠️ Phone number not verified:</div>
+            <label style={{ display: 'block', fontSize: '11px', marginBottom: '4px' }}>Provide responder callback phone number:</label>
+            <Field
+              id="unverified-sos-callback-phone"
+              name="unverified_sos_callback_phone"
+              type="tel"
+              value={unverifiedCallbackPhone}
+              onChange={(e) => setUnverifiedCallbackPhone(e.target.value)}
+              placeholder="e.g. 9845012345"
+            />
+          </div>
+        ) : null}
         <p style={{ margin: '0 0 12px 0', fontSize: '14px', lineHeight: '1.5', color: 'var(--md-sys-color-text)' }}>
           This action will immediately alert central dispatch to mobilize an emergency medical unit to:
         </p>
@@ -1510,6 +1776,8 @@ export const CitizenDashboard: React.FC<CitizenDashboardProps> = ({
 
           {/* Medical Conditions Selector */}
           <div>
+
+
             <div style={{ fontSize: '12px', fontWeight: 500, color: 'var(--md-sys-color-text-secondary)', marginBottom: '8px' }}>
               Chronic diseases & medical conditions
             </div>
@@ -1531,6 +1799,8 @@ export const CitizenDashboard: React.FC<CitizenDashboardProps> = ({
 
           {/* Known Allergies Selector */}
           <div>
+
+
             <div style={{ fontSize: '12px', fontWeight: 500, color: 'var(--md-sys-color-text-secondary)', marginBottom: '8px' }}>
               Known drug & food allergies
             </div>
@@ -1569,12 +1839,249 @@ export const CitizenDashboard: React.FC<CitizenDashboardProps> = ({
             <Button variant="outlined" type="button" onClick={() => setIsEditProfileOpen(false)}>
               Cancel
             </Button>
+  
             <Button variant="filled" type="submit">
               Save changes
             </Button>
           </div>
         </form>
       </Dialog>
-    </div>
+
+      {/* Cancellation Reason M3 Dialog */}
+      <Dialog
+        isOpen={isCancelDialogOpen}
+        onClose={() => setIsCancelDialogOpen(false)}
+        title="Cancel Emergency Request"
+        icon="cancel"
+        maxWidth="480px"
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }} id="cancel-emergency-dialog">
+          <p style={{ fontSize: '13px', color: 'var(--md-sys-color-text-secondary)', margin: 0 }}>
+            Please select the reason for cancelling this emergency dispatch. A valid reason is required for CAD records.
+          </p>
+
+          {cancelError && (
+            <div
+              style={{
+                padding: '8px 12px',
+                borderRadius: '8px',
+                backgroundColor: 'var(--md-sys-color-error-container)',
+                color: 'var(--md-sys-color-error)',
+                fontSize: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}
+            >
+              <Icon name="error" size={16} />
+              <span>{cancelError}</span>
+            </div>
+          )}
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {[
+              { code: 'BOOKED_BY_MISTAKE', label: 'Booked by mistake' },
+              { code: 'HELP_ARRIVED_ANOTHER_WAY', label: 'Help arrived another way' },
+              { code: 'SITUATION_RESOLVED', label: 'Situation resolved' },
+              { code: 'AMBULANCE_TAKING_TOO_LONG', label: 'Ambulance taking too long' },
+              { code: 'WRONG_LOCATION', label: 'Wrong location' },
+              { code: 'OTHER', label: 'Other (type reason)' },
+            ].map((option) => {
+              const isSelected = cancelReasonCode === option.code;
+              return (
+                <div
+                  key={option.code}
+                  role="radio"
+                  aria-checked={isSelected}
+                  tabIndex={0}
+                  onClick={() => {
+                    setCancelReasonCode(option.code);
+                    setCancelError(null);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === ' ' || e.key === 'Enter') {
+                      setCancelReasonCode(option.code);
+                      setCancelError(null);
+                    }
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    padding: '10px 12px',
+                    borderRadius: '8px',
+                    border: `1px solid ${isSelected ? 'var(--md-sys-color-primary)' : 'var(--md-sys-color-outline)'}`,
+                    backgroundColor: isSelected
+                      ? 'var(--md-sys-color-primary-container)'
+                      : 'var(--md-sys-color-surface-container-low)',
+                    cursor: 'pointer',
+                    fontSize: '13px',
+                    fontWeight: isSelected ? 600 : 400,
+                  }}
+                >
+                  <div
+                    style={{
+                      width: '16px',
+                      height: '16px',
+                      borderRadius: '50%',
+                      border: isSelected
+                        ? '5px solid var(--md-sys-color-primary)'
+                        : '2px solid var(--md-sys-color-outline)',
+                      backgroundColor: 'var(--md-sys-color-surface)',
+                      boxSizing: 'border-box',
+                    }}
+                  />
+                  <span>{option.label}</span>
+                </div>
+              );
+            })}
+          </div>
+
+          {cancelReasonCode === 'OTHER' && (
+            <Field
+              id="cancel-other-reason-input"
+              label="Cancellation Reason Details *"
+              value={cancelReasonText}
+              onChange={(e) => setCancelReasonText(e.target.value)}
+              placeholder="Explain why the dispatch is cancelled (min 3, max 200 chars)"
+              helperText="3 to 200 characters required"
+              fullWidth
+              required
+              autoFocus
+            />
+          )}
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '8px' }}>
+            <Button
+              variant="text"
+              onClick={() => setIsCancelDialogOpen(false)}
+            >
+              Keep Dispatch
+            </Button>
+            <Button
+              variant="emergency"
+              id="btn-confirm-cancel"
+              onClick={() => {
+                if (!cancelReasonCode) {
+                  setCancelError('Please select a reason for cancelling');
+                  return;
+                }
+                if (cancelReasonCode === 'OTHER') {
+                  const trimmed = cancelReasonText.trim();
+                  if (trimmed.length < 3) {
+                    setCancelError('Please specify the reason (minimum 3 characters).');
+                    return;
+                  }
+                  if (trimmed.length > 200) {
+                    setCancelError('Reason must not exceed 200 characters.');
+                    return;
+                  }
+                }
+                if (activeEmergency && onCancelSOS) {
+                  onCancelSOS(
+                    activeEmergency.id,
+                    cancelReasonCode,
+                    cancelReasonCode === 'OTHER' ? cancelReasonText.trim() : undefined
+                  );
+                }
+                setIsCancelDialogOpen(false);
+              }}
+            >
+              Confirm Cancellation
+            </Button>
+          </div>
+        </div>
+      </Dialog>
+
+      {/* 5-Second Cancelable SOS Countdown Dialog */}
+      <Dialog
+        isOpen={isSosCountingDown}
+        onClose={handleCancelSosCountdown}
+        title="Emergency Dispatch Initiated"
+        icon="e911_emergency"
+        maxWidth="440px"
+      >
+        <div style={{ textAlign: 'center', padding: '16px 0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }} id="sos-countdown-container">
+          <div
+            style={{
+              width: '80px',
+              height: '80px',
+              borderRadius: '50%',
+              backgroundColor: 'var(--md-sys-color-error-container)',
+              color: 'var(--md-sys-color-error)',
+              fontSize: '36px',
+              fontWeight: 700,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              animation: 'pulse 1s infinite',
+            }}
+          >
+            {sosCountdownSeconds}
+          </div>
+
+          <div>
+
+
+            <h3 style={{ fontSize: '18px', fontWeight: 600, margin: '0 0 6px 0' }}>
+              Transmitting Emergency Alert in {sosCountdownSeconds}s
+            </h3>
+            <p style={{ fontSize: '12px', color: 'var(--md-sys-color-text-secondary)', margin: 0 }}>
+              Collecting real-time GPS coordinates, device vitals, and medical summary. Press Cancel if triggered accidentally.
+            </p>
+          </div>
+
+          {!privacyConsentAccepted && (
+            <div style={{ padding: '8px 12px', borderRadius: '8px', backgroundColor: 'var(--md-sys-color-surface-container)', fontSize: '11px', color: 'var(--md-sys-color-text-secondary)', textAlign: 'left' }}>
+              🔒 <strong>Privacy Explainer:</strong> Your device GPS, connection status, and medical profile are transmitted strictly for ambulance routing and clinical handover.
+            </div>
+          )}
+
+          <div style={{ display: 'flex', gap: '10px', width: '100%', marginTop: '8px' }}>
+            <Button
+              variant="outlined"
+              fullWidth
+              id="btn-cancel-sos-countdown"
+              onClick={handleCancelSosCountdown}
+            >
+              Cancel SOS
+            </Button>
+            <Button
+              variant="emergency"
+              fullWidth
+              id="btn-send-sos-now"
+              onClick={handleImmediateSosTrigger}
+            >
+              Send Immediately
+            </Button>
+          </div>
+        </div>
+      </Dialog>
+
+      {isOfflineQueued && (
+        <div
+          style={{
+            position: 'fixed',
+            bottom: '24px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            backgroundColor: 'var(--md-sys-color-warning-container)',
+            color: 'var(--md-sys-color-on-warning-container)',
+            padding: '12px 20px',
+            borderRadius: '12px',
+            boxShadow: 'var(--elevation-3)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            zIndex: 1000,
+            fontSize: '13px',
+            fontWeight: 500,
+          }}
+        >
+          <Icon name="cloud_off" size={20} />
+          <span>You are offline. SOS is queued locally and will transmit automatically once connection is restored.</span>
+        </div>
+      )}
+      </div>
   );
 };

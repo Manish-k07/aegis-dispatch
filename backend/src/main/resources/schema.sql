@@ -78,6 +78,26 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 ALTER TABLE users ADD COLUMN IF NOT EXISTS enabled BOOLEAN NOT NULL DEFAULT TRUE;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS google_sub VARCHAR(120);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(120);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS auth_provider VARCHAR(40) DEFAULT 'LOCAL';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_complete BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS phone_verified BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS phone_verified_at TIMESTAMP WITH TIME ZONE;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified_at TIMESTAMP WITH TIME ZONE;
+CREATE INDEX IF NOT EXISTS idx_users_google_sub ON users(google_sub);
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+
+ALTER TABLE emergencies ADD COLUMN IF NOT EXISTS other_type_description VARCHAR(200);
+ALTER TABLE emergencies ADD COLUMN IF NOT EXISTS cancel_reason_code VARCHAR(80);
+ALTER TABLE emergencies ADD COLUMN IF NOT EXISTS cancel_reason_text VARCHAR(500);
+ALTER TABLE emergencies ADD COLUMN IF NOT EXISTS cancelled_at TIMESTAMP WITH TIME ZONE;
+ALTER TABLE emergencies ADD COLUMN IF NOT EXISTS cancelled_by VARCHAR(120);
+ALTER TABLE emergencies ADD COLUMN IF NOT EXISTS sos_triggered_at TIMESTAMP WITH TIME ZONE;
+ALTER TABLE emergencies ADD COLUMN IF NOT EXISTS location_accuracy DOUBLE PRECISION;
+ALTER TABLE emergencies ADD COLUMN IF NOT EXISTS location_source VARCHAR(40);
+ALTER TABLE emergencies ADD COLUMN IF NOT EXISTS device_info TEXT;
 
 CREATE TABLE IF NOT EXISTS incident_events (
   id BIGSERIAL PRIMARY KEY,
@@ -92,8 +112,10 @@ CREATE TABLE IF NOT EXISTS incident_events (
 );
 
 CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
+CREATE INDEX IF NOT EXISTS idx_users_phone ON users(phone);
 CREATE INDEX IF NOT EXISTS idx_incident_events_incident ON incident_events(incident_id);
 CREATE INDEX IF NOT EXISTS idx_emergencies_status ON emergencies(status);
+CREATE INDEX IF NOT EXISTS idx_emergencies_phone ON emergencies(phone);
 CREATE INDEX IF NOT EXISTS idx_ambulances_status ON ambulances(status);
 CREATE INDEX IF NOT EXISTS idx_ambulance_locations_time ON ambulance_locations(ambulance_id, recorded_at DESC);
 CREATE INDEX IF NOT EXISTS idx_dispatches_emergency ON dispatches(emergency_id);

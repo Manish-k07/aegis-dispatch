@@ -10,10 +10,14 @@ export interface IconProps {
 // Dev-time check pattern for valid Material Symbols ligature names
 const VALID_ICON_NAME_PATTERN = /^[a-z0-9_]+$/;
 
+// Custom CAD Operator / Dispatcher icon SVG path (vectorized from uploaded CAD dispatch line-art)
+const CAD_ICON_PATH =
+  'M17 0h31v1h-31z M16 1h33v1h-33z M16 2h2v1h-2z M47 2h2v1h-2z M16 3h2v1h-2z M47 3h2v1h-2z M16 4h2v1h-2z M21 4h4v1h-4z M26 4h3v1h-3z M31 4h13v1h-13z M47 4h2v1h-2z M16 5h2v1h-2z M21 5h4v1h-4z M26 5h3v1h-3z M31 5h13v1h-13z M47 5h2v1h-2z M16 6h2v1h-2z M47 6h2v1h-2z M16 7h2v1h-2z M47 7h2v1h-2z M16 8h22v1h-22z M40 8h9v1h-9z M17 9h31v1h-31z M37 10h4v1h-4z M38 11h3v1h-3z M11 12h2v1h-2z M17 12h5v1h-5z M24 12h11v1h-11z M39 12h2v1h-2z M11 13h2v1h-2z M16 13h6v1h-6z M24 13h12v1h-12z M9 14h9v1h-9z M34 14h2v1h-2z M42 14h15v1h-15z M7 15h11v1h-11z M34 15h2v1h-2z M41 15h17v1h-17z M6 16h4v1h-4z M11 16h2v1h-2z M15 16h4v1h-4z M22 16h6v1h-6z M29 16h3v1h-3z M34 16h2v1h-2z M40 16h3v1h-3z M56 16h3v1h-3z M5 17h3v1h-3z M11 17h2v1h-2z M17 17h3v1h-3z M22 17h6v1h-6z M29 17h4v1h-4z M34 17h2v1h-2z M39 17h3v1h-3z M57 17h2v1h-2z M4 18h3v1h-3z M11 18h2v1h-2z M18 18h3v1h-3z M34 18h2v1h-2z M39 18h3v1h-3z M57 18h3v1h-3z M4 19h2v1h-2z M11 19h2v1h-2z M19 19h2v1h-2z M34 19h2v1h-2z M40 19h2v1h-2z M58 19h2v1h-2z M3 20h3v1h-3z M10 20h4v1h-4z M19 20h7v1h-7z M29 20h7v1h-7z M40 20h12v1h-12z M58 20h2v1h-2z M3 21h2v1h-2z M9 21h7v1h-7z M20 21h7v1h-7z M28 21h7v1h-7z M41 21h12v1h-12z M58 21h2v1h-2z M3 22h2v1h-2z M8 22h3v1h-3z M13 22h9v1h-9z M25 22h5v1h-5z M42 22h2v1h-2z M51 22h3v1h-3z M58 22h2v1h-2z M3 23h2v1h-2z M8 23h2v1h-2z M14 23h8v1h-8z M25 23h4v1h-4z M42 23h2v1h-2z M52 23h2v1h-2z M58 23h2v1h-2z M3 24h2v1h-2z M8 24h2v1h-2z M14 24h8v1h-8z M25 24h3v1h-3z M42 24h2v1h-2z M47 24h1v1h-1z M52 24h2v1h-2z M58 24h2v1h-2z M3 25h2v1h-2z M8 25h2v1h-2z M14 25h3v1h-3z M20 25h2v1h-2z M41 25h3v1h-3z M46 25h2v1h-2z M52 25h3v1h-3z M58 25h2v1h-2z M3 26h3v1h-3z M8 26h2v1h-2z M14 26h8v1h-8z M41 26h2v1h-2z M46 26h2v1h-2z M53 26h2v1h-2z M57 26h3v1h-3z M4 27h2v1h-2z M8 27h3v1h-3z M13 27h9v1h-9z M40 27h3v1h-3z M53 27h2v1h-2z M57 27h3v1h-3z M4 28h3v1h-3z M9 28h13v1h-13z M41 28h3v1h-3z M53 28h2v1h-2z M57 28h2v1h-2z M5 29h3v1h-3z M10 29h4v1h-4z M20 29h2v1h-2z M42 29h2v1h-2z M53 29h6v1h-6z M6 30h2v1h-2z M20 30h2v1h-2z M42 30h2v1h-2z M54 30h4v1h-4z M6 31h2v1h-2z M20 31h2v1h-2z M42 31h2v1h-2z M56 31h2v1h-2z M6 32h2v1h-2z M14 32h8v1h-8z M42 32h8v1h-8z M56 32h2v1h-2z M6 33h2v1h-2z M13 33h8v1h-8z M43 33h8v1h-8z M56 33h2v1h-2z M6 34h2v1h-2z M13 34h2v1h-2z M49 34h2v1h-2z M56 34h2v1h-2z M6 35h10v1h-10z M49 35h9v1h-9z M5 36h13v1h-13z M47 36h12v1h-12z M4 37h16v1h-16z M46 37h14v1h-14z M3 38h3v1h-3z M17 38h4v1h-4z M45 38h3v1h-3z M58 38h3v1h-3z M2 39h3v1h-3z M19 39h2v1h-2z M44 39h3v1h-3z M59 39h3v1h-3z M2 40h2v1h-2z M10 40h3v1h-3z M19 40h3v1h-3z M43 40h3v1h-3z M60 40h2v1h-2z M2 41h2v1h-2z M8 41h7v1h-7z M20 41h2v1h-2z M43 41h2v1h-2z M51 41h3v1h-3z M60 41h2v1h-2z M2 42h2v1h-2z M7 42h4v1h-4z M12 42h4v1h-4z M20 42h2v1h-2z M42 42h2v1h-2z M50 42h6v1h-6z M60 42h2v1h-2z M2 43h2v1h-2z M6 43h3v1h-3z M14 43h2v1h-2z M20 43h3v1h-3z M42 43h2v1h-2z M49 43h3v1h-3z M53 43h3v1h-3z M60 43h2v1h-2z M2 44h2v1h-2z M6 44h2v1h-2z M14 44h3v1h-3z M20 44h3v1h-3z M42 44h2v1h-2z M49 44h2v1h-2z M54 44h3v1h-3z M60 44h2v1h-2z M2 45h2v1h-2z M6 45h2v1h-2z M15 45h2v1h-2z M20 45h3v1h-3z M41 45h3v1h-3z M49 45h2v1h-2z M54 45h3v1h-3z M60 45h2v1h-2z M6 46h2v1h-2z M15 46h2v1h-2z M20 46h3v1h-3z M41 46h3v1h-3z M49 46h1v1h-1z M54 46h3v1h-3z M60 46h2v1h-2z M6 47h3v1h-3z M14 47h3v1h-3z M20 47h3v1h-3z M41 47h3v1h-3z M54 47h3v1h-3z M60 47h2v1h-2z M7 48h2v1h-2z M13 48h3v1h-3z M20 48h3v1h-3z M41 48h3v1h-3z M54 48h3v1h-3z M60 48h2v1h-2z M2 49h2v1h-2z M7 49h9v1h-9z M20 49h3v1h-3z M41 49h3v1h-3z M49 49h1v1h-1z M54 49h3v1h-3z M60 49h2v1h-2z M2 50h2v1h-2z M7 50h9v1h-9z M20 50h2v1h-2z M41 50h3v1h-3z M49 50h2v1h-2z M54 50h3v1h-3z M60 50h2v1h-2z M2 51h2v1h-2z M7 51h2v1h-2z M13 51h3v1h-3z M19 51h3v1h-3z M33 51h18v1h-18z M54 51h3v1h-3z M60 51h2v1h-2z M2 52h2v1h-2z M7 52h2v1h-2z M13 52h3v1h-3z M18 52h3v1h-3z M31 52h20v1h-20z M54 52h3v1h-3z M60 52h2v1h-2z M2 53h7v1h-7z M11 53h1v1h-1z M13 53h8v1h-8z M31 53h3v1h-3z M37 53h2v1h-2z M54 53h3v1h-3z M60 53h2v1h-2z M2 54h7v1h-7z M10 54h10v1h-10z M30 54h3v1h-3z M37 54h2v1h-2z M54 54h3v1h-3z M60 54h2v1h-2z M2 55h2v1h-2z M7 55h2v1h-2z M10 55h2v1h-2z M13 55h3v1h-3z M18 55h2v1h-2z M30 55h3v1h-3z M37 55h2v1h-2z M54 55h3v1h-3z M60 55h2v1h-2z M2 56h2v1h-2z M7 56h2v1h-2z M13 56h3v1h-3z M18 56h2v1h-2z M31 56h2v1h-2z M37 56h2v1h-2z M53 56h3v1h-3z M60 56h2v1h-2z M2 57h2v1h-2z M7 57h2v1h-2z M13 57h3v1h-3z M18 57h2v1h-2z M31 57h24v1h-24z M60 57h2v1h-2z M2 58h2v1h-2z M7 58h9v1h-9z M18 58h2v1h-2z M32 58h22v1h-22z M60 58h2v1h-2z M2 59h2v1h-2z M7 59h9v1h-9z M18 59h2v1h-2z M41 59h3v1h-3z M60 59h2v1h-2z M2 60h2v1h-2z M7 60h9v1h-9z M18 60h2v1h-2z M41 60h3v1h-3z M60 60h2v1h-2z M2 61h2v1h-2z M7 61h2v1h-2z M13 61h3v1h-3z M18 61h2v1h-2z M41 61h3v1h-3z M60 61h2v1h-2z M2 62h18v1h-18z M42 62h20v1h-20z M3 63h17v1h-17z M42 63h19v1h-19z';
+
 /**
  * Material Symbols Outlined Icon Component.
  * Self-hosted from 'material-symbols/outlined.css'.
- * Never falls back to raw glyphs like '*'.
+ * Renders pure scalable SVG for specialized custom roles (CAD Dispatcher).
  */
 export const Icon: React.FC<IconProps> = ({
   name,
@@ -21,7 +25,36 @@ export const Icon: React.FC<IconProps> = ({
   size = 20,
   style,
 }) => {
-  // Dev-time assertion check
+  const cleanName = name?.trim() || 'help';
+
+  // Custom CAD Operator / Dispatcher icon (pure SVG with currentColor fill)
+  if (cleanName === 'cad_operator' || cleanName === 'cad') {
+    return (
+      <svg
+        viewBox="0 0 64 64"
+        width={size}
+        height={size}
+        fill="currentColor"
+        className={`cad-icon-svg ${className}`}
+        style={{
+          width: `${size}px`,
+          height: `${size}px`,
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexShrink: 0,
+          userSelect: 'none',
+          ...style,
+        }}
+        aria-hidden="true"
+        data-icon="cad_operator"
+      >
+        <path d={CAD_ICON_PATH} />
+      </svg>
+    );
+  }
+
+  // Dev-time assertion check for standard ligature names
   if ((import.meta as any).env?.DEV) {
     if (!name || !VALID_ICON_NAME_PATTERN.test(name)) {
       console.error(
@@ -30,8 +63,6 @@ export const Icon: React.FC<IconProps> = ({
       );
     }
   }
-
-  const cleanName = name?.trim() || 'help';
 
   return (
     <span

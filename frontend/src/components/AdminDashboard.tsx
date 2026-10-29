@@ -463,7 +463,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, userLa
   const getRoleIcon = (role: string) => {
     switch (role.toUpperCase()) {
       case 'DISPATCHER':
-        return 'shield';
+        return 'cad_operator';
       case 'PARAMEDIC':
         return 'ambulance';
       case 'HOSPITAL_STAFF':
@@ -504,7 +504,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, userLa
           setNewAssignedHospital('');
         }}
         options={[
-          { value: 'DISPATCHER', label: 'Dispatcher', icon: 'shield' },
+          { value: 'DISPATCHER', label: 'Dispatcher', icon: 'cad_operator' },
           { value: 'PARAMEDIC', label: 'Paramedic', icon: 'ambulance' },
           { value: 'HOSPITAL_STAFF', label: 'Hospital staff', icon: 'local_hospital' },
           { value: 'ADMIN', label: 'Administrator', icon: 'admin_panel_settings' },

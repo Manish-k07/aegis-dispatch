@@ -31,10 +31,16 @@ Thumbs.db
 ehthumbs.db
 Desktop.ini
 
+# Environment and secrets
+.env
+backend/.env
 
 # Local tooling & QA screenshots
 .tools/
 frontend/screenshots/
+.agents/
+scratch/
+frontend/scratch/
 
 test-results/
 playwright-report/

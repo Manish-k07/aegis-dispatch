@@ -36,6 +36,48 @@ public class DispatchController {
     private final com.aegisdispatch.service.HospitalCapacityService hospitalCapacityService;
     private final com.aegisdispatch.service.PredictiveStagingService predictiveStagingService;
     private final org.springframework.core.env.Environment environment;
+    private final com.aegisdispatch.service.AuthService authService;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public DispatchController(
+            EmergencyRepository emergencies,
+            AmbulanceRepository ambulances,
+            HospitalRepository hospitals,
+            DispatchRepository dispatches,
+            DispatchEngine engine,
+            LiveSocketHandler ws,
+            AuditService audit,
+            AuditLogRepository auditRepo,
+            AmbulanceLocationRepository locationRepo,
+            IncidentEventRepository incidentEventRepository,
+            SimulationService simulationService,
+            RoutingService routingService,
+            com.aegisdispatch.service.CadFileService cadFileService,
+            com.aegisdispatch.service.SmsService smsService,
+            com.aegisdispatch.service.HospitalCapacityService hospitalCapacityService,
+            com.aegisdispatch.service.PredictiveStagingService predictiveStagingService,
+            org.springframework.core.env.Environment environment,
+            @org.springframework.beans.factory.annotation.Autowired(required = false) com.aegisdispatch.service.AuthService authService
+    ) {
+        this.emergencies = emergencies;
+        this.ambulances = ambulances;
+        this.hospitals = hospitals;
+        this.dispatches = dispatches;
+        this.engine = engine;
+        this.ws = ws;
+        this.audit = audit;
+        this.auditRepo = auditRepo;
+        this.locationRepo = locationRepo;
+        this.incidentEventRepository = incidentEventRepository;
+        this.simulationService = simulationService;
+        this.routingService = routingService;
+        this.cadFileService = cadFileService;
+        this.smsService = smsService;
+        this.hospitalCapacityService = hospitalCapacityService;
+        this.predictiveStagingService = predictiveStagingService;
+        this.environment = environment;
+        this.authService = authService;
+    }
 
     public DispatchController(
             EmergencyRepository emergencies,
@@ -56,23 +98,9 @@ public class DispatchController {
             com.aegisdispatch.service.PredictiveStagingService predictiveStagingService,
             org.springframework.core.env.Environment environment
     ) {
-        this.emergencies = emergencies;
-        this.ambulances = ambulances;
-        this.hospitals = hospitals;
-        this.dispatches = dispatches;
-        this.engine = engine;
-        this.ws = ws;
-        this.audit = audit;
-        this.auditRepo = auditRepo;
-        this.locationRepo = locationRepo;
-        this.incidentEventRepository = incidentEventRepository;
-        this.simulationService = simulationService;
-        this.routingService = routingService;
-        this.cadFileService = cadFileService;
-        this.smsService = smsService;
-        this.hospitalCapacityService = hospitalCapacityService;
-        this.predictiveStagingService = predictiveStagingService;
-        this.environment = environment;
+        this(emergencies, ambulances, hospitals, dispatches, engine, ws, audit, auditRepo, locationRepo,
+                incidentEventRepository, simulationService, routingService, cadFileService, smsService,
+                hospitalCapacityService, predictiveStagingService, environment, null);
     }
 
     private void triggerAutoSave(String reason) {
@@ -105,7 +133,20 @@ public class DispatchController {
         if (e.getStatus() == null || e.getStatus().isBlank()) e.setStatus("PENDING_DISPATCH");
         if (e.getPatientCount() <= 0) e.setPatientCount(1);
         if (e.getPatientCount() > 100) e.setPatientCount(100);
-        if (e.getPriority() == null) e.setPriority("HIGH");
+        // Validation for OTHER emergency type (Requirement C)
+        if (e.getType() != null && e.getType().equalsIgnoreCase("OTHER")) {
+            String desc = e.getOtherTypeDescription();
+            if (desc == null || desc.trim().length() < 3 || desc.trim().length() > 200) {
+                throw new IllegalArgumentException("Description is required for 'OTHER' emergency type (3-200 characters).");
+            }
+            e.setOtherTypeDescription(desc.replaceAll("<[^>]*>", "").trim());
+            // Documented: default priority for OTHER is HIGH, consistent with general acute medical alerts
+            if (e.getPriority() == null || e.getPriority().isBlank()) {
+                e.setPriority("HIGH");
+            }
+        } else {
+            if (e.getPriority() == null) e.setPriority("HIGH");
+        }
 
         // Validate coordinate boundaries
         if (e.getLatitude() < -90.0 || e.getLatitude() > 90.0) {
@@ -113,6 +154,11 @@ public class DispatchController {
         }
         if (e.getLongitude() < -180.0 || e.getLongitude() > 180.0) {
             throw new IllegalArgumentException("Invalid incident longitude: must be between -180 and 180");
+        }
+
+        // Validate accuracy if present
+        if (e.getLocationAccuracy() != null && e.getLocationAccuracy() < 0) {
+            throw new IllegalArgumentException("Location accuracy cannot be negative");
         }
 
         // Bound string fields to prevent memory abuse
@@ -124,6 +170,27 @@ public class DispatchController {
         }
         if (e.getAddress() != null && e.getAddress().length() > 500) {
             e.setAddress(e.getAddress().substring(0, 500));
+        }
+        if (e.getLocationSource() != null && e.getLocationSource().length() > 40) {
+            e.setLocationSource(e.getLocationSource().substring(0, 40));
+        }
+        if (e.getDeviceInfo() != null && e.getDeviceInfo().length() > 4000) {
+            e.setDeviceInfo(e.getDeviceInfo().substring(0, 4000));
+        }
+
+        // Rate limit per caller phone: max 5 active emergencies
+        if (e.getPhone() != null && !e.getPhone().isBlank()) {
+            String normPhone = com.aegisdispatch.service.OtpService.normalizePhone(e.getPhone());
+            long activeCount = emergencies.findAll().stream()
+                    .filter(em -> em.getPhone() != null && normPhone.equals(com.aegisdispatch.service.OtpService.normalizePhone(em.getPhone())))
+                    .filter(em -> !"CLOSED".equalsIgnoreCase(em.getStatus()) && !"CANCELLED".equalsIgnoreCase(em.getStatus()) && !"RESOLVED".equalsIgnoreCase(em.getStatus()))
+                    .count();
+            if (activeCount >= 5) {
+                throw new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.TOO_MANY_REQUESTS,
+                        "Maximum active emergencies reached for this caller phone (5 active). Please resolve or cancel existing emergencies before opening new ones."
+                );
+            }
         }
 
         e.setCreatedAt(Instant.now());
@@ -166,6 +233,36 @@ public class DispatchController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "Emergency not found"));
         }
         String newStatus = body.getOrDefault("status", "CANCELLED");
+
+        // Requirement D: Cancellation reason mandatory
+        if ("CANCELLED".equalsIgnoreCase(newStatus)) {
+            String reasonCode = body.get("reasonCode");
+            if (reasonCode == null || reasonCode.isBlank()) {
+                reasonCode = body.get("cancelReasonCode");
+            }
+            if (reasonCode == null || reasonCode.isBlank()) {
+                reasonCode = body.get("reason");
+            }
+            if (reasonCode == null || reasonCode.isBlank()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", "Cancellation reason is required"));
+            }
+
+            String reasonText = body.get("reasonText");
+            if (reasonText == null) {
+                reasonText = body.get("cancelReasonText");
+            }
+
+            if ("OTHER".equalsIgnoreCase(reasonCode.trim())) {
+                if (reasonText == null || reasonText.trim().length() < 3 || reasonText.trim().length() > 200) {
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", "Description of 3-200 characters is required for cancellation reason 'Other'"));
+                }
+            }
+
+            e.setCancelReasonCode(reasonCode.trim());
+            e.setCancelReasonText(reasonText != null ? reasonText.replaceAll("<[^>]*>", "").trim() : "");
+            e.setCancelledAt(Instant.now());
+            e.setCancelledBy(body.getOrDefault("actor", "Citizen"));
+        }
         String prevStatus = e.getStatus();
         e.setStatus(newStatus);
         e.setUpdatedAt(Instant.now());
@@ -183,9 +280,18 @@ public class DispatchController {
         });
 
         audit.log(body.getOrDefault("actor", "User"), "STATUS_CHANGED", "EMERGENCY", id, prevStatus, newStatus, "Status updated to " + newStatus);
-        ws.broadcast(String.format("{\"event\":\"EMERGENCY_UPDATED\",\"id\":\"%s\",\"status\":\"%s\"}", id, newStatus));
+        String reasonPayload = e.getCancelReasonCode() != null ? String.format(",\"cancelReasonCode\":\"%s\",\"cancelReasonText\":\"%s\"", e.getCancelReasonCode(), e.getCancelReasonText() != null ? e.getCancelReasonText() : "") : "";
+        ws.broadcast(String.format("{\"event\":\"EMERGENCY_UPDATED\",\"id\":\"%s\",\"status\":\"%s\"%s}", id, newStatus, reasonPayload));
         triggerAutoSave("EMERGENCY_STATUS_UPDATED");
         return ResponseEntity.ok(e);
+    }
+
+    @PostMapping("/emergencies/{id}/cancel")
+    @Transactional
+    public ResponseEntity<?> cancelEmergency(@PathVariable UUID id, @RequestBody Map<String, String> body) {
+        Map<String, String> params = new HashMap<>(body != null ? body : Map.of());
+        params.put("status", "CANCELLED");
+        return updateEmergencyStatus(id, params);
     }
 
     @PostMapping("/dispatches")

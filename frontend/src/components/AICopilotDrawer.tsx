@@ -345,7 +345,7 @@ export const AICopilotDrawer: React.FC<AICopilotDrawerProps> = ({
                     Protocol checklist:
                   </div>
                   <ul className="triage-checklist" style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    {triageResult.protocolChecklist.map((step, idx) => (
+                    {(triageResult.protocolChecklist || []).map((step, idx) => (
                       <li key={idx} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--md-sys-color-text)' }}>
                         <Icon name="check_circle" size={14} style={{ color: 'var(--md-sys-color-success)' }} />
                         <span>{step}</span>
