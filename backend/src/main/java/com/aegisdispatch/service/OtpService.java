@@ -153,76 +153,81 @@ public class OtpService {
     // ==========================================
 
     public OtpRequestResult requestOtp(String phone, String clientIp) {
-        lazyPurgeExpired();
+        try {
+            lazyPurgeExpired();
 
-        String cleanPhone = normalizePhone(phone);
-        if (!isValidIndianMobile(cleanPhone)) {
-            return new OtpRequestResult(false, "Invalid mobile number. Please enter a valid 10-digit Indian mobile number.", 0, null, 400);
-        }
-
-        long now = System.currentTimeMillis();
-        String storeKey = "SMS:" + cleanPhone;
-
-        // Check per-IP rate limit (max 25 requests per hour)
-        String ipKey = (clientIp != null && !clientIp.isBlank()) ? clientIp.trim() : "unknown";
-        if (isRateLimited(ipRequestTimestamps, ipKey, 25, 3600_000L, now)) {
-            return new OtpRequestResult(false, "Too many requests from this network. Please wait an hour before requesting again.", resendSeconds, null, 429);
-        }
-
-        // Check per-phone rate limit (max 5 requests per hour)
-        if (isRateLimited(targetRequestTimestamps, storeKey, maxPerHour, 3600_000L, now)) {
-            return new OtpRequestResult(false, "Maximum hourly OTP limit reached for this number. Please try again after an hour.", resendSeconds, null, 429);
-        }
-
-        // Check resend cooldown
-        OtpEntry existing = otpStore.get(storeKey);
-        if (existing != null) {
-            long elapsedSeconds = (now - existing.lastSentAt()) / 1000;
-            if (elapsedSeconds < resendSeconds) {
-                int waitSeconds = (int) (resendSeconds - elapsedSeconds);
-                return new OtpRequestResult(false, "Please wait " + waitSeconds + " seconds before requesting a new OTP.", waitSeconds, null, 429);
+            String cleanPhone = normalizePhone(phone);
+            if (!isValidIndianMobile(cleanPhone)) {
+                return new OtpRequestResult(false, "Invalid mobile number. Please enter a valid 10-digit Indian mobile number.", 0, null, 400);
             }
-        }
 
-        // Provider configuration check:
-        // With no SMS provider configured and AEGIS_OTP_DEV_ECHO=true the code is logged/returned for dev;
-        // with no provider and dev-echo false return 503 {"message":"SMS service is not configured"}
-        if (!smsService.isTwilioConfigured()) {
-            if (!devEcho) {
-                log.warn("[AEGIS-OTP] SMS service is not configured and AEGIS_OTP_DEV_ECHO is false for {}", SmsService.maskPhone(cleanPhone));
-                return new OtpRequestResult(false, "SMS service is not configured", 0, null, 503);
+            long now = System.currentTimeMillis();
+            String storeKey = "SMS:" + cleanPhone;
+
+            // Check per-IP rate limit (max 25 requests per hour)
+            String ipKey = (clientIp != null && !clientIp.isBlank()) ? clientIp.trim() : "unknown";
+            if (isRateLimited(ipRequestTimestamps, ipKey, 25, 3600_000L, now)) {
+                return new OtpRequestResult(false, "Too many requests from this network. Please wait an hour before requesting again.", resendSeconds, null, 429);
             }
-        }
 
-        // Generate 6-digit code
-        String code = String.format("%06d", secureRandom.nextInt(1000000));
-        byte[] salt = new byte[16];
-        secureRandom.nextBytes(salt);
-        byte[] hash = hashOtp(code, salt);
-
-        long expiresAt = now + (ttlSeconds * 1000L);
-        String e164 = "+91" + cleanPhone;
-
-        // Dispatch via provider if configured
-        if (smsService.isTwilioConfigured()) {
-            SmsService.SmsDeliveryResult deliveryResult = smsService.sendOtpSmsResult(e164, code);
-            if (deliveryResult.status() != SmsService.SmsDeliveryStatus.SUCCESS) {
-                log.error("[AEGIS-OTP] Twilio failed to deliver SMS OTP to {}: {}", SmsService.maskPhone(e164), deliveryResult.errorDetail());
-                return new OtpRequestResult(false, "Could not send SMS, please try again", 0, null, 502);
+            // Check per-phone rate limit (max 5 requests per hour)
+            if (isRateLimited(targetRequestTimestamps, storeKey, maxPerHour, 3600_000L, now)) {
+                return new OtpRequestResult(false, "Maximum hourly OTP limit reached for this number. Please try again after an hour.", resendSeconds, null, 429);
             }
-        } else {
-            log.info("[AEGIS-OTP-SIMULATED] Unconfigured provider dev-echo. Verification code for {}: {}", SmsService.maskPhone(e164), code);
+
+            // Check resend cooldown
+            OtpEntry existing = otpStore.get(storeKey);
+            if (existing != null) {
+                long elapsedSeconds = (now - existing.lastSentAt()) / 1000;
+                if (elapsedSeconds < resendSeconds) {
+                    int waitSeconds = (int) (resendSeconds - elapsedSeconds);
+                    return new OtpRequestResult(false, "Please wait " + waitSeconds + " seconds before requesting a new OTP.", waitSeconds, null, 429);
+                }
+            }
+
+            // Provider configuration check:
+            // With no SMS provider configured and AEGIS_OTP_DEV_ECHO=true the code is logged/returned for dev;
+            // with no provider and dev-echo false return 503 {"message":"SMS service is not configured"}
+            if (!smsService.isTwilioConfigured()) {
+                if (!devEcho) {
+                    log.warn("[AEGIS-OTP] SMS service is not configured and AEGIS_OTP_DEV_ECHO is false for {}", SmsService.maskPhone(cleanPhone));
+                    return new OtpRequestResult(false, "SMS service is not configured", 0, null, 503);
+                }
+            }
+
+            // Generate 6-digit code
+            String code = String.format("%06d", secureRandom.nextInt(1000000));
+            byte[] salt = new byte[16];
+            secureRandom.nextBytes(salt);
+            byte[] hash = hashOtp(code, salt);
+
+            long expiresAt = now + (ttlSeconds * 1000L);
+            String e164 = "+91" + cleanPhone;
+
+            // Dispatch via provider if configured
+            if (smsService.isTwilioConfigured()) {
+                SmsService.SmsDeliveryResult deliveryResult = smsService.sendOtpSmsResult(e164, code);
+                if (deliveryResult.status() != SmsService.SmsDeliveryStatus.SUCCESS) {
+                    log.error("[AEGIS-OTP] Twilio failed to deliver SMS OTP to {}: {}", SmsService.maskPhone(e164), deliveryResult.errorDetail());
+                    return new OtpRequestResult(false, "Could not send SMS, please try again", 0, null, 502);
+                }
+            } else {
+                log.info("[AEGIS-OTP-SIMULATED] Unconfigured provider dev-echo. Verification code for {}: {}", SmsService.maskPhone(e164), code);
+            }
+
+            // Only commit entry and record timestamps when delivery succeeded or dev-echo active
+            recordTimestamp(targetRequestTimestamps, storeKey, now);
+            recordTimestamp(ipRequestTimestamps, ipKey, now);
+            otpStore.put(storeKey, new OtpEntry(hash, salt, expiresAt, 0, now));
+
+            String devEchoCode = devEcho ? code : null;
+            log.info("[AEGIS-OTP] OTP generated for phone: {}", SmsService.maskPhone(e164));
+
+            return new OtpRequestResult(true, "If the number is valid, a code has been sent.", resendSeconds, devEchoCode, 200);
+        } catch (Throwable t) {
+            log.error("[AEGIS-OTP] Unexpected exception processing OTP request: {}", t.getMessage(), t);
+            return new OtpRequestResult(false, "Could not process verification code request. Please try again.", 0, null, 502);
         }
-
-        // Only commit entry and record timestamps when delivery succeeded or dev-echo active
-        recordTimestamp(targetRequestTimestamps, storeKey, now);
-        recordTimestamp(ipRequestTimestamps, ipKey, now);
-        otpStore.put(storeKey, new OtpEntry(hash, salt, expiresAt, 0, now));
-
-        String devEchoCode = devEcho ? code : null;
-        log.info("[AEGIS-OTP] OTP generated for phone: {}", SmsService.maskPhone(e164));
-
-        return new OtpRequestResult(true, "If the number is valid, a code has been sent.", resendSeconds, devEchoCode, 200);
     }
 
     public OtpVerifyResult verifyOtpWithDetails(String phone, String code) {
@@ -248,57 +253,65 @@ public class OtpService {
     // ==========================================
 
     public OtpRequestResult requestEmailOtp(String email, String clientIp) {
-        lazyPurgeExpired();
+        try {
+            lazyPurgeExpired();
 
-        String cleanEmail = normalizeEmail(email);
-        if (!isValidEmail(cleanEmail)) {
-            return new OtpRequestResult(false, "Invalid email address.", 0, null, 400);
-        }
-
-        long now = System.currentTimeMillis();
-        String storeKey = "EMAIL:" + cleanEmail;
-
-        // Check per-IP rate limit
-        String ipKey = (clientIp != null && !clientIp.isBlank()) ? clientIp.trim() : "unknown";
-        if (isRateLimited(ipRequestTimestamps, ipKey, 25, 3600_000L, now)) {
-            return new OtpRequestResult(false, "Too many requests from this network. Please wait an hour before requesting again.", emailResendSeconds, null, 429);
-        }
-
-        // Check per-email rate limit (max 5 per hour)
-        if (isRateLimited(targetRequestTimestamps, storeKey, emailMaxPerHour, 3600_000L, now)) {
-            return new OtpRequestResult(false, "Maximum hourly verification limit reached for this email. Please try again after an hour.", emailResendSeconds, null, 429);
-        }
-
-        // Check resend cooldown (60s)
-        OtpEntry existing = otpStore.get(storeKey);
-        if (existing != null) {
-            long elapsedSeconds = (now - existing.lastSentAt()) / 1000;
-            if (elapsedSeconds < emailResendSeconds) {
-                int waitSeconds = (int) (emailResendSeconds - elapsedSeconds);
-                return new OtpRequestResult(false, "Please wait " + waitSeconds + " seconds before requesting a new code.", waitSeconds, null, 429);
+            String cleanEmail = normalizeEmail(email);
+            if (!isValidEmail(cleanEmail)) {
+                return new OtpRequestResult(false, "Invalid email address.", 0, null, 400);
             }
+
+            long now = System.currentTimeMillis();
+            String storeKey = "EMAIL:" + cleanEmail;
+
+            // Check per-IP rate limit
+            String ipKey = (clientIp != null && !clientIp.isBlank()) ? clientIp.trim() : "unknown";
+            if (isRateLimited(ipRequestTimestamps, ipKey, 25, 3600_000L, now)) {
+                return new OtpRequestResult(false, "Too many requests from this network. Please wait an hour before requesting again.", emailResendSeconds, null, 429);
+            }
+
+            // Check per-email rate limit (max 5 per hour)
+            if (isRateLimited(targetRequestTimestamps, storeKey, emailMaxPerHour, 3600_000L, now)) {
+                return new OtpRequestResult(false, "Maximum hourly verification limit reached for this email. Please try again after an hour.", emailResendSeconds, null, 429);
+            }
+
+            // Check resend cooldown (60s)
+            OtpEntry existing = otpStore.get(storeKey);
+            if (existing != null) {
+                long elapsedSeconds = (now - existing.lastSentAt()) / 1000;
+                if (elapsedSeconds < emailResendSeconds) {
+                    int waitSeconds = (int) (emailResendSeconds - elapsedSeconds);
+                    return new OtpRequestResult(false, "Please wait " + waitSeconds + " seconds before requesting a new code.", waitSeconds, null, 429);
+                }
+            }
+
+            // Record request for rate limiting
+            recordTimestamp(targetRequestTimestamps, storeKey, now);
+            recordTimestamp(ipRequestTimestamps, ipKey, now);
+
+            // Generate 6-digit code
+            String code = String.format("%06d", secureRandom.nextInt(1000000));
+            byte[] salt = new byte[16];
+            secureRandom.nextBytes(salt);
+            byte[] hash = hashOtp(code, salt);
+
+            long expiresAt = now + (emailTtlSeconds * 1000L);
+            otpStore.put(storeKey, new OtpEntry(hash, salt, expiresAt, 0, now));
+
+            // Dispatch Email
+            boolean dispatched = emailService.sendOtpEmail(cleanEmail, code);
+            if (!dispatched && !devEcho) {
+                return new OtpRequestResult(false, "Could not send verification email, please try again", 0, null, 502);
+            }
+
+            String devEchoCode = devEcho ? code : null;
+            log.info("[AEGIS-OTP] OTP generated for email: {}", EmailService.maskEmail(cleanEmail));
+
+            return new OtpRequestResult(true, "A verification code has been sent to your email address.", emailResendSeconds, devEchoCode, 200);
+        } catch (Throwable t) {
+            log.error("[AEGIS-OTP] Unexpected exception processing email OTP request: {}", t.getMessage(), t);
+            return new OtpRequestResult(false, "Could not process email verification request. Please try again.", 0, null, 502);
         }
-
-        // Record request for rate limiting
-        recordTimestamp(targetRequestTimestamps, storeKey, now);
-        recordTimestamp(ipRequestTimestamps, ipKey, now);
-
-        // Generate 6-digit code
-        String code = String.format("%06d", secureRandom.nextInt(1000000));
-        byte[] salt = new byte[16];
-        secureRandom.nextBytes(salt);
-        byte[] hash = hashOtp(code, salt);
-
-        long expiresAt = now + (emailTtlSeconds * 1000L);
-        otpStore.put(storeKey, new OtpEntry(hash, salt, expiresAt, 0, now));
-
-        // Dispatch Email
-        emailService.sendOtpEmail(cleanEmail, code);
-
-        String devEchoCode = devEcho ? code : null;
-        log.info("[AEGIS-OTP] OTP generated for email: {}", EmailService.maskEmail(cleanEmail));
-
-        return new OtpRequestResult(true, "A verification code has been sent to your email address.", emailResendSeconds, devEchoCode, 200);
     }
 
     public OtpVerifyResult verifyEmailOtpWithDetails(String email, String code) {
@@ -316,12 +329,6 @@ public class OtpService {
     // ==========================================
 
     private OtpVerifyResult verifyChannelOtp(String storeKey, String cleanCode) {
-        // Universal developer bypasses: 1120 (universal dev pin) and 123456 (demo test code)
-        if ("1120".equals(cleanCode) || "123456".equals(cleanCode)) {
-            otpStore.remove(storeKey);
-            return new OtpVerifyResult(true, null, 200);
-        }
-
         OtpEntry entry = otpStore.get(storeKey);
         if (entry == null) {
             return new OtpVerifyResult(false, "No active verification code found. Please request a new code.", 401);

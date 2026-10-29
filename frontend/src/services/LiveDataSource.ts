@@ -140,7 +140,10 @@ export class LiveDataSource implements DataSource {
 
     if (!res.ok) {
       const errorData = await res.json().catch(() => ({}));
-      const msg = errorData.message || errorData.error || `Request failed with status ${res.status}`;
+      let msg = errorData.message || errorData.error;
+      if (!msg) {
+        msg = res.status >= 500 ? "Server unreachable, please try again" : `Request failed with status ${res.status}`;
+      }
       const err = new Error(msg);
       (err as any).status = res.status;
       throw err;

@@ -73,30 +73,41 @@ public class EmailService {
                 + "<p style=\"font-size: 11px; color: #999;\">Aegis Dispatch – Emergency Medical Dispatch Platform</p>"
                 + "</div>";
 
-        if (isEmailConfigured()) {
-            try {
-                MimeMessage message = mailSender.createMimeMessage();
-                MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-                helper.setFrom(mailFrom != null && !mailFrom.isBlank() ? mailFrom : "noreply@aegisdispatch.org");
-                helper.setTo(toEmail.trim());
-                helper.setSubject(subject);
-                helper.setText(textBody, htmlBody);
-                mailSender.send(message);
-                log.info("[AEGIS-EMAIL] Verification OTP email dispatched to: {}", masked);
-                return true;
-            } catch (Exception e) {
-                log.warn("[AEGIS-EMAIL] SMTP delivery failed for recipient {}: {}", masked, e.getMessage());
+        try {
+            if (isEmailConfigured()) {
+                try {
+                    MimeMessage message = mailSender.createMimeMessage();
+                    MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+                    helper.setFrom(mailFrom != null && !mailFrom.isBlank() ? mailFrom : "noreply@aegisdispatch.org");
+                    helper.setTo(toEmail.trim());
+                    helper.setSubject(subject);
+                    helper.setText(textBody, htmlBody);
+                    mailSender.send(message);
+                    log.info("[AEGIS-EMAIL] Verification OTP email dispatched to: {}", masked);
+                    return true;
+                } catch (Throwable t) {
+                    log.warn("[AEGIS-EMAIL] SMTP delivery failed for recipient {}: {}", masked, t.getMessage());
+                    if (!devEcho) {
+                        return false;
+                    }
+                }
+            } else {
+                log.warn("[AEGIS-EMAIL] SMTP is not configured. Falling back to simulated email dispatch.");
+                if (!devEcho) {
+                    return false;
+                }
             }
-        } else {
-            log.warn("[AEGIS-EMAIL] SMTP is not configured. Falling back to simulated email dispatch.");
-        }
 
-        if (devEcho) {
-            log.info("[AEGIS-EMAIL-OTP-DEV-ECHO] Verification code for {}: {}", masked, otp);
-        } else {
-            log.info("[AEGIS-EMAIL-OTP-SIMULATED] Verification code dispatched to {}", masked);
-        }
+            if (devEcho) {
+                log.info("[AEGIS-EMAIL-OTP-DEV-ECHO] Verification code for {}: {}", masked, otp);
+            } else {
+                log.info("[AEGIS-EMAIL-OTP-SIMULATED] Verification code dispatched to {}", masked);
+            }
 
-        return true;
+            return true;
+        } catch (Throwable t) {
+            log.error("[AEGIS-EMAIL] Unexpected exception in sendOtpEmail for {}: {}", masked, t.getMessage());
+            return devEcho;
+        }
     }
 }

@@ -33,7 +33,14 @@ public class GoogleAuthAndCitizenFlowTest {
         jwtService = new JwtService("aegis-dispatch-test-jwt-hmac-sha256-secret-key-2026-very-secure");
         SmsService mockSms = mock(SmsService.class);
         AuditService mockAudit = mock(AuditService.class);
-        GoogleTokenVerifier googleVerifier = new GoogleTokenVerifier(new com.fasterxml.jackson.databind.ObjectMapper());
+        GoogleTokenVerifier googleVerifier = mock(GoogleTokenVerifier.class);
+        when(googleVerifier.isConfigured()).thenReturn(true);
+        when(googleVerifier.verifyToken("valid-new-google-id-token")).thenReturn(
+                new GoogleTokenVerifier.GooglePayload("google-sub-999", "newcitizen@example.com", "John Doe", true)
+        );
+        when(googleVerifier.verifyToken("valid-existing-google-id-token")).thenReturn(
+                new GoogleTokenVerifier.GooglePayload("google-existing-456", "priya@example.com", "Priya Sharma", true)
+        );
         otpService = new OtpService(mockSms);
         authService = new AuthService(userRepository, jwtService, otpService, googleVerifier, mockAudit);
         authController = new AuthController(authService, otpService, jwtService, googleVerifier);
@@ -57,7 +64,7 @@ public class GoogleAuthAndCitizenFlowTest {
     @Test
     @DisplayName("F1: New Google user gets EMAIL_VERIFICATION_REQUIRED and no user is created until verified")
     void testNewGoogleUserRequiresPhoneVerification() {
-        String googleIdToken = "mock:google-sub-999:newcitizen@example.com:John Doe";
+        String googleIdToken = "valid-new-google-id-token";
         long userCountBefore = userRepository.count();
 
         AuthService.GoogleAuthResponse resp = authService.googleLogin(googleIdToken, "127.0.0.1");
@@ -128,7 +135,7 @@ public class GoogleAuthAndCitizenFlowTest {
         existing.setProfileComplete(true);
         userRepository.save(existing);
 
-        String googleToken = "mock:google-existing-456:priya@example.com:Priya Sharma";
+        String googleToken = "valid-existing-google-id-token";
         AuthService.GoogleAuthResponse resp = authService.googleLogin(googleToken, "127.0.0.1");
 
         assertTrue(resp.success());

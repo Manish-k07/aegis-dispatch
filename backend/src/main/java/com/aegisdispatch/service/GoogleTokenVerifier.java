@@ -51,35 +51,14 @@ public class GoogleTokenVerifier {
             return null;
         }
 
-        // Support mock/demo tokens for automated tests and offline preview
+        // Security rule: Never accept "mock:" or "demo:" tokens on the server in any configuration
         if (idToken.startsWith("mock:") || idToken.startsWith("demo:")) {
-            String[] parts = idToken.split(":");
-            String sub = parts.length > 1 && !parts[1].isBlank() ? parts[1] : "mock-sub-123456";
-            String email = parts.length > 2 && !parts[2].isBlank() ? parts[2] : "citizen@example.com";
-            String name = parts.length > 3 && !parts[3].isBlank() ? parts[3] : "Mock Citizen";
-            return new GooglePayload(sub, email.toLowerCase(), name, true);
+            log.warn("[SECURITY] Rejected forbidden mock/demo Google token format.");
+            return null;
         }
 
-        // If client-id is not configured, reject real tokens
         if (!isConfigured()) {
-            // Check if test environment passed simulated JWT
-            try {
-                String[] parts = idToken.split("\\.");
-                if (parts.length >= 2) {
-                    byte[] decoded = Base64.getUrlDecoder().decode(parts[1]);
-                    @SuppressWarnings("unchecked")
-                    Map<String, Object> map = objectMapper.readValue(decoded, Map.class);
-                    if (map != null && map.containsKey("sub") && map.containsKey("email")) {
-                        return new GooglePayload(
-                                (String) map.get("sub"),
-                                ((String) map.get("email")).toLowerCase(),
-                                (String) map.getOrDefault("name", "Google Citizen"),
-                                Boolean.TRUE.equals(map.get("email_verified")) || "true".equalsIgnoreCase(String.valueOf(map.get("email_verified")))
-                        );
-                    }
-                }
-            } catch (Exception ignored) {}
-            log.warn("Google Sign-In is not configured (missing GOOGLE_CLIENT_ID).");
+            log.warn("Google Sign-In is not configured on the server (missing GOOGLE_CLIENT_ID).");
             return null;
         }
 
@@ -117,6 +96,17 @@ public class GoogleTokenVerifier {
             if (!"true".equalsIgnoreCase(emailVerifiedStr)) {
                 log.warn("Google token email is not verified");
                 return null;
+            }
+
+            Object expObj = body.get("exp");
+            if (expObj != null) {
+                try {
+                    long expSeconds = Long.parseLong(expObj.toString());
+                    if (System.currentTimeMillis() / 1000 > expSeconds) {
+                        log.warn("Google token has expired: exp={}", expSeconds);
+                        return null;
+                    }
+                } catch (Exception ignored) {}
             }
 
             String sub = (String) body.get("sub");

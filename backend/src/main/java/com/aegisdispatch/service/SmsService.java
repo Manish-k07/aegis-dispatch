@@ -172,12 +172,12 @@ public class SmsService {
     }
 
     public SmsDeliveryResult sendOtpSmsResult(String toPhone, String code) {
-        if (!isTwilioConfigured()) {
-            return new SmsDeliveryResult(SmsDeliveryStatus.NOT_CONFIGURED, "SMS service is not configured");
-        }
-
-        String body = "Your Aegis Dispatch verification code is: " + code + ". Valid for 5 minutes. Do not share this code.";
         try {
+            if (!isTwilioConfigured()) {
+                return new SmsDeliveryResult(SmsDeliveryStatus.NOT_CONFIGURED, "SMS service is not configured");
+            }
+
+            String body = "Your Aegis Dispatch verification code is: " + code + ". Valid for 5 minutes. Do not share this code.";
             boolean ok = dispatchTwilioSms(toPhone, body);
             if (ok) {
                 return new SmsDeliveryResult(SmsDeliveryStatus.SUCCESS, null);
@@ -185,9 +185,9 @@ public class SmsService {
                 log.error("Twilio SMS delivery returned non-2xx response for recipient {}", maskPhone(toPhone));
                 return new SmsDeliveryResult(SmsDeliveryStatus.TWILIO_ERROR, "Twilio returned non-success response");
             }
-        } catch (Exception e) {
-            log.error("Twilio SMS delivery exception for recipient {}: {}", maskPhone(toPhone), e.getMessage());
-            return new SmsDeliveryResult(SmsDeliveryStatus.TWILIO_ERROR, e.getMessage());
+        } catch (Throwable t) {
+            log.error("Twilio SMS delivery exception for recipient {}: {}", maskPhone(toPhone), t.getMessage());
+            return new SmsDeliveryResult(SmsDeliveryStatus.TWILIO_ERROR, t.getMessage() != null ? t.getMessage() : "Twilio delivery failure");
         }
     }
 

@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 @RestController
@@ -171,7 +172,12 @@ public class AuthController {
             idToken = body.get("credential");
         }
 
-        if (!googleTokenVerifier.isConfigured() && idToken != null && !idToken.startsWith("mock:") && !idToken.startsWith("demo:")) {
+        if (idToken != null && (idToken.startsWith("mock:") || idToken.startsWith("demo:"))) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "Mock or demo Google tokens are not permitted on the server."));
+        }
+
+        if (!googleTokenVerifier.isConfigured()) {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
                     .body(Map.of("error", "Google sign-in is not configured on the server."));
         }
@@ -267,14 +273,20 @@ public class AuthController {
      */
     @GetMapping({"/api/auth/profile", "/api/citizen/profile"})
     public ResponseEntity<?> getCitizenProfile(HttpServletRequest request) {
-        String username = extractUsernameFromToken(request);
-        if (username == null) {
+        Map<String, Object> claims = extractClaimsFromToken(request);
+        if (claims == null || claims.get("sub") == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Missing or invalid authorization token."));
         }
 
+        String role = claims.get("role") != null ? claims.get("role").toString() : "";
+        if (!"CITIZEN".equalsIgnoreCase(role)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "Only citizen accounts possess a citizen profile."));
+        }
+
+        String username = claims.get("sub").toString();
         Map<String, Object> profile = authService.getCitizenProfile(username);
         if (profile == null) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "Profile not found or access denied."));
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "Account is disabled or profile not found."));
         }
 
         return ResponseEntity.ok(profile);
@@ -286,24 +298,40 @@ public class AuthController {
      */
     @RequestMapping(value = {"/api/auth/profile", "/api/citizen/profile"}, method = {RequestMethod.PUT, RequestMethod.POST})
     public ResponseEntity<?> updateCitizenProfile(@RequestBody Map<String, Object> body, HttpServletRequest request) {
-        String username = extractUsernameFromToken(request);
-        if (username == null) {
-            username = (String) body.get("username");
-            if (username == null) username = (String) body.get("phone");
-        }
-
-        if (username == null || username.isBlank()) {
+        Map<String, Object> claims = extractClaimsFromToken(request);
+        if (claims == null || claims.get("sub") == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Missing or invalid authorization token."));
         }
 
+        String role = claims.get("role") != null ? claims.get("role").toString() : "";
+        if (!"CITIZEN".equalsIgnoreCase(role)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "Only citizen accounts possess a citizen profile."));
+        }
+
+        String username = claims.get("sub").toString();
+
+        // Strip and ignore immutable/privileged account fields from client body
+        Map<String, Object> sanitizedInput = new LinkedHashMap<>(body != null ? body : Map.of());
+        sanitizedInput.remove("id");
+        sanitizedInput.remove("phone");
+        sanitizedInput.remove("role");
+        sanitizedInput.remove("registeredAt");
+        sanitizedInput.remove("authProvider");
+        sanitizedInput.remove("googleSub");
+        sanitizedInput.remove("phone_verified");
+        sanitizedInput.remove("phoneVerified");
+        sanitizedInput.remove("email_verified");
+        sanitizedInput.remove("emailVerified");
+        sanitizedInput.remove("username");
+
         Integer expectedVersion = null;
-        Object v = body.get("expectedVersion");
+        Object v = sanitizedInput.get("expectedVersion");
         if (v instanceof Number) expectedVersion = ((Number) v).intValue();
         else if (v != null) {
             try { expectedVersion = Integer.parseInt(v.toString()); } catch (Exception ignored) {}
         }
 
-        AuthService.ProfileUpdateResult result = authService.updateCitizenProfile(username, body, expectedVersion);
+        AuthService.ProfileUpdateResult result = authService.updateCitizenProfile(username, sanitizedInput, expectedVersion);
 
         if (result.status() == 200) {
             return ResponseEntity.ok(result.profile());
@@ -351,14 +379,11 @@ public class AuthController {
         ));
     }
 
-    private String extractUsernameFromToken(HttpServletRequest request) {
+    private Map<String, Object> extractClaimsFromToken(HttpServletRequest request) {
         String authHeader = request.getHeader("Authorization");
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            String token = authHeader.substring(7);
-            Map<String, Object> claims = jwtService.validateAndExtractClaims(token);
-            if (claims != null && claims.get("sub") != null) {
-                return claims.get("sub").toString();
-            }
+            String token = authHeader.substring(7).trim();
+            return jwtService.validateAndExtractClaims(token);
         }
         return null;
     }

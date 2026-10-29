@@ -323,10 +323,24 @@ const CitizenPhoneOtpForm: React.FC<FormSubmitProps> = ({
               id="citizen-otp-phone"
               name="citizen_otp_phone"
               label="Mobile Phone Number"
-              placeholder="e.g. 9845012345"
+              placeholder="10-digit mobile number"
               type="tel"
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val.includes('+') || val.includes(' ') || val.includes('-')) {
+                  setPhone(sanitizeIndianPhone(val));
+                } else {
+                  setPhone(val);
+                }
+              }}
+              onPaste={(e) => {
+                const pasted = e.clipboardData.getData('text');
+                if (pasted) {
+                  e.preventDefault();
+                  setPhone(sanitizeIndianPhone(pasted));
+                }
+              }}
               disabled={otpSent}
               required
               autoFocus
@@ -351,13 +365,13 @@ const CitizenPhoneOtpForm: React.FC<FormSubmitProps> = ({
               id="citizen-otp-code"
               name="citizen_otp_code"
               label="Verification Code (OTP)"
-              placeholder="Enter 6-digit OTP (e.g. 1120)"
+              placeholder="Enter 6-digit verification code"
               type="text"
               value={otp}
               onChange={(e) => setOtp(e.target.value)}
               required
               autoFocus
-              helperText="For testing or demo, enter 1120"
+              helperText="Check your phone for the 6-digit verification code"
             />
 
             <div style={{ display: 'flex', gap: '8px' }}>
@@ -573,7 +587,7 @@ const CitizenGoogleAuth: React.FC<FormSubmitProps> = ({ onSuccess, dataSource })
             id="google-email-otp"
             name="google_email_otp"
             label="6-Digit Email Code"
-            placeholder="e.g. 123456"
+            placeholder="6-digit verification code"
             type="text"
             value={emailOtp}
             onChange={(e) => setEmailOtp(e.target.value)}
